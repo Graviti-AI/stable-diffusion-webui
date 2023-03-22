@@ -5,13 +5,15 @@ import os
 import inspect
 from contextlib import closing
 
+import starlette.requests
+
 import modules.textual_inversion.dataset
 import torch
 import tqdm
 from einops import rearrange, repeat
 from ldm.util import default
-from modules import devices, sd_models, shared, sd_samplers, hashes, sd_hijack_checkpoint, errors
-from modules.textual_inversion import textual_inversion, logging
+from modules import devices, processing, sd_models, shared, sd_samplers, hashes, sd_hijack_checkpoint, errors
+from modules.textual_inversion import textual_inversion, logger
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
 from torch import einsum
 from torch.nn.init import normal_, xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_, zeros_
@@ -468,7 +470,7 @@ def create_hypernetwork(name, enable_sizes, overwrite_old, layer_structure=None,
     shared.reload_hypernetworks()
 
 
-def train_hypernetwork(id_task, hypernetwork_name, learn_rate, batch_size, gradient_step, data_root, log_directory, training_width, training_height, varsize, steps, clip_grad_mode, clip_grad_value, shuffle_tags, tag_drop_out, latent_sampling_method, use_weight, create_image_every, save_hypernetwork_every, template_filename, preview_from_txt2img, preview_prompt, preview_negative_prompt, preview_steps, preview_sampler_index, preview_cfg_scale, preview_seed, preview_width, preview_height):
+def train_hypernetwork(request: starlette.requests.Request, id_task, hypernetwork_name, learn_rate, batch_size, gradient_step, data_root, log_directory, training_width, training_height, varsize, steps, clip_grad_mode, clip_grad_value, shuffle_tags, tag_drop_out, latent_sampling_method, use_weight, create_image_every, save_hypernetwork_every, template_filename, preview_from_txt2img, preview_prompt, preview_negative_prompt, preview_steps, preview_sampler_index, preview_cfg_scale, preview_seed, preview_width, preview_height):
     from modules import images, processing
 
     save_hypernetwork_every = save_hypernetwork_every or 0
@@ -532,7 +534,7 @@ def train_hypernetwork(id_task, hypernetwork_name, learn_rate, batch_size, gradi
             model_name=checkpoint.model_name, model_hash=checkpoint.shorthash, num_of_dataset_images=len(ds),
             **{field: getattr(hypernetwork, field) for field in ['layer_structure', 'activation_func', 'weight_init', 'add_layer_norm', 'use_dropout', ]}
         )
-        logging.save_settings_to_file(log_directory, {**saved_params, **locals()})
+        logger.save_settings_to_file(log_directory, {**saved_params, **locals()})
 
     latent_sampling_method = ds.latent_sampling_method
 
@@ -691,7 +693,7 @@ def train_hypernetwork(id_task, hypernetwork_name, learn_rate, batch_size, gradi
                         do_not_save_grid=True,
                         do_not_save_samples=True,
                     )
-
+                    p.set_request(request)
                     p.disable_extra_networks = True
 
                     if preview_from_txt2img:

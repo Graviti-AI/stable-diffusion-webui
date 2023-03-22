@@ -12,11 +12,16 @@ from functools import lru_cache
 
 from modules import cmd_args, errors
 from modules.paths_internal import script_path, extensions_dir
-from modules.timer import startup_timer
+from modules.timer import Timer
 from modules import logging_config
 
 args, _ = cmd_args.parser.parse_known_args()
 logging_config.setup_logging(args.loglevel)
+
+
+startup_timer = Timer('main', print_log=args.log_startup)
+
+startup_record = None
 
 python = sys.executable
 git = os.environ.get('GIT', "git")
@@ -427,13 +432,14 @@ def configure_for_tests():
     os.environ['COMMANDLINE_ARGS'] = ""
 
 
-def start():
+def start(server_port: int = 0):
     print(f"Launching {'API server' if '--nowebui' in sys.argv else 'Web UI'} with arguments: {' '.join(sys.argv[1:])}")
+    _config_logging('webui')
     import webui
     if '--nowebui' in sys.argv:
-        webui.api_only()
+        webui.api_only(server_port)
     else:
-        webui.webui()
+        webui.webui(server_port)
 
 
 def dump_sysinfo():
@@ -447,3 +453,35 @@ def dump_sysinfo():
         file.write(text)
 
     return filename
+
+
+def _config_logging(component):
+    logging_level = args.logging_level.upper()
+    if logging_level == 'CRITICAL':
+        level = logging.CRITICAL
+    elif logging_level == 'FATAL':
+        level = logging.FATAL
+    elif logging_level == 'ERROR':
+        level = logging.ERROR
+    elif logging_level == 'WARN':
+        level = logging.WARNING
+    elif logging_level == 'WARNING':
+        level = logging.WARNING
+    elif logging_level == 'INFO':
+        level = logging.INFO
+    elif logging_level == 'DEBUG':
+        level = logging.DEBUG
+    elif logging_level == 'NOTSET':
+        level = logging.NOTSET
+    else:
+        level = logging.ERROR
+
+    if args.logging_file_dir:
+        import pathlib
+        log_filename = pathlib.Path(args.logging_file_dir).joinpath(f'{component}.log')
+        logging.basicConfig(level=level,
+                            filename=str(log_filename),
+                            format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
+    else:
+        logging.basicConfig(level=level,
+                            format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')

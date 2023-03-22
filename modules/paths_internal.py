@@ -23,8 +23,10 @@ cmd_opts_pre = parser_pre.parse_known_args()[0]
 
 data_path = cmd_opts_pre.data_dir
 
-models_path = os.path.join(data_path, "models")
-extensions_dir = os.path.join(data_path, "extensions")
+MODEL_CONTAINER_NAME = os.getenv('MODEL_CONTAINER_NAME', 'models')
+models_path = os.path.join(data_path, MODEL_CONTAINER_NAME, "public")
+
+extensions_dir = os.path.join(script_path, "extensions")
 extensions_builtin_dir = os.path.join(script_path, "extensions-builtin")
 config_states_dir = os.path.join(script_path, "config_states")
 

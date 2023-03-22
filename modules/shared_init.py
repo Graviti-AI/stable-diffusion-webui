@@ -34,8 +34,8 @@ def initialize():
     from modules import shared_state
     shared.state = shared_state.State()
 
-    from modules import styles
-    shared.prompt_styles = styles.StyleDatabase(shared.styles_filename)
+    #from modules import styles
+    #shared.prompt_styles = styles.StyleDatabase(shared.styles_filename)
 
     from modules import interrogate
     shared.interrogator = interrogate.InterrogateModels("interrogate")

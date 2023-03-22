@@ -4,9 +4,10 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules import images
-from modules.processing import process_images
+from modules.processing import process_images, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import opts, state
 import modules.sd_samplers
+from modules.system_monitor import monitor_call_context
 
 
 def draw_xy_grid(xs, ys, x_label, y_label, cell):
@@ -94,7 +95,12 @@ class Script(scripts.Script):
             p.negative_prompt = all_prompts
         p.seed = [p.seed + (i if different_seeds else 0) for i in range(len(all_prompts))]
         p.prompt_for_display = positive_prompt
-        processed = process_images(p)
+        with monitor_call_context(
+                p.get_request(),
+                get_function_name_from_processing(p),
+                "script.prompt_matrix",
+                decoded_params=build_decoded_params_from_processing(p)):
+            processed = process_images(p)
 
         grid = images.image_grid(processed.images, p.batch_size, rows=1 << ((len(prompt_matrix_parts) - 1) // 2))
         grid = images.draw_prompt_matrix(grid, processed.images[0].width, processed.images[0].height, prompt_matrix_parts, margin_size)

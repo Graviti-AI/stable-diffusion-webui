@@ -1,10 +1,15 @@
 import json
-import os
-import os.path
 import threading
 import time
+import os
+import pathlib
+import shutil
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 
 from modules.paths import data_path, script_path
+from modules.lru_cache import LruCache
 
 cache_filename = os.environ.get('SD_WEBUI_CACHE_FILE', os.path.join(data_path, "cache.json"))
 cache_data = None
@@ -70,7 +75,9 @@ def cache(subsection):
                             cache_data = json.load(file)
                     except Exception:
                         os.replace(cache_filename, os.path.join(script_path, "tmp", "cache.json"))
-                        print('[ERROR] issue occurred while trying to read cache.json, move current cache to tmp/cache.json and create new cache')
+                        print(
+                            '[ERROR] issue occurred while trying to read cache.json, '
+                            'move current cache to tmp/cache.json and create new cache')
                         cache_data = {}
 
     s = cache_data.get(subsection, {})
@@ -122,3 +129,130 @@ def cached_data_for_file(subsection, title, filename, func):
         dump_cache()
 
     return entry['value']
+
+
+def get_cache_filepath(filepath: str, base_dir: str, cache_dir: str) -> tuple:
+    filepath = os.path.abspath(filepath)
+    base_dir = os.path.abspath(base_dir)
+    cache_dir = os.path.abspath(cache_dir)
+    relpath = os.path.relpath(filepath, base_dir)
+    return relpath, os.path.join(cache_dir, relpath)
+
+
+def _copy_file_atomically(filepath, destpath):
+    dirname = os.path.dirname(destpath)
+    tmppath = os.path.join(dirname, str(uuid.uuid4()))
+    if not os.path.exists(dirname):
+        os.makedirs(dirname, exist_ok=True)
+    # This is not atomic, so we first copy to a unique path
+    shutil.copy2(filepath, tmppath)
+    # This is atomic
+    os.rename(tmppath, destpath)
+    print(f"Cache model {destpath} created.")
+
+
+def _copy_file_to_cache_dir(
+        filepath: str,
+        base_dir: str,
+        cache_dir: str,
+        source_file_container: list,
+):
+    relpath, destpath = get_cache_filepath(filepath, base_dir, cache_dir)
+
+    copied = False
+    for src_container in source_file_container:
+        src_filepath = os.path.join(src_container, relpath)
+        if not os.path.exists(src_filepath):
+            continue
+        _copy_file_atomically(src_filepath, destpath)
+        copied = True
+        break
+    if not copied:
+        _copy_file_atomically(filepath, destpath)
+    return destpath
+
+
+# check if the cache_dir has enough space to store new file
+def check_cache_space(lru_cache: LruCache, new_file_size_gb, cache_size_gb):
+    total_space_occupied_gb = 0
+    for file_path, file_info in lru_cache:
+        total_space_occupied_gb += file_info['file_size']
+    return new_file_size_gb + total_space_occupied_gb < cache_size_gb
+
+
+def copy_file_to_cache_dir_if_space_available(lru_cache: LruCache,
+                                              filepath: str,
+                                              base_dir: str,
+                                              cache_dir: str,
+                                              source_file_containers: list,
+                                              cache_size_gb: float):
+    """
+    copy file from source_file_container for cache.
+    we do not copy src file from filepath directly, but copy it from source_file_container.
+    """
+    cache_dir = os.path.abspath(cache_dir)
+    filepath = os.path.abspath(filepath)
+    current_file_size_gb = os.stat(filepath).st_size / 1e9  # Convert bytes to GB
+    while not check_cache_space(lru_cache, current_file_size_gb, cache_size_gb):
+        # disk is full, release a file
+        cached_filepath, _ = lru_cache.pop()
+        if cached_filepath:
+            os.unlink(cached_filepath)
+        else:
+            break
+
+    # in case of cache is empty, but still not get enough disk space
+    if check_cache_space(lru_cache, current_file_size_gb, cache_size_gb):
+        cached_filepath = _copy_file_to_cache_dir(filepath, base_dir, cache_dir, source_file_containers)
+        _cache_file_info(lru_cache, cached_filepath, current_file_size_gb)
+
+
+def _cache_file_info(lru_cache: LruCache, cached_filepath, cached_file_size_gb):
+    lru_cache.touch(cached_filepath, {'file_size': cached_file_size_gb})
+
+
+# scan cache dir, load all cache model file info to lru_cache at service startup.
+# the model files are cached in arbitrary order.
+def setup_remote_file_cache(lru_cache: LruCache, cache_dir: str):
+    if not cache_dir:
+        return
+    cache_path = pathlib.Path(cache_dir)
+    if not cache_path.exists():
+        return
+    for item in cache_path.iterdir():
+        if item.is_dir():
+            setup_remote_file_cache(lru_cache, str(item))
+        else:
+            file_size = os.stat(item).st_size / 1e9
+            _cache_file_info(lru_cache, str(item.absolute()), file_size)
+
+
+# A function wrapper (Decorator) to help cache big files to a local ssd
+def use_sdd_to_cache_remote_file(
+        func: callable,
+        lru_cache: LruCache,
+        base_dir: str,
+        cache_dir: str,
+        source_file_container: list,
+        executor_ppol: ThreadPoolExecutor,
+        filepath_arg_index: int = 0,
+        cache_size_gb: float = 100.0):
+    @wraps(func)
+    def weight_loading_wrapper(*args, **kwargs):
+        if base_dir and cache_dir and executor_ppol and cache_size_gb > 0:
+            filepath = args[filepath_arg_index]
+            _, cached_filepath = get_cache_filepath(filepath, base_dir, cache_dir)
+            if os.path.exists(cached_filepath):
+                args = list(args)
+                args[filepath_arg_index] = cached_filepath
+                lru_cache.touch(cached_filepath)
+                print(f"Loading cached model {cached_filepath}.")
+            else:
+                print(f"Loading original model {filepath}.")
+                executor_ppol.submit(
+                    copy_file_to_cache_dir_if_space_available,
+                    lru_cache, filepath, base_dir, cache_dir, source_file_container, cache_size_gb
+                )
+        return func(*args, **kwargs)
+
+    return weight_loading_wrapper

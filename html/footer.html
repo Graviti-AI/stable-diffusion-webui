@@ -1,15 +1,35 @@
-<div>
-        <a href="{api_docs}">API</a>
-         • 
-        <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">Github</a>
-         • 
-        <a href="https://gradio.app">Gradio</a>
-         • 
-        <a href="#" onclick="showProfile('./internal/profile-startup'); return false;">Startup profile</a>
-         • 
-        <a href="/" onclick="javascript:gradioApp().getElementById('settings_restart_gradio').click(); return false">Reload UI</a>
+<div id="footer-nav">
+        <a href="https://discord.gg/QfBbBYqQ7z" class="nav-item">Discord</a>
+         <span class="nav-item">•</span>
+        <a class="nav-item" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">Github</a>
+        <span class="nav-item">•</span>
+        <a class="nav-item" href="https://gradio.app">Gradio</a>
+        <span class="nav-item">•</span>
+        <!-- <a href="/" onclick="javascript:gradioApp().getElementById('settings_restart_gradio').click(); return false">Reload UI</a> -->
+        <div class="nav-item" id="language-list" style="display: none;">{language_list}</div>
 </div>
 <br />
 <div class="versions">
 {versions}
 </div>
+
+<noscript><iframe src="​https://www.googletagmanager.com/ns.html?id=GTM-NJBVS8D" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+<style>
+.language-list {{
+    background-color: var(--background-fill-primary) !important;
+    border: none;
+    max-width: 160px;
+    font-size: 14px !important;
+}}
+
+.nav-item {{
+    margin-right: 10px;
+}}
+
+.language-list:hover {{
+    outline:  none;
+}}
+
+
+</style>

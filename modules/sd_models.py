@@ -1,3 +1,4 @@
+import logging
 import collections
 import os.path
 import sys
@@ -10,13 +11,17 @@ import safetensors.torch
 from omegaconf import OmegaConf
 from os import mkdir
 from urllib import request
+from typing import Optional
 import ldm.modules.midas as midas
+import gradio as gr
 
 from ldm.util import instantiate_from_config
 
-from modules import paths, shared, modelloader, devices, script_callbacks, sd_vae, sd_disable_initialization, errors, hashes, sd_models_config, sd_unet, sd_models_xl, cache, extra_networks, processing, lowvram, sd_hijack
+from modules import paths, shared, modelloader, devices, script_callbacks, sd_vae, sd_disable_initialization, errors, hashes, sd_models_config, sd_unet, sd_models_xl, cache, extra_networks, processing, lowvram, sd_hijack, sd_models_types
 from modules.timer import Timer
 import tomesd
+
+logger = logging.getLogger(__name__)
 
 model_dir = "Stable-diffusion"
 model_path = os.path.abspath(os.path.join(paths.models_path, model_dir))
@@ -91,9 +96,11 @@ class CheckpointInfo:
             self.ids += [self.shorthash, self.sha256, f'{self.name} [{self.shorthash}]', f'{self.name_for_extra} [{self.shorthash}]']
 
     def register(self):
-        checkpoints_list[self.title] = self
+        if self.title not in checkpoints_list:
+            checkpoints_list[self.title] = self
         for id in self.ids:
-            checkpoint_aliases[id] = self
+            if id not in checkpoint_alisases:
+                checkpoint_alisases[id] = self
 
     def calculate_shorthash(self):
         self.sha256 = hashes.sha256(self.filename, f"checkpoint/{self.name}")
@@ -131,16 +138,23 @@ except Exception:
 def setup_model():
     os.makedirs(model_path, exist_ok=True)
 
+    # list_models()
     enable_midas_autodownload()
 
 
-def checkpoint_tiles(use_short=False):
-    return [x.short_title if use_short else x.title for x in checkpoints_list.values()]
+def checkpoint_tiles(req: Optional[gr.Request] = None, use_short=False):
+    def convert(name):
+        return int(name) if name.isdigit() else name.lower()
+
+    def alphanumeric_key(key):
+        return [convert(c) for c in re.split('([0-9]+)', key)]
+
+    return sorted([x.short_title if use_short else x.title  for x in checkpoints_list.values()], key=alphanumeric_key)
 
 
-def list_models():
-    checkpoints_list.clear()
-    checkpoint_aliases.clear()
+def list_models(req: gr.Request = None):
+    # checkpoints_list.clear()
+    # checkpoint_alisases.clear()
 
     cmd_ckpt = shared.cmd_opts.ckpt
     if shared.cmd_opts.no_download_sd_model or cmd_ckpt != shared.sd_model_file or os.path.exists(cmd_ckpt):
@@ -158,9 +172,10 @@ def list_models():
     elif cmd_ckpt is not None and cmd_ckpt != shared.default_sd_model_file:
         print(f"Checkpoint in --ckpt argument not found (Possible it was moved to {model_path}: {cmd_ckpt}", file=sys.stderr)
 
-    for filename in model_list:
-        checkpoint_info = CheckpointInfo(filename)
-        checkpoint_info.register()
+    if not shared.cmd_opts.skip_load_default_model:
+        for filename in sorted(model_list, key=str.lower):
+            checkpoint_info = CheckpointInfo(filename)
+            checkpoint_info.register()
 
 
 re_strip_checksum = re.compile(r"\s*\[[^]]+]\s*$")
@@ -481,12 +496,12 @@ sdxl_refiner_clip_weight = 'conditioner.embedders.0.model.ln_final.weight'
 
 class SdModelData:
     def __init__(self):
-        self.sd_model = None
+        self.sd_model: Optional[sd_models_types.WebuiSdModel] = None
         self.loaded_sd_models = []
         self.was_loaded_at_least_once = False
         self.lock = threading.Lock()
 
-    def get_sd_model(self):
+    def get_sd_model(self) -> Optional[sd_models_types.WebuiSdModel]:
         if self.was_loaded_at_least_once:
             return self.sd_model
 
@@ -520,6 +535,21 @@ class SdModelData:
 
         if v is not None:
             self.loaded_sd_models.insert(0, v)
+
+    def unload_current(self):
+        with self.lock:
+            try:
+                self.loaded_sd_models.remove(self.sd_model)
+            except ValueError:
+                logger.warning("Failed to remove sd_model from loaded_sd_models when unload")
+            self.sd_model = None
+            self.was_loaded_at_least_once = False
+            gc.collect()
+            devices.torch_gc()
+
+    def clear_current(self):
+        self.sd_model = None
+        self.was_loaded_at_least_once = False
 
 
 model_data = SdModelData()
@@ -565,11 +595,10 @@ def send_model_to_trash(m):
     devices.torch_gc()
 
 
-def load_model(checkpoint_info=None, already_loaded_state_dict=None):
-    from modules import sd_hijack
+def load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken_to_load_state_dict=None):
     checkpoint_info = checkpoint_info or select_checkpoint()
 
-    timer = Timer()
+    timer = Timer('sd_models.load_model', checkpoint_info.title)
 
     if model_data.sd_model:
         send_model_to_trash(model_data.sd_model)
@@ -663,6 +692,7 @@ def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
     If no such model exists, returns None.
     Additionaly deletes loaded models that are over the limit set in settings (sd_checkpoints_limit).
     """
+    assert shared.opts is not None, "shared.opts is not initialized"
 
     already_loaded = None
     for i in reversed(range(len(model_data.loaded_sd_models))):
@@ -717,7 +747,7 @@ def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
 def reload_model_weights(sd_model=None, info=None):
     checkpoint_info = info or select_checkpoint()
 
-    timer = Timer()
+    timer = Timer('sd_models.reload_model_weights')
 
     if not sd_model:
         sd_model = model_data.sd_model
@@ -777,13 +807,13 @@ def reload_model_weights(sd_model=None, info=None):
 
 
 def unload_model_weights(sd_model=None, info=None):
-    timer = Timer()
+    timer = Timer('sd_model.unload_model_weights')
 
     if model_data.sd_model:
         model_data.sd_model.to(devices.cpu)
         sd_hijack.model_hijack.undo_hijack(model_data.sd_model)
-        model_data.sd_model = None
         sd_model = None
+        model_data.unload_current()
         gc.collect()
         devices.torch_gc()
 

@@ -18,11 +18,12 @@ class SdVersion(enum.Enum):
 
 
 class NetworkOnDisk:
-    def __init__(self, name, filename):
+    def __init__(self, name, filename, metadata: dict = None):
         self.name = name
         self.filename = filename
-        self.metadata = {}
+        self.metadata = metadata if metadata else {}
         self.is_safetensors = os.path.splitext(filename)[1].lower() == ".safetensors"
+        self.safetensor_metadata = {}
 
         def read_metadata():
             metadata = sd_models.read_metadata_from_safetensors(filename)
@@ -32,7 +33,7 @@ class NetworkOnDisk:
 
         if self.is_safetensors:
             try:
-                self.metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + self.name, filename, read_metadata)
+                self.safetensor_metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + self.name, filename, read_metadata)
             except Exception as e:
                 errors.display(e, f"reading lora {filename}")
 
@@ -43,12 +44,12 @@ class NetworkOnDisk:
 
             self.metadata = m
 
-        self.alias = self.metadata.get('ss_output_name', self.name)
+        self.alias = self.safetensor_metadata.get('ss_output_name', self.name)
 
         self.hash = None
         self.shorthash = None
         self.set_hash(
-            self.metadata.get('sshs_model_hash') or
+            self.safetensor_metadata.get('sshs_model_hash') or
             hashes.sha256_from_cache(self.filename, "lora/" + self.name, use_addnet_hash=self.is_safetensors) or
             ''
         )
@@ -56,11 +57,11 @@ class NetworkOnDisk:
         self.sd_version = self.detect_version()
 
     def detect_version(self):
-        if str(self.metadata.get('ss_base_model_version', "")).startswith("sdxl_"):
+        if str(self.safetensor_metadata.get('ss_base_model_version', "")).startswith("sdxl_"):
             return SdVersion.SDXL
-        elif str(self.metadata.get('ss_v2', "")) == "True":
+        elif str(self.safetensor_metadata.get('ss_v2', "")) == "True":
             return SdVersion.SD2
-        elif len(self.metadata):
+        elif len(self.safetensor_metadata):
             return SdVersion.SD1
 
         return SdVersion.Unknown

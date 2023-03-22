@@ -2,8 +2,9 @@
 
 function set_theme(theme) {
     var gradioURL = window.location.href;
-    if (!gradioURL.includes('?__theme=')) {
-        window.location.replace(gradioURL + '?__theme=' + theme);
+    const searchParam = new URLSearchParams(window.location.search);
+    if (!gradioURL.includes('__theme=')) {
+      window.location.replace(`${window.location.origin}?${searchParam}&__theme=${theme}`);
     }
 }
 
@@ -112,8 +113,8 @@ function create_submit_args(args) {
     // This can lead to uploading a huge gallery of previously generated images, which leads to an unnecessary delay between submitting and beginning to generate.
     // I don't know why gradio is sending outputs along with inputs, but we can prevent sending the image gallery here, which seems to be an issue for some.
     // If gradio at some point stops sending outputs, this may break something
-    if (Array.isArray(res[res.length - 3])) {
-        res[res.length - 3] = null;
+    if (Array.isArray(res[res.length - 4])) {
+        res[res.length - 4] = null;
     }
 
     return res;
@@ -132,6 +133,8 @@ function showRestoreProgressButton(tabname, show) {
 }
 
 function submit() {
+    checkSignatureCompatibility();
+
     showSubmitButtons('txt2img', false);
 
     var id = randomId();
@@ -197,10 +200,26 @@ function restoreProgressImg2img() {
     return id;
 }
 
+function getImageGenerationTaskId(id_task, tabname){
+    return [localStorage.getItem(`${tabname}_task_id`), tabname];
+}
 
 onUiLoaded(function() {
     showRestoreProgressButton('txt2img', localGet("txt2img_task_id"));
     showRestoreProgressButton('img2img', localGet("img2img_task_id"));
+});
+
+onUiLoaded(function() {
+    let gr_tabs = document.querySelector("#tabs");
+    let tab_items = gr_tabs.querySelectorAll(":scope>.tabitem");
+    let tab_buttons = gr_tabs.querySelector(".tab-nav").querySelectorAll(":scope>button");
+    if (tab_items.length === tab_buttons.length) {
+        tab_items.forEach(function(tab_item, index) {
+            if (tab_item.classList.contains("hidden")) {
+                tab_buttons[index].classList.add("hidden");
+            }
+        });
+    }
 });
 
 
@@ -211,6 +230,75 @@ function modelmerger() {
     var res = create_submit_args(arguments);
     res[0] = id;
     return res;
+}
+
+function debounceCalcuteTimes(func, type, wait=1000,immediate) {
+    let timer = {};
+    timer[type] = null;
+    return function () {
+        let context = this;
+        let args = arguments;
+        if (timer[type]) clearTimeout(timer[type]);
+        if (immediate) {
+            const callNow = !timer;
+            timer[type] = setTimeout(() => {
+                timer = null;
+            }, wait)
+            if (callNow) func.apply(context, args)
+        } else {
+            timer[type] = setTimeout(function(){
+                func.apply(context, args)
+            }, wait);
+        }
+    }
+}
+
+const debounceCalcute = {
+    'txt2img_generate': debounceCalcuteTimes(calcuCreditTimes, 'txt2img_generate'),
+    'img2img_generate': debounceCalcuteTimes(calcuCreditTimes, 'img2img_generate'),
+};
+
+
+async function calcuCreditTimes(width, height, batch_count, batch_size, steps, buttonId, hr_scale = 1, hr_second_pass_steps = 0, enable_hr = false) {
+    try {
+        const response = await fetch(`/api/calculateConsume`, {
+            method: "POST", 
+            credentials: "include",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: buttonId.split('_')[0],
+                image_sizes: [
+                    {
+                        width,
+                        height
+                    }
+                ],
+                batch_count,
+                batch_size,
+                steps,
+                scale: hr_scale,
+                hr_second_pass_steps,
+                hr_scale,
+                enable_hr
+            })
+        });
+        const { inference } = await response.json();
+        const buttonEle = gradioApp().querySelector(`#${buttonId}`);
+        //buttonEle.innerHTML = `Generate <span>(Use ${inference} ${inference === 1 ? 'credit)': 'credits)'}</span> `;
+    } catch(e) {
+        console.log(e);
+    }
+    
+}
+
+function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20, hr_scale = 1, enable_hr = false, hr_second_pass_steps = 0) {
+    debounceCalcute['txt2img_generate'](width, height, batch_count, batch_size, steps, 'txt2img_generate', hr_scale, hr_second_pass_steps, enable_hr);
+}
+
+function updateGenerateBtn_img2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {
+    debounceCalcute['img2img_generate'](width, height, batch_count, batch_size, steps, 'img2img_generate');
 }
 
 
@@ -310,6 +398,12 @@ function restart_reload() {
     return [];
 }
 
+function redirect_to_payment(need_upgrade){
+    if (need_upgrade) {
+        window.location.href = "/user?upgradeFlag=true";
+    }
+}
+
 // Simulate an `input` DOM event for Gradio Textbox component. Needed after you edit its contents in javascript, otherwise your edits
 // will only visible on web page and not sent to python.
 function updateInput(target) {
@@ -327,7 +421,21 @@ function selectCheckpoint(name) {
 
 function currentImg2imgSourceResolution(w, h, scaleBy) {
     var img = gradioApp().querySelector('#mode_img2img > div[style="display: block;"] img');
-    return img ? [img.naturalWidth, img.naturalHeight, scaleBy] : [0, 0, scaleBy];
+    const img2imgScaleDom = gradioApp().querySelector("#img2img_scale");
+    const sliderDom = img2imgScaleDom.querySelector("input[type='range']");
+    const inputDom = img2imgScaleDom.querySelector("input[type='number']");
+    const maxImgSizeLimit = 4096;
+    if (img) {
+        const maxScale = Math.min(Math.floor(maxImgSizeLimit / img.naturalWidth), Math.floor(maxImgSizeLimit / img.naturalHeight)).toFixed(2);
+        if (sliderDom.max !== maxScale) {
+            sliderDom.max = maxScale;
+            inputDom.max = maxScale;
+        }
+        return [img.naturalWidth, img.naturalHeight, scaleBy]
+    }
+
+    return [0, 0, scaleBy];
+
 }
 
 function updateImg2imgResizeToTextAfterChangingImage() {
@@ -366,3 +474,680 @@ function switchWidthHeight(tabname) {
     updateInput(height);
     return [];
 }
+
+function browseWorkspaceModels() {
+    const browseModelsBtn = gradioApp().querySelector('#browse_models_in_workspace');
+    if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide")) {
+        browseModelsBtn.textContent = 'Hide workspace models';
+    } else {
+        browseModelsBtn.textContent = 'Show workspace models';
+    }
+
+    fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
+}
+
+async function browseModels(){
+    fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
+}
+
+let uiPageSize;
+
+function setUiPageSize() {
+    const contentWidth = document.body.clientWidth - 84;
+    uiPageSize = Math.floor(contentWidth / 238) * 2;
+}
+
+function searchModel({page_name, searchValue}) {
+    const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${uiPageSize}` 
+        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${uiPageSize}&need_refresh=false`;
+    return fetchGet(requestUrl);
+}
+
+function searchPublicModel({page_name, searchValue}) {
+    const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${uiPageSize}` 
+        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${uiPageSize}&need_refresh=false`;
+    return fetchGet(requestUrl);
+}
+
+async function getModelFromUrl() {
+
+    // get model form url
+    const urlParam = new URLSearchParams(location.search);
+    // const checkpointModelValueFromUrl = urlParam.get('checkpoint');
+
+    // document.cookie = `selected_checkpoint_model=${checkpointModelValueFromUrl}`;
+    const keyMapModelType = {
+        "checkpoint": "checkpoints",
+        "c": "checkpoints",
+        "lora": "lora",
+        "l": "lora",
+        "ti": "textual_inversion",
+        "t": "textual_inversion",
+        "hn": "hypernetworks",
+        "h": "hypernetworks",
+        "lycoris": "lycoris",
+        "y": "lycoris",
+    }
+
+    const promiseList = [];
+    const urlList = Array.from(urlParam.entries());
+    const urlKeys =  [];
+    const urlValues =  [];
+    let checkpoint = null;
+
+    for (const [key, value] of urlList) {
+        if (keyMapModelType[key]) {
+            if (checkpoint) {
+                notifier.alert('There are multiple checkpoint in the url, we will use the first one and discard the rest')
+                break;
+            }
+            if (key === 'checkpoint') {
+                checkpoint = value;
+            }
+            // query is in public models
+            const publicModelResponse = searchPublicModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
+            promiseList.push(publicModelResponse);
+            urlKeys.push(key);
+            urlValues.push(value);
+        }
+    }
+
+    if(promiseList.length === 0) return;
+    const allPromise = Promise.all(promiseList);
+
+    notifier.asyncBlock(allPromise, async (promisesRes) => {
+        promisesRes.forEach(async (publicModelResponse, index) => {
+            if (publicModelResponse && publicModelResponse.status === 200) {
+                const { model_list, allow_negative_prompt } = await publicModelResponse.json();
+                if (model_list && model_list.length > 0) {
+                        // add to personal workspace
+                        const res = await fetchPost({ data: {model_id: model_list[0].id}, url: `/internal/favorite_models` });
+                        if(res.status === 200) {
+                            notifier.success(`Added model ${model_list[0].name} to your workspace successfully.`)
+                        } else if (res.status === 409) {
+                            const { detail } = await res.json();
+                            notifier.info(detail);
+                        } else {
+                            notifier.alert(`Added model ${model_list[0].name} to your workspace Failed`)
+                        }
+                        if(urlKeys[index] === 'checkpoint') {
+                            // checkpoint dont need to replace text
+                            selectCheckpoint(model_list[0].sha256 || model_list[0].shorthash || model_list[0].name);
+                        } else {
+                            if (model_list[0].prompt) {
+                                cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);
+                            }
+                        }
+                } else {
+                    fetchPost({
+                        data: {"sha256": urlValues[index]},
+                        url: "/download-civitai-model"
+                    })
+                    notifier.warning(`We could not find model (${urlValues[index]}) in our library. Trying to download it from Civitai, it could take up to 5 minutes. Meanwhile, feel free to check out thousands of models already in our library.`, {
+                        labels: {
+                            warning: 'DOWNLOADIND MODEL'
+                        }
+                    })
+                }
+             } else {
+                notifier.alert(`Query Failed`);
+             }
+        })
+    });
+}
+
+function imgExists(url, imgNode, name){
+    const img = new Image();
+    img.src= url;
+    img.onerror = () => {
+        imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=random&format=svg`
+        joinShareGroup(name, imgNode.src);
+    }
+    img.onload = () => {
+        imgNode.src = url;
+        joinShareGroup(name, url);
+    }
+}
+
+function getSubscribers(interval = 10, timeoutId = null)
+{
+    const latestSubscribers = fetchGet(`/subscriptions/latest?interval=${interval}`);
+    latestSubscribers.then(async (response) => {
+        if (response.ok) {
+            const newSubscribers = await response.json();
+            if (newSubscribers.current_tier != "free") {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            } else {
+                newSubscribers.subscribers.forEach((newSubscriber) => {
+                    const notificationElem = notifier.success(
+                        `<div class="notification-sub-main" style="width: 285px"><b class="notification-sub-email">${newSubscriber.email}</b> just subscribed to our basic plan &#129395 <a class="notification-upgrade-hyperlink" href="/user#/subscription?type=subscription" target="_blank">Click here to upgrade</a> and enjoy 5000 credits monthly!</div>`,
+                        {labels: {success: ""}, animationDuration: 800, durations: {success: 8000}}
+                    );
+                    if (typeof posthog === 'object') {
+                        notificationElem.querySelector(".notification-upgrade-hyperlink").addEventListener("click", () => {
+                            posthog.capture('Notification upgrade link clicked', {
+                                subscriber_email: newSubscriber.email,
+                            });
+                        });
+                    }
+                });
+            }
+        }
+    });
+}
+
+async function checkSignatureCompatibility(timeoutId = null)
+{
+    const txt2imgSignaturePromise = fetchGet("/internal/signature/txt2img");
+    const img2imgSignaturePromise = fetchGet("/internal/signature/img2img");
+
+    const currentTxt2imgSignature = gradioApp().querySelector("#txt2img_signature textarea").value;
+    const currentTxt2imgFnIndex = gradioApp().querySelector("#txt2img_function_index textarea").value;
+    const currentImg2imgSignature = gradioApp().querySelector("#img2img_signature textarea").value;
+    const currentImg2imgFnIndex = gradioApp().querySelector("#img2img_function_index textarea").value;
+
+    let needRefresh = false;
+
+    txt2imgSignaturePromise
+    .then(response => {
+        if (response.status === 200) {
+            return response.json();
+        }
+        return Promise.reject(response);
+    })
+    .then((txt2imgSignature) => {
+        if (txt2imgSignature && txt2imgSignature.signature && txt2imgSignature.fn_index) {
+            if ((txt2imgSignature.signature != currentTxt2imgSignature || txt2imgSignature.fn_index != currentTxt2imgFnIndex) && !needRefresh)
+            {
+                let onRefresh = () => {location.reload();};
+                needRefresh = true;
+                if (timeoutId)
+                {
+                    clearTimeout(timeoutId);
+                }
+                notifier.confirm(
+                    'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+                    onRefresh,
+                    false,
+                    {
+                        labels: {
+                        confirm: 'Page Need Refresh'
+                        }
+                    }
+                );
+            }
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+
+    img2imgSignaturePromise
+    .then(response => {
+        if (response.status === 200) {
+            return response.json();
+        }
+        return Promise.reject(response);
+    })
+    .then((img2imgSignature) => {
+        if (img2imgSignature && img2imgSignature.signature && img2imgSignature.fn_index) {
+            if ((img2imgSignature.signature != currentImg2imgSignature || img2imgSignature.fn_index != currentImg2imgFnIndex) && !needRefresh)
+            {
+                let onRefresh = () => {location.reload();};
+                needRefresh = true;
+                if (timeoutId)
+                {
+                    clearTimeout(timeoutId);
+                }
+                notifier.confirm(
+                    'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+                    onRefresh,
+                    false,
+                    {
+                        labels: {
+                        confirm: 'Page Need Refresh'
+                        }
+                    }
+                );
+            }
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+async function monitorSignatureChange() {
+    const timeoutId = setTimeout(monitorSignatureChange, 30000);
+    checkSignatureCompatibility(timeoutId);
+}
+
+async function pullNewSubscribers() {
+    const interval = 10;
+    const timeoutId = setTimeout(pullNewSubscribers, interval * 1000);
+    getSubscribers(interval, timeoutId);
+}
+
+function getCurrentUserName() {
+    const userName = gradioApp().querySelector(
+        "div.user_info > div > span").textContent;
+    return userName;
+}
+
+function getCurrentUserAvatar() {
+    const userAvatarUrl = gradioApp().querySelector(
+        "div.user_info > a > img").src;
+    return userAvatarUrl;
+}
+
+function preloadImage(url, onloadCallback, onerrorCallback)
+{
+    let img = new Image();
+    img.src = url;
+    img.onload = onloadCallback;
+    img.onerror = onerrorCallback;
+}
+
+const loadImages = (htmlResponse) => new Promise((resolve, reject) => {
+    let doc = document.implementation.createHTMLDocument();
+    doc.body.innerHTML = htmlResponse;
+    const imgs = doc.body.querySelectorAll("img");
+    const totalNumImages = imgs.length;
+    let imageCount = 0;
+
+    const imageLoadCallback = () => {
+        imageCount += 1;
+        if (imageCount == totalNumImages) {
+            resolve(doc);
+        }
+    }
+    const onerrorCallback = (error) => {reject(error);}
+    imgs.forEach(elem => {
+        preloadImage(elem.src, imageLoadCallback, onerrorCallback);
+    });
+});
+
+function renderInPopup(doc) {
+    let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+        return el;
+    });
+    for (const index in arrayScripts) {
+        doc.body.removeChild(arrayScripts[index]);
+    }
+    notifier.modal(doc.body.innerHTML);
+    for (const index in arrayScripts) {
+        let new_script = document.createElement("script");
+        if (arrayScripts[index].src) {
+            new_script.src = arrayScripts[index].src;
+        } else {
+            new_script.innerHTML = arrayScripts[index].innerHTML;
+        }
+        document.body.appendChild(new_script);
+    }
+}
+
+function popupHtmlResponse(htmlResponse) {
+    loadImages(htmlResponse)
+    .then((doc) => {renderInPopup(doc);})
+    .catch((error) => {console.error("Error:", error)});
+}
+
+function showInspirationPopup() {
+    if (typeof posthog === 'object') {
+      posthog.capture('Inspiration button clicked.');
+    }
+    let loadPromise =new Promise((resolve, reject) => {
+      fetch('/inspire/html', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+          })
+      })
+      .then(response => {
+          if (response.status === 200) {
+              return response.text();
+          }
+          return Promise.reject(response);
+      })
+      .then(htmlResponse => {
+          loadImages(htmlResponse)
+          .then((doc) => {resolve(doc)})
+          .catch((error) => {reject(error)});
+      })
+      .catch((error) => {reject(error)});
+    });
+    notifier.async(
+      loadPromise,
+      (doc) => {renderInPopup(doc);},
+      (error) => {console.error('Error:', error);},
+      "Selecting a good piece for you!"
+    );
+}
+
+async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null) {
+    if (!userName) {
+        userName = getCurrentUserName();
+    }
+    if (!userAvatarUrl) {
+        userAvatarUrl = getCurrentUserAvatar();
+    }
+    if (share_id) {
+        fetch('/share/group/join', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                group_info: {
+                    share_id: share_id
+                },
+                avatar: {
+                    avatar_url: userAvatarUrl,
+                    user_name: userName
+                }
+            })
+        })
+        .then(response => {
+            if (response.status === 200) {
+                return response.json();
+            }
+            return Promise.reject(response);
+        })
+        .then((data) => {
+            if (data.event_code != 202) {
+                fetch('/share/group/join/html', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_name: userName,
+                        user_avatar_url: userAvatarUrl,
+                        event_code: data.event_code,
+                        share_group: data.share_group
+                    })
+                })
+                .then(response => {
+                    if (response.status === 200) {
+                        return response.text();
+                    }
+                    return Promise.reject(response);
+                })
+                .then(popupHtmlResponse)
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+}
+
+async function joinShareGroup(userName=null, avatarUrl=null) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const share_id = urlParams.get('share_id');
+
+    if (share_id) {
+      joinShareGroupWithId(share_id, userName, avatarUrl);
+    } else {
+      notifyUserTheShareCampaign(userName, avatarUrl);
+    }
+}
+
+function notifyUserTheShareCampaign(userName, avatarUrl) {
+    const showed = window.Cookies.get("_1000by1000showed");
+    if (!showed) {
+        if (!userName) {
+            userName = getCurrentUserName();
+        }
+        if (!avatarUrl) {
+            avatarUrl = getCurrentUserAvatar();
+        }
+        fetch('/share/group/create/html', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ avatar_url: avatarUrl, user_name: userName })
+        })
+        .then(response => {
+            if (response.status === 200) {
+                return response.text();
+            }
+            return Promise.reject(response);
+        })
+        .then((data) => {
+            let doc = document.implementation.createHTMLDocument();
+            doc.body.innerHTML = data;
+            let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+                return el;
+            });
+            for (const index in arrayScripts) {
+                doc.body.removeChild(arrayScripts[index]);
+            }
+            const shareButton = doc.body.querySelector("button.share-group-share-btn");
+            const checkStatusButton = doc.body.querySelector("button.share-group-status-btn");
+            if (shareButton || checkStatusButton) {
+                notifier.modal(doc.body.innerHTML);
+                for (const index in arrayScripts) {
+                    let new_script = document.createElement("script");
+                    if (arrayScripts[index].src) {
+                        new_script.src = arrayScripts[index].src;
+                    } else {
+                        new_script.innerHTML = arrayScripts[index].innerHTML;
+                    }
+                    document.body.appendChild(new_script);
+                }
+                window.Cookies.set("_1000by1000showed", true, { expires: 28 });
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+}
+
+function on_sd_model_selection_updated(model_title){
+    return [model_title, model_title]
+}
+
+function check_tab(tabName, tabContainerId, element) {
+  let switchBackToText2img = () => {
+    const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
+    gradioApp().querySelectorAll("#tabs > div.tab-nav > button")[
+      Array.from(tabItems).findIndex(el => el.id === "tab_txt2img")]
+      .click();
+  };
+  let onOk = () => {
+    switchBackToText2img();
+    element.setAttribute("data-uprade-notifier", "");
+    window.location.href = "/user#/subscription?type=subscription";
+  };
+  let onCancel = () => {
+    switchBackToText2img();
+    element.setAttribute("data-uprade-notifier", "");
+  }
+  return remind_user_friendly(tabName, onOk, onCancel, element);
+}
+
+function check_feature(featureName, featureContainerId, element) {
+  let closeAccordin = () => {
+    let labelWrapper = Array.from(element.querySelectorAll(".gradio-accordion > .label-wrap > span"))
+      .find(el => el.textContent.includes(featureName));
+    if (labelWrapper.nextElementSibling.textContent.includes("▼")) {
+      labelWrapper.click();
+    }
+  };
+  let onOk = () => {
+    closeAccordin();
+    element.setAttribute("data-uprade-notifier", "");
+    window.location.href = "/user#/subscription?type=subscription";
+  };
+  let onCancel = () => {
+    closeAccordin();
+    element.setAttribute("data-uprade-notifier", "");
+  }
+  return remind_user_friendly(featureName, onOk, onCancel, element);
+}
+
+function remind_user_friendly(name, onOk, onCancel, element) {
+  let reminder_function = (event) => {
+    event.stopPropagation();
+    const notified = element.getAttribute("data-uprade-notifier");
+    if (!notified) {
+      notifier.confirm(
+        `${name} is not available in the current plan. Click the button to upgrade to enjoy these features.`,
+        onOk,
+        onCancel,
+        {
+          labels: {
+            confirm: 'Upgrade Now',
+            confirmOk: 'Upgrade'
+          }
+        }
+      );
+      element.setAttribute("data-uprade-notifier", true);
+    }
+  };
+  return reminder_function;
+}
+
+function add_event_listener_to_tabs_and_features(options) {
+  options.not_allowed_tabs.forEach((tabInfo) => {
+    const tabContainer = gradioApp().querySelector(`#${tabInfo.element_id}`);
+    if (tabContainer) {
+      tabContainer.addEventListener("click", check_tab(tabInfo.tab_text, tabInfo.element_id, tabContainer));
+    }
+  });
+  let buttonContainer = gradioApp().querySelector("#tabs > div.tab-nav");
+  buttonContainer.addEventListener("click", (event) => {
+    let target = event.target;
+    const buttons = gradioApp().querySelectorAll("#tabs > div.tab-nav > button");
+    const buttonIndex = Array.from(buttons).findIndex(el => el.textContent === target.textContent);
+    if (buttonIndex >= 0) {
+      const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
+      const relevantTab = tabItems[buttonIndex];
+      options.not_allowed_tabs.forEach((tabInfo) => {
+        if (relevantTab.id.includes(tabInfo.element_id)) {
+          let action = check_tab(tabInfo.tab_text, tabInfo.element_id, target);
+          action(event);
+        }
+      });
+    }
+  });
+  options.not_allowed_features.forEach((featureInfo) => {
+    let featureContainers;
+    if (featureInfo.element_id == "script_list") {
+      const scriptLists = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
+      scriptLists.forEach((scriptList) => {
+        let onOk = () => {
+          scriptList.setAttribute("data-uprade-notifier", "");
+          window.location.href = "/user#/subscription?type=subscription";
+        };
+        let onCancel = () => {
+          scriptList.setAttribute("data-uprade-notifier", "");
+        }
+        scriptList.addEventListener("click", remind_user_friendly(featureInfo.label_name, onOk, onCancel, scriptList));
+      });
+    } else if (featureInfo.element_id) {
+      featureContainers = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
+    } else {
+      featureContainers = Array.from(gradioApp().querySelectorAll(".gradio-group > .gradio-accordion > .label-wrap > span"))
+        .filter(el => el.textContent.includes(featureInfo.label_name)).map(el => el.parentElement.parentElement);
+    }
+    if (featureContainers) {
+      featureContainers.forEach((featureContainer) => {
+        featureContainer.addEventListener("click", check_feature(featureInfo.label_name, featureInfo.element_id, featureContainer));
+      });
+    }
+  });
+}
+
+// get user info
+onUiLoaded(function(){
+    setUiPageSize();
+    // update generate button text
+    updateGenerateBtn_txt2img();
+    updateGenerateBtn_img2img();
+
+    getModelFromUrl();
+
+    const {search} = location;
+    const isDarkTheme = /theme=dark/g.test(search);
+    if (isDarkTheme) {
+        const rightContent = gradioApp().querySelector(".right-content");
+        const imgNodes = rightContent.querySelectorAll("a > img");
+        imgNodes.forEach(item => {
+            item.style.filter = 'invert(100%)';
+        })
+    }
+
+    setTimeout(monitorSignatureChange, 30000);
+    pullNewSubscribers();
+
+    fetch(`/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
+        if (res && res.ok && !res.redirected) {
+            return res.json();
+        }
+    }).then(result => {
+        if (result) {
+                const userContent = gradioApp().querySelector(".user-content");
+                const userInfo = userContent.querySelector(".user_info");
+                if (userInfo) {
+                    userTier = result.tier;
+                    userInfo.style.display = 'flex';
+                    const img = userInfo.querySelector("a > img");
+                    if (img) {
+                        imgExists(result.picture, img, result.name);
+                    }
+                    const name = userInfo.querySelector(".user_info-name > span");
+                    if (name) {
+                        name.innerHTML = result.name;
+                    }
+                    const logOutLink = userInfo.querySelector(".user_info-name > a");
+                    if (logOutLink) {
+                        logOutLink.target="_self";
+                        // remove cookie
+                        logOutLink.onclick = () => {
+                            document.cookie = 'auth-session=;';
+                        }
+                    }
+
+                    if (result.tier === 'Free') {
+                        const upgradeContent = userContent.querySelector("#upgrade");
+                        if (upgradeContent) {
+                            upgradeContent.style.display = 'flex';
+                        }
+                    }
+
+                    if (result.tier === 'Basic') {
+                        gtag('event', 'conversion', {
+                            'send_to': 'AW-347751974/EiR7CPWfu88YEKaM6aUB',
+                            'value': 12.0,
+                            'currency': 'USD'
+                        });
+                        const packageIcon = gradioApp().querySelector('#package');
+                        if (packageIcon) {
+                            packageIcon.style.display = 'flex';
+                            const aLink = packageIcon.querySelector('a');
+                            const spanNode = aLink.querySelector('span');
+                            const resultInfo = {"user_id": result.user_id};
+                            const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+                            const host = judgeEnvironment() === 'prod' ? 'https://buy.stripe.com/00g7sF1K90IXa0UeV5' : 'https://buy.stripe.com/test_9AQ15Uewh6kEb2o9AF';
+                            aLink.href = `${host}?prefilled_email=${result.email}&client_reference_id=${referenceId}`;
+                            spanNode.textContent = isPcScreen ? 'Credits Package' : '';
+                        }
+                    }
+                }
+                if (result.access) {
+                  add_event_listener_to_tabs_and_features(result.access);
+                }
+        }
+    })
+});

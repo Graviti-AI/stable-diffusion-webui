@@ -24,31 +24,29 @@ function setupExtraNetworksForTab(tabname) {
     var sort = gradioApp().getElementById(tabname + '_extra_sort');
     var sortOrder = gradioApp().getElementById(tabname + '_extra_sortorder');
     var refresh = gradioApp().getElementById(tabname + '_extra_refresh');
-    var showDirsDiv = gradioApp().getElementById(tabname + '_extra_show_dirs');
-    var showDirs = gradioApp().querySelector('#' + tabname + '_extra_show_dirs input');
+    var matureLevel = gradioApp().getElementById(tabname+'_mature_level')
 
+    search.classList.add('search');
+    // Sort related functionalities
+    sort.classList.add('sort');
+    sortOrder.classList.add('sortorder');
     sort.dataset.sortkey = 'sortDefault';
-    tabs.appendChild(searchDiv);
+
+    matureLevel.classList.add('mature_level');
+
+    tabs.appendChild(search);
     tabs.appendChild(sort);
     tabs.appendChild(sortOrder);
     tabs.appendChild(refresh);
-    tabs.appendChild(showDirsDiv);
+    tabs.appendChild(matureLevel);
 
     var applyFilter = function() {
-        var searchTerm = search.value.toLowerCase();
+        const model_type = currentTab.get(tabname);
+        // reset page
+        const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+        currentPageForTabs.set(currentPageTabsId, 1);
 
-        gradioApp().querySelectorAll('#' + tabname + '_extra_tabs div.card').forEach(function(elem) {
-            var searchOnly = elem.querySelector('.search_only');
-            var text = elem.querySelector('.name').textContent.toLowerCase() + " " + elem.querySelector('.search_term').textContent.toLowerCase();
-
-            var visible = text.indexOf(searchTerm) != -1;
-
-            if (searchOnly && searchTerm.length < 4) {
-                visible = false;
-            }
-
-            elem.style.display = visible ? "" : "none";
-        });
+        fetchHomePageDataAndUpdateList({tabname, model_type, page: 1, loading: false});
     };
 
     var applySort = function() {
@@ -88,7 +86,10 @@ function setupExtraNetworksForTab(tabname) {
     };
 
     search.addEventListener("input", applyFilter);
-    applyFilter();
+
+    //applyFilter();
+
+    // Sort selections
     ["change", "blur", "click"].forEach(function(evt) {
         sort.querySelector("input").addEventListener(evt, applySort);
     });
@@ -99,14 +100,6 @@ function setupExtraNetworksForTab(tabname) {
 
     extraNetworksApplyFilter[tabname] = applyFilter;
 
-    var showDirsUpdate = function() {
-        var css = '#' + tabname + '_extra_tabs .extra-network-subdirs { display: none; }';
-        toggleCss(tabname + '_extra_show_dirs_style', css, !showDirs.checked);
-        localSet('extra-networks-show-dirs', showDirs.checked ? 1 : 0);
-    };
-    showDirs.checked = localGet('extra-networks-show-dirs', 1) == 1;
-    showDirs.addEventListener("change", showDirsUpdate);
-    showDirsUpdate();
 }
 
 function applyExtraNetworkFilter(tabname) {
@@ -115,9 +108,11 @@ function applyExtraNetworkFilter(tabname) {
 
 var extraNetworksApplyFilter = {};
 var activePromptTextarea = {};
+let pageSize;
+let homePageMatureLevel = "None";
 
 function setupExtraNetworks() {
-    setupExtraNetworksForTab('txt2img');
+    // setupExtraNetworksForTab('txt2img');
     setupExtraNetworksForTab('img2img');
 
     function registerPrompt(tabname, id) {
@@ -138,9 +133,9 @@ function setupExtraNetworks() {
     registerPrompt('img2img', 'img2img_neg_prompt');
 }
 
-onUiLoaded(setupExtraNetworks);
 
 var re_extranet = /<([^:]+:[^:]+):[\d.]+>(.*)/;
+//var re_extranet = /<([^:]+:[^:]+):[\d.]+>/;
 var re_extranet_g = /\s+<([^:]+:[^:]+):[\d.]+>/g;
 
 function tryToRemoveExtraNetworkFromPrompt(textarea, text) {
@@ -214,56 +209,71 @@ function extraNetworksSearchButton(tabs_id, event) {
     updateInput(searchTextarea);
 }
 
-var globalPopup = null;
-var globalPopupInner = null;
-function closePopup() {
-    if (!globalPopup) return;
+var globalPopup = {
+    meta: null,
+    gallary: null,
+    common: null,
+};
+var globalPopupInner = {
+    meta: null,
+    gallary: null,
+    common: null,
+};
 
-    globalPopup.style.display = "none";
+function closePopup(type='common') {
+    if (!globalPopup[type]) return;
+
+    globalPopup[type].style.display = "none";
 }
-function popup(contents) {
-    if (!globalPopup) {
-        globalPopup = document.createElement('div');
-        globalPopup.onclick = closePopup;
-        globalPopup.classList.add('global-popup');
+
+function popup(contents, type='common') {
+    if (!globalPopup[type]) {
+        globalPopup[type] = document.createElement('div');
+        globalPopup[type].onclick = function() {
+            globalPopup[type].style.display = "none";
+        };
+        globalPopup[type].classList.add('global-popup');
 
         var close = document.createElement('div');
         close.classList.add('global-popup-close');
-        close.onclick = closePopup;
+        close.onclick = function() {
+            globalPopup[type].style.display = "none";
+        };
         close.title = "Close";
-        globalPopup.appendChild(close);
+        globalPopup[type].appendChild(close);
 
-        globalPopupInner = document.createElement('div');
-        globalPopupInner.onclick = function(event) {
+        globalPopupInner[type] = document.createElement('div');
+        globalPopupInner[type].onclick = function(event) {
             event.stopPropagation(); return false;
         };
-        globalPopupInner.classList.add('global-popup-inner');
-        globalPopup.appendChild(globalPopupInner);
+        globalPopupInner[type].classList.add('global-popup-inner');
+        globalPopup[type].appendChild(globalPopupInner[type]);
 
-        gradioApp().querySelector('.main').appendChild(globalPopup);
+        gradioApp().querySelector('.main').appendChild(globalPopup[type]);
+        //gradioApp().appendChild(globalPopup[type]);
     }
 
-    globalPopupInner.innerHTML = '';
-    globalPopupInner.appendChild(contents);
+    globalPopupInner[type].innerHTML = '';
+    globalPopupInner[type].appendChild(contents);
 
-    globalPopup.style.display = "flex";
+    globalPopup[type].style.display = "flex";
 }
 
 var storedPopupIds = {};
-function popupId(id) {
+function popupId(id, type='common') {
     if (!storedPopupIds[id]) {
         storedPopupIds[id] = gradioApp().getElementById(id);
     }
 
-    popup(storedPopupIds[id]);
+    popup(storedPopupIds[id], type);
 }
 
 function extraNetworksShowMetadata(text) {
-    var elem = document.createElement('pre');
+    var elem = document.createElement('div');
     elem.classList.add('popup-metadata');
-    elem.textContent = text;
+    elem.innerHTML = text;
 
-    popup(elem);
+    popup(elem, 'meta');
 }
 
 function requestGet(url, data, handler, errorHandler) {
@@ -292,20 +302,24 @@ function requestGet(url, data, handler, errorHandler) {
     xhr.send(js);
 }
 
-function extraNetworksRequestMetadata(event, extraPage, cardName) {
-    var showError = function() {
-        extraNetworksShowMetadata("there was an error getting metadata");
-    };
+async function extraNetworksRequestMetadata(event, extraPage, cardName) {
+    event.stopPropagation()
 
-    requestGet("./sd_extra_networks/metadata", {page: extraPage, item: cardName}, function(data) {
-        if (data && data.metadata) {
-            extraNetworksShowMetadata(data.metadata);
-        } else {
-            showError();
+    var showError = function(){ extraNetworksShowMetadata("<h1>there was an error getting metadata</h1>"); }
+
+    try {
+        const response = await fetch(
+            `/sd_extra_networks/metadata?page=${encodeURIComponent(extraPage)}&item=${encodeURIComponent(cardName)}`,
+            {method: "GET"});
+        const metadata_html_str = await response.text();
+        if(metadata_html_str){
+            extraNetworksShowMetadata(metadata_html_str)
+        } else{
+            showError()
         }
-    }, showError);
-
-    event.stopPropagation();
+    } catch (error) {
+        showError()
+  }
 }
 
 var extraPageUserMetadataEditors = {};
@@ -347,3 +361,193 @@ function extraNetworksRefreshSingleCard(page, tabname, name) {
         }
     });
 }
+
+async function updatePrivatePreviews(tabname, model_type) {
+    var cards = gradioApp().querySelectorAll(`#${tabname}_${model_type}_cards>div`);
+    const response = await fetch(`/sd_extra_networks/private_previews?page_name=${model_type}`, {
+        method: "GET", cache: "no-cache"});
+    const private_preview_list = await response.json();
+    cards.forEach((card) => {
+        const filename = card.getAttribute("filename");
+        if (filename) {
+            private_preview_list.forEach((preview_info) => {
+                if (preview_info.filename_no_extension == filename) {
+                    card.style.backgroundImage = preview_info.css_url;
+                }
+            });
+        }
+    });
+}
+
+function updateTabPrivatePreviews(tabname) {
+    refreshModelList({tabname})
+}
+
+const currentPageForTabs = new Map();
+const totalCountForTabs = new Map();
+let currentTab = new Map();
+currentTab.set('txt2img', 'checkpoints');
+currentTab.set('img2img', 'checkpoints');
+
+async function handleData({response, tabname, model_type }) {
+    const cardsParentNode = gradioApp().querySelector(`#${tabname}_${model_type}_cards`);
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const currentTotalCountId = `${tabname}_${model_type}_total_count`;
+    const totalPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .total-page`);
+    const currentPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .current-page`);
+    const addModelBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_add_model-to-workspace`);
+    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card`);
+    const uploadPrivateBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card-private`);
+    const currentPage = currentPageForTabs.get(currentPageTabsId) || 1;
+
+    const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt = false } = await response.json();
+
+    // set page
+    currentPageForTabs.set(currentPageTabsId, resPage || currentPage);
+    currentPageNode.innerHTML = resPage || currentPage;
+
+    // set total count
+    totalCountForTabs.set(currentTotalCountId, totalCount);
+    totalPageNode.innerHTML = Math.ceil(totalCount / pageSize);
+
+    // remove child node
+    const cards = cardsParentNode.querySelectorAll(".card");
+    cards.forEach(card => {
+        // exclude upload button
+        if (
+            card.id !== uploadBtnNode.id &&
+            card.id !== addModelBtnNode.id &&
+            card.id !== uploadPrivateBtnNode.id
+        ) {
+            cardsParentNode.removeChild(card);
+        }
+    })
+
+    if (model_list && model_list.length === 0) {
+        addModelBtnNode.style.display = 'block';
+    } else {
+        addModelBtnNode.style.display = 'none';
+    }
+
+    // add new child
+    model_list.forEach(item => {
+        const cardNode = document.createElement('div');
+        cardNode.className = 'card';
+        if (item.onclick) {
+            cardNode.setAttribute('onclick', item.onclick.replaceAll(/\"/g, '').replaceAll(/&quot;/g, '"'));
+        } else {
+            cardNode.setAttribute('onclick', `return cardClicked('${tabname}', ${item.prompt}, ${allow_negative_prompt})`)
+        }
+
+        cardNode.setAttribute('mature-level', item.preview_mature_level || 'None');
+        cardNode.setAttribute('filename', item.name);
+
+        cardNode.innerHTML = `
+            <div class="set-bg-filter"></div>
+            <div class="metadata-button" title="Show metadata" onclick="extraNetworksRequestMetadata(event, '${model_type}', '${item.name}')"></div>
+            <div class="actions">
+                <div class="additional">
+                    <ul>
+                        <a title="replace preview image with currently selected in gallery" onclick="return saveCardPreview(event, '${tabname}', '${model_type}/${item.name}.png')" target="_blank">
+                            set private preview
+                        </a>
+                    </ul>
+                    <span class="search_term" style="display: none;">${item.search_term || ''}</span>
+                </div>
+                <span class="name">${item.name_for_extra}</span>
+                <span class="description"></span>
+            </div>
+
+        `
+        const bgFilter = cardNode.querySelector('.set-bg-filter');
+        if (item.preview) {
+            bgFilter.style.backgroundImage = `url('${item.preview.replace(/\s/g, encodeURIComponent(' '))}')`;
+        }
+
+        if (judgeLevel(homePageMatureLevel, cardNode.getAttribute('mature-level'))) {
+            bgFilter.style['filter'] = 'blur(10px)';
+        }
+        cardsParentNode.insertBefore(cardNode, uploadBtnNode);
+    })
+}
+
+async function fetchHomePageDataAndUpdateList({tabname, model_type, page, loading=true}) {
+   const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
+   const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
+        : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`
+   const promise = fetchGet(requestUrl);
+    
+   // loading
+    if (loading) {
+        notifier.asyncBlock(promise, (response) => {
+            handleData({response, tabname, model_type })
+        });
+    } else {
+        const response = await promise;
+        handleData({ response, tabname, model_type })
+    }
+}
+
+function updatePage(tabname, model_type, page_type) {
+    let currentPage = 1;
+    let totalCount;
+
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const currentTotalCountId = `${tabname}_${model_type}_total_count`;
+
+    currentPage = currentPageForTabs.get(currentPageTabsId);
+    totalCount = totalCountForTabs.get(currentTotalCountId);
+
+    if (currentPage === 1 && page_type === 'previous') {
+        return
+     }
+     if (currentPage * pageSize >= totalCount && page_type === 'next') {
+        return
+     }
+    const page = page_type === 'previous' ? currentPage - 1 : currentPage + 1;
+    fetchHomePageDataAndUpdateList({ tabname, model_type, page });
+}
+
+function setPageSize() {
+    const contentWidth = document.body.clientWidth - 84;
+    pageSize = Math.floor(contentWidth / 238) * 2;
+}
+
+async function refreshModelList({tabname}) {
+    const model_type = currentTab.get(tabname);
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const currentPage = currentPageForTabs.get(currentPageTabsId) || 1;
+    fetchHomePageDataAndUpdateList({tabname, model_type, page: currentPage, need_refresh: true});
+}
+
+function modelTabClick({tabname, model_type}) {
+    let currentPage = 1;
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    if (currentPageForTabs.has(currentPageTabsId)) {
+        currentPage = currentPageForTabs.get(currentPageTabsId);
+    } else {
+        currentPageForTabs.set(currentPageTabsId, 1);
+    }
+
+    currentTab.set(tabname, model_type);
+
+    fetchHomePageDataAndUpdateList({tabname, model_type, page: currentPage});
+}
+
+function changeHomeMatureLevel(selectedLevel, {tabname}) {
+    const modelType = currentTab.get(tabname);
+    homePageMatureLevel = selectedLevel;
+    const cardList = gradioApp().querySelector(`#${tabname}_${modelType}_cards`).querySelectorAll('.card');
+    cardList.forEach(card => {
+        if (card.id !== `${tabname}_${modelType}_upload_button-card` && card.id !== `${tabname}_${modelType}_add_model-to-workspace`) {
+            const needBlur = judgeLevel(selectedLevel, card.getAttribute('mature-level'));
+            const bgFilter = card.querySelector('.set-bg-filter');
+            bgFilter.style['filter'] = needBlur ? 'blur(10px)' : 'none';
+        }
+    })
+}
+
+onUiLoaded(function() {
+    setPageSize();
+    setupExtraNetworks();
+});

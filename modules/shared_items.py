@@ -1,4 +1,7 @@
 import sys
+from typing import Optional
+
+import gradio as gr
 
 from modules.shared_cmd_options import cmd_opts
 
@@ -44,14 +47,14 @@ def refresh_unet_list():
     modules.sd_unet.list_unets()
 
 
-def list_checkpoint_tiles():
+def list_checkpoint_tiles(request: Optional[gr.Request] = None):
     import modules.sd_models
-    return modules.sd_models.checkpoint_tiles()
+    return modules.sd_models.checkpoint_tiles(request)
 
 
-def refresh_checkpoints():
+def refresh_checkpoints(request: gr.Request):
     import modules.sd_models
-    return modules.sd_models.list_models()
+    return modules.sd_models.list_models(request)
 
 
 def list_samplers():

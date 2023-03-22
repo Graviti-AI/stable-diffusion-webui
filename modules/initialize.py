@@ -3,8 +3,9 @@ import logging
 import sys
 import warnings
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
 
-from modules.timer import startup_timer
+from modules.launch_utils import startup_timer
 
 
 def imports():
@@ -47,6 +48,42 @@ def check_versions():
 
 
 def initialize():
+    import tempfile
+    from modules import shared
+    if shared.opts is None:
+        raise ValueError("shared.opts is None. Shared has not been initialized.")
+    # hijack tempdir to our temp_dir, to share tmp files between clusters
+    tempfile.tempdir = shared.opts.temp_dir
+
+    import torch
+    import safetensors.torch
+    from modules import call_queue
+    from modules.lru_cache import LruCache
+    from modules.cache import use_sdd_to_cache_remote_file, setup_remote_file_cache
+    from modules.shared_cmd_options import cmd_opts
+    from modules.paths_internal import models_path
+
+    call_queue.gpu_worker_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gpu_worker_")
+    file_mover_worker_pool = ThreadPoolExecutor(thread_name_prefix="file_mover_threads_")
+    lru_cache = LruCache()
+    setup_remote_file_cache(lru_cache, cmd_opts.model_cache_dir)
+    torch.load = use_sdd_to_cache_remote_file(
+        torch.load,
+        lru_cache,
+        models_path,
+        cmd_opts.model_cache_dir,
+        cmd_opts.model_cache_src.split(','),
+        file_mover_worker_pool,
+        cache_size_gb=cmd_opts.model_cache_max_size)
+    safetensors.torch.load_file = use_sdd_to_cache_remote_file(
+        safetensors.torch.load_file,
+        lru_cache,
+        models_path,
+        cmd_opts.model_cache_dir,
+        cmd_opts.model_cache_src.split(','),
+        file_mover_worker_pool,
+        cache_size_gb=cmd_opts.model_cache_max_size)
+
     from modules import initialize_util
     initialize_util.fix_torch_version()
     initialize_util.fix_asyncio_event_loop_policy()
@@ -60,8 +97,6 @@ def initialize():
     from modules import sd_models
     sd_models.setup_model()
     startup_timer.record("setup SD model")
-
-    from modules.shared_cmd_options import cmd_opts
 
     from modules import codeformer_model
     warnings.filterwarnings(action="ignore", category=UserWarning, module="torchvision.transforms.functional_tensor")
@@ -123,8 +158,8 @@ def initialize_rest(*, reload_script_modules=False):
     sd_vae.refresh_vae_list()
     startup_timer.record("refresh VAE")
 
-    from modules import textual_inversion
-    textual_inversion.textual_inversion.list_textual_inversion_templates()
+    import modules.textual_inversion.textual_inversion as textual_inversion
+    textual_inversion.list_textual_inversion_templates()
     startup_timer.record("refresh textual inversion templates")
 
     from modules import script_callbacks, sd_hijack_optimizations, sd_hijack
@@ -136,27 +171,28 @@ def initialize_rest(*, reload_script_modules=False):
     sd_unet.list_unets()
     startup_timer.record("scripts list_unets")
 
-    def load_model():
-        """
-        Accesses shared.sd_model property to load model.
-        After it's available, if it has been loaded before this access by some extension,
-        its optimization may be None because the list of optimizaers has neet been filled
-        by that time, so we apply optimization again.
-        """
 
-        shared.sd_model  # noqa: B018
+    if not cmd_opts.skip_load_default_model:
+        from modules import shared_items
+        shared_items.reload_hypernetworks()
+        startup_timer.record("reload hypernetworks")
+        def load_model():
+            """
+            Accesses shared.sd_model property to load model.
+            After it's available, if it has been loaded before this access by some extension,
+            its optimization may be None because the list of optimizaers has neet been filled
+            by that time, so we apply optimization again.
+            """
 
-        if sd_hijack.current_optimizer is None:
-            sd_hijack.apply_optimizations()
+            shared.sd_model  # noqa: B018
 
-        from modules import devices
-        devices.first_time_calculation()
+            if sd_hijack.current_optimizer is None:
+                sd_hijack.apply_optimizations()
 
-    Thread(target=load_model).start()
+            from modules import devices
+            devices.first_time_calculation()
 
-    from modules import shared_items
-    shared_items.reload_hypernetworks()
-    startup_timer.record("reload hypernetworks")
+        Thread(target=load_model).start()
 
     from modules import ui_extra_networks
     ui_extra_networks.initialize()

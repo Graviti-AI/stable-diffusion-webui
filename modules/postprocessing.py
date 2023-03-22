@@ -1,12 +1,14 @@
 import os
 
+import gradio as gr
 from PIL import Image
 
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, generation_parameters_copypaste
 from modules.shared import opts
 
 
-def run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
+def run_postprocessing(
+        request: gr.Request, id_task, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
     devices.torch_gc()
 
     shared.state.begin(job="extras")
@@ -24,6 +26,8 @@ def run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, 
                     fn = os.path.splitext(img.orig_name)[0]
                 yield image, fn
         elif extras_mode == 2:
+            import modules.call_utils
+            modules.call_utils.check_insecure_calls()
             assert not shared.cmd_opts.hide_ui_dir_config, '--hide-ui-dir-config option must be disabled'
             assert input_dir, 'input directory not selected'
 
@@ -41,7 +45,8 @@ def run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, 
     if extras_mode == 2 and output_dir != '':
         outpath = output_dir
     else:
-        outpath = opts.outdir_samples or opts.outdir_extras_samples
+        from modules.paths import Paths
+        outpath = Paths(request).outdir_extras_samples()
 
     infotext = ''
 
@@ -70,7 +75,12 @@ def run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, 
             pp.image.info["postprocessing"] = infotext
 
         if save_output:
-            images.save_image(pp.image, path=outpath, basename=basename, seed=None, prompt=None, extension=opts.samples_format, info=infotext, short_filename=True, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=None)
+            from modules.processing import get_fixed_seed
+            # we make a StableDiffusionProcessing here to let on_image_saved script can get request from it
+            from modules.processing import StableDiffusionProcessing
+            p = StableDiffusionProcessing()
+            p.set_request(request)
+            images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), prompt=None, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=None, p=p, save_to_dirs=True)
 
         if extras_mode != 2 or show_extras_results:
             outputs.append(pp.image)
@@ -82,7 +92,7 @@ def run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, 
     return outputs, ui_common.plaintext_to_html(infotext), ''
 
 
-def run_extras(extras_mode, resize_mode, image, image_folder, input_dir, output_dir, show_extras_results, gfpgan_visibility, codeformer_visibility, codeformer_weight, upscaling_resize, upscaling_resize_w, upscaling_resize_h, upscaling_crop, extras_upscaler_1, extras_upscaler_2, extras_upscaler_2_visibility, upscale_first: bool, save_output: bool = True):
+def run_extras(request: gr.Request, extras_mode, resize_mode, image, image_folder, input_dir, output_dir, show_extras_results, gfpgan_visibility, codeformer_visibility, codeformer_weight, upscaling_resize, upscaling_resize_w, upscaling_resize_h, upscaling_crop, extras_upscaler_1, extras_upscaler_2, extras_upscaler_2_visibility, upscale_first: bool, save_output: bool = True):
     """old handler for API"""
 
     args = scripts.scripts_postproc.create_args_for_run({
@@ -105,4 +115,4 @@ def run_extras(extras_mode, resize_mode, image, image_folder, input_dir, output_
         },
     })
 
-    return run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output=save_output)
+    return run_postprocessing(request, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output=save_output)

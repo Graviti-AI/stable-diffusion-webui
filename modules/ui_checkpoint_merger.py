@@ -16,7 +16,9 @@ def update_interp_description(value):
     return interp_descriptions[value]
 
 
-def modelmerger(*args):
+def modelmerger(request: gr.Request, *args):
+    import modules.call_utils
+    modules.call_utils.check_insecure_calls()
     try:
         results = extras.run_modelmerger(*args)
     except Exception as e:
@@ -83,14 +85,14 @@ class UiCheckpointMerger:
         self.metadata_editor = metadata_editor
         self.blocks = modelmerger_interface
 
-    def setup_ui(self, dummy_component, sd_model_checkpoint_component):
+    def setup_ui(self, dummy_component, sd_model_checkpoint_component, need_upgrade_component):
         self.checkpoint_format.change(lambda fmt: gr.update(visible=fmt == 'safetensors'), inputs=[self.checkpoint_format], outputs=[self.metadata_editor], show_progress=False)
 
         self.read_metadata.click(extras.read_metadata, inputs=[self.primary_model_name, self.secondary_model_name, self.tertiary_model_name], outputs=[self.metadata_json])
 
         self.modelmerger_merge.click(fn=lambda: '', inputs=[], outputs=[self.modelmerger_result])
         self.modelmerger_merge.click(
-            fn=call_queue.wrap_gradio_gpu_call(modelmerger, extra_outputs=lambda: [gr.update() for _ in range(4)]),
+            fn=call_queue.wrap_gradio_gpu_call(modelmerger, extra_outputs=lambda: [gr.update() for _ in range(4)], add_monitor_state=True),
             _js='modelmerger',
             inputs=[
                 dummy_component,
@@ -116,6 +118,7 @@ class UiCheckpointMerger:
                 self.tertiary_model_name,
                 sd_model_checkpoint_component,
                 self.modelmerger_result,
+                need_upgrade_component
             ]
         )
 

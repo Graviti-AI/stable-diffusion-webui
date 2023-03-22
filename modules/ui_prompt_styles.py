@@ -6,8 +6,8 @@ styles_edit_symbol = '\U0001f58c\uFE0F'  # 🖌️
 styles_materialize_symbol = '\U0001f4cb'  # 📋
 
 
-def select_style(name):
-    style = shared.prompt_styles.styles.get(name)
+def select_style(request: gr.Request, name):
+    style = shared.prompt_styles(request).styles.get(name)
     existing = style is not None
     empty = not name
 
@@ -17,36 +17,37 @@ def select_style(name):
     return prompt, negative_prompt, gr.update(visible=existing), gr.update(visible=not empty)
 
 
-def save_style(name, prompt, negative_prompt):
+def save_style(request: gr.Request, name, prompt, negative_prompt):
     if not name:
         return gr.update(visible=False)
 
     style = styles.PromptStyle(name, prompt, negative_prompt)
-    shared.prompt_styles.styles[style.name] = style
-    shared.prompt_styles.save_styles(shared.styles_filename)
+    shared.prompt_styles(request).styles[style.name] = style
+    shared.prompt_styles(request).save_styles(style)
 
     return gr.update(visible=True)
 
 
-def delete_style(name):
-    if name == "":
-        return
+def delete_style(request: gr.Request, name, prompt, negative_prompt):
+    if not name or (not prompt and not negative_prompt):
+        return name, prompt, negative_prompt
 
-    shared.prompt_styles.styles.pop(name, None)
-    shared.prompt_styles.save_styles(shared.styles_filename)
+    style = shared.prompt_styles(request).delete_style(name)
 
-    return '', '', ''
+    if style:
+        return '', '', ''
+    return name, prompt, negative_prompt
 
 
-def materialize_styles(prompt, negative_prompt, styles):
-    prompt = shared.prompt_styles.apply_styles_to_prompt(prompt, styles)
-    negative_prompt = shared.prompt_styles.apply_negative_styles_to_prompt(negative_prompt, styles)
+def materialize_styles(request: gr.Request, prompt, negative_prompt, styles):
+    prompt = shared.prompt_styles(request).apply_styles_to_prompt(prompt, styles)
+    negative_prompt = shared.prompt_styles(request).apply_negative_styles_to_prompt(negative_prompt, styles)
 
     return [gr.Textbox.update(value=prompt), gr.Textbox.update(value=negative_prompt), gr.Dropdown.update(value=[])]
 
 
-def refresh_styles():
-    return gr.update(choices=list(shared.prompt_styles.styles)), gr.update(choices=list(shared.prompt_styles.styles))
+def refresh_styles(request: gr.Request):
+    return gr.update(choices=list(shared.prompt_styles(request).styles)), gr.update(choices=list(shared.prompt_styles(request).styles))
 
 
 class UiPromptStyles:
@@ -54,13 +55,17 @@ class UiPromptStyles:
         self.tabname = tabname
 
         with gr.Row(elem_id=f"{tabname}_styles_row"):
-            self.dropdown = gr.Dropdown(label="Styles", show_label=False, elem_id=f"{tabname}_styles", choices=list(shared.prompt_styles.styles), value=[], multiselect=True, tooltip="Styles")
+            self.dropdown = gr.Dropdown(label="Styles", show_label=False, elem_id=f"{tabname}_styles", choices=list(), value=[], multiselect=True, tooltip="Styles")
             edit_button = ui_components.ToolButton(value=styles_edit_symbol, elem_id=f"{tabname}_styles_edit_button", tooltip="Edit styles")
 
         with gr.Box(elem_id=f"{tabname}_styles_dialog", elem_classes="popup-dialog") as styles_dialog:
             with gr.Row():
-                self.selection = gr.Dropdown(label="Styles", elem_id=f"{tabname}_styles_edit_select", choices=list(shared.prompt_styles.styles), value=[], allow_custom_value=True, info="Styles allow you to add custom text to prompt. Use the {prompt} token in style text, and it will be replaced with user's prompt when applying style. Otherwise, style's text will be added to the end of the prompt.")
-                ui_common.create_refresh_button([self.dropdown, self.selection], shared.prompt_styles.reload, lambda: {"choices": list(shared.prompt_styles.styles)}, f"refresh_{tabname}_styles")
+                self.selection = gr.Dropdown(label="Styles", elem_id=f"{tabname}_styles_edit_select", choices=list(), value=[], allow_custom_value=True, info="Styles allow you to add custom text to prompt. Use the {prompt} token in style text, and it will be replaced with user's prompt when applying style. Otherwise, style's text will be added to the end of the prompt.")
+
+                def current_prompt_styles(request: gr.Request):
+                    return {"choices": list(shared.prompt_styles(request).styles.keys())}
+
+                ui_common.create_refresh_button([self.dropdown, self.selection], shared.reload_style, current_prompt_styles, f"refresh_{tabname}_styles")
                 self.materialize = ui_components.ToolButton(value=styles_materialize_symbol, elem_id=f"{tabname}_style_apply", tooltip="Apply all selected styles from the style selction dropdown in main UI to the prompt.")
 
             with gr.Row():
@@ -78,30 +83,30 @@ class UiPromptStyles:
             fn=select_style,
             inputs=[self.selection],
             outputs=[self.prompt, self.neg_prompt, self.delete, self.save],
-            show_progress=False,
+            show_progress="hidden",
         )
 
         self.save.click(
             fn=save_style,
             inputs=[self.selection, self.prompt, self.neg_prompt],
             outputs=[self.delete],
-            show_progress=False,
-        ).then(refresh_styles, outputs=[self.dropdown, self.selection], show_progress=False)
+            show_progress="hidden",
+        ).then(refresh_styles, outputs=[self.dropdown, self.selection], show_progress="hidden")
 
         self.delete.click(
             fn=delete_style,
-            _js='function(name){ if(name == "") return ""; return confirm("Delete style " + name + "?") ? name : ""; }',
-            inputs=[self.selection],
+            _js='function(name, prompt, neg_prompt){ if(name == "") return ""; return confirm("Delete style " + name + "?") ? name : ""; }',
+            inputs=[self.selection, self.prompt, self.neg_prompt],
             outputs=[self.selection, self.prompt, self.neg_prompt],
-            show_progress=False,
-        ).then(refresh_styles, outputs=[self.dropdown, self.selection], show_progress=False)
+            show_progress="hidden",
+        ).then(refresh_styles, outputs=[self.dropdown, self.selection], show_progress="hidden")
 
         self.materialize.click(
             fn=materialize_styles,
             inputs=[main_ui_prompt, main_ui_negative_prompt, self.dropdown],
             outputs=[main_ui_prompt, main_ui_negative_prompt, self.dropdown],
-            show_progress=False,
-        ).then(fn=None, _js="function(){update_"+tabname+"_tokens(); closePopup();}", show_progress=False)
+            show_progress="hidden",
+        ).then(fn=None, _js="function(){update_"+tabname+"_tokens(); closePopup();}", show_progress="hidden")
 
         ui_common.setup_dialog(button_show=edit_button, dialog=styles_dialog, button_close=self.close)
 

@@ -4,10 +4,12 @@ import sys
 import inspect
 from collections import namedtuple
 from dataclasses import dataclass
+import traceback
 
 import gradio as gr
 
-from modules import shared, paths, script_callbacks, extensions, script_loading, scripts_postprocessing, errors, timer
+from modules.launch_utils import startup_timer
+from modules import shared, paths, script_callbacks, extensions, script_loading, scripts_postprocessing, errors
 
 AlwaysVisible = object()
 
@@ -119,6 +121,16 @@ class Script:
     def before_process(self, p, *args):
         """
         This function is called very early during processing begins for AlwaysVisible scripts.
+        You can modify the processing object (p) here, inject hooks, etc.
+        args contains all values returned by components from ui()
+        """
+
+        pass
+
+    # Defined by Diffus Team
+    def preprocess(self, p, *args):
+        """
+        This function is called at the very beginning of process function for AlwaysVisible scripts.
         You can modify the processing object (p) here, inject hooks, etc.
         args contains all values returned by components from ui()
         """
@@ -367,10 +379,14 @@ def load_scripts():
 
     def orderby(basedir):
         # 1st webui, 2nd extensions-builtin, 3rd extensions
-        priority = {os.path.join(paths.script_path, "extensions-builtin"):1, paths.script_path:0}
-        for key in priority:
-            if basedir.startswith(key):
-                return priority[key]
+        priority = [
+            os.path.join(paths.script_path, "extensions"),
+            os.path.join(paths.script_path, "extensions-builtin"),
+            paths.script_path
+        ]
+        for i in range(len(priority)):
+            if basedir.startswith(priority[i]):
+                return len(priority) - i
         return 9999
 
     for scriptfile in sorted(scripts_list, key=lambda x: [orderby(x.basedir), x]):
@@ -388,7 +404,7 @@ def load_scripts():
         finally:
             sys.path = syspath
             current_basedir = paths.script_path
-            timer.startup_timer.record(scriptfile.filename)
+            startup_timer.record(scriptfile.filename)
 
     global scripts_txt2img, scripts_img2img, scripts_postproc
 
@@ -416,6 +432,7 @@ class ScriptRunner:
         self.infotext_fields = []
         self.paste_field_names = []
         self.inputs = [None]
+        self._is_img2img = None
 
         self.on_before_component_elem_id = {}
         """dict of callbacks to be called before an element is created; key=elem_id, value=list of callbacks"""
@@ -429,6 +446,7 @@ class ScriptRunner:
         self.scripts.clear()
         self.alwayson_scripts.clear()
         self.selectable_scripts.clear()
+        self._is_img2img = is_img2img
 
         auto_processing_scripts = scripts_auto_postprocessing.create_auto_preprocessing_script_data()
 
@@ -541,6 +559,15 @@ class ScriptRunner:
         self.setup_ui_for_section(None)
 
         dropdown = gr.Dropdown(label="Script", elem_id="script_list", choices=["None"] + self.titles, value="None", type="index")
+        if self._is_img2img is not None:
+            tab_id = "tab_img2img" if self._is_img2img else "tab_txt2img"
+            function_name = "modules.img2img.img2img" if self._is_img2img else "modules.txt2img.txt2img"
+            dropdown.select(
+                None,
+                inputs=[],
+                outputs=[dropdown],
+                _js=f"resetMutipliers('{tab_id}', '{function_name}', resetLinkParams = true, resetLinkMultipliers = true)"
+            )
         self.inputs[0] = dropdown
 
         self.setup_ui_for_section(None, self.selectable_scripts)
@@ -611,6 +638,16 @@ class ScriptRunner:
                 script.before_process(p, *script_args)
             except Exception:
                 errors.report(f"Error running before_process: {script.filename}", exc_info=True)
+
+    # Defined by Diffus Team
+    def preprocess(self, p):
+        for script in self.alwayson_scripts:
+            try:
+                script_args = p.script_args[script.args_from:script.args_to]
+                script.preprocess(p, *script_args)
+            except Exception:
+                print(f"Error running preprocess: {script.filename}", file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
 
     def process(self, p):
         for script in self.alwayson_scripts:

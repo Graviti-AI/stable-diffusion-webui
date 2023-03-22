@@ -156,19 +156,19 @@ var addContextMenuEventListener = initResponse[2];
         generateOnRepeat('#img2img_generate', '#img2img_interrupt');
     };
 
-    appendContextMenuOption('#txt2img_generate', 'Generate forever', generateOnRepeat_txt2img);
-    appendContextMenuOption('#txt2img_interrupt', 'Generate forever', generateOnRepeat_txt2img);
-    appendContextMenuOption('#img2img_generate', 'Generate forever', generateOnRepeat_img2img);
-    appendContextMenuOption('#img2img_interrupt', 'Generate forever', generateOnRepeat_img2img);
+    // appendContextMenuOption('#txt2img_generate', 'Generate forever', generateOnRepeat_txt2img);
+    // appendContextMenuOption('#txt2img_interrupt', 'Generate forever', generateOnRepeat_txt2img);
+    // appendContextMenuOption('#img2img_generate', 'Generate forever', generateOnRepeat_img2img);
+    // appendContextMenuOption('#img2img_interrupt', 'Generate forever', generateOnRepeat_img2img);
 
     let cancelGenerateForever = function() {
         clearInterval(window.generateOnRepeatInterval);
     };
 
-    appendContextMenuOption('#txt2img_interrupt', 'Cancel generate forever', cancelGenerateForever);
-    appendContextMenuOption('#txt2img_generate', 'Cancel generate forever', cancelGenerateForever);
-    appendContextMenuOption('#img2img_interrupt', 'Cancel generate forever', cancelGenerateForever);
-    appendContextMenuOption('#img2img_generate', 'Cancel generate forever', cancelGenerateForever);
+    // appendContextMenuOption('#txt2img_interrupt', 'Cancel generate forever', cancelGenerateForever);
+    // appendContextMenuOption('#txt2img_generate', 'Cancel generate forever', cancelGenerateForever);
+    // appendContextMenuOption('#img2img_interrupt', 'Cancel generate forever', cancelGenerateForever);
+    // appendContextMenuOption('#img2img_generate', 'Cancel generate forever', cancelGenerateForever);
 
 })();
 //End example Context Menu Items

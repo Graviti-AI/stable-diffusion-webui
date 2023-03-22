@@ -10,7 +10,8 @@ import psutil
 import re
 
 import launch
-from modules import paths_internal, timer, shared, extensions, errors
+from modules.launch_utils import startup_record
+from modules import paths_internal, shared, extensions, errors
 
 checksum_token = "DontStealMyGamePlz__WINNERS_DONT_USE_DRUGS__DONT_COPY_THAT_FLOPPY"
 environment_whitelist = {
@@ -97,7 +98,7 @@ def get_dict():
         "Inactive extensions": get_extensions(enabled=False),
         "Environment": get_environment(),
         "Config": get_config(),
-        "Startup": timer.startup_record,
+        "Startup": startup_record,
         "Packages": sorted([f"{pkg.key}=={pkg.version}" for pkg in pkg_resources.working_set]),
     }
 

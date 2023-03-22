@@ -1,7 +1,9 @@
+import logging
 import os
 from collections import namedtuple
 from contextlib import closing
 
+import starlette.requests
 import torch
 import tqdm
 import html
@@ -18,7 +20,7 @@ import modules.textual_inversion.dataset
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
 
 from modules.textual_inversion.image_embedding import embedding_to_b64, embedding_from_b64, insert_image_data_embed, extract_image_data_embed, caption_image_overlay
-from modules.textual_inversion.logging import save_settings_to_file
+from modules.textual_inversion.logger import save_settings_to_file
 
 
 TextualInversionTemplate = namedtuple("TextualInversionTemplate", ["name", "path"])
@@ -118,6 +120,11 @@ class EmbeddingDatabase:
         self.embedding_dirs = {}
         self.previously_displayed_embeddings = ()
 
+        # a cache to store loaded embeddings
+        # key: embedding filename
+        # value: embedding data
+        self.loaded_embeddings = {}
+
     def add_embedding_dir(self, path):
         self.embedding_dirs[path] = DirWithTextualInversionEmbeddings(path)
 
@@ -128,18 +135,19 @@ class EmbeddingDatabase:
         return self.register_embedding_by_name(embedding, model, embedding.name)
 
     def register_embedding_by_name(self, embedding, model, name):
-        ids = model.cond_stage_model.tokenize([name])[0]
-        first_id = ids[0]
-        if first_id not in self.ids_lookup:
-            self.ids_lookup[first_id] = []
-        if name in self.word_embeddings:
-            # remove old one from the lookup list
-            lookup = [x for x in self.ids_lookup[first_id] if x[1].name!=name]
-        else:
-            lookup = self.ids_lookup[first_id]
-        if embedding is not None:
-            lookup += [(ids, embedding)]
-        self.ids_lookup[first_id] = sorted(lookup, key=lambda x: len(x[0]), reverse=True)
+        if model and model.cond_stage_model:
+            ids = model.cond_stage_model.tokenize([name])[0]
+            first_id = ids[0]
+            if first_id not in self.ids_lookup:
+                self.ids_lookup[first_id] = []
+            if name in self.word_embeddings:
+                # remove old one from the lookup list
+                lookup = [x for x in self.ids_lookup[first_id] if x[1].name!=name]
+            else:
+                lookup = self.ids_lookup[first_id]
+            if embedding is not None:
+                lookup += [(ids, embedding)]
+            self.ids_lookup[first_id] = sorted(lookup, key=lambda x: len(x[0]), reverse=True)
         if embedding is None:
             # unregister embedding with specified name
             if name in self.word_embeddings:
@@ -151,75 +159,104 @@ class EmbeddingDatabase:
         return embedding
 
     def get_expected_shape(self):
-        vec = shared.sd_model.cond_stage_model.encode_embedding_init_text(",", 1)
-        return vec.shape[1]
+        if shared.sd_model and shared.sd_model.cond_stage_model:
+            vec = shared.sd_model.cond_stage_model.encode_embedding_init_text(",", 1)
+            return vec.shape[1]
+        else:
+            return -1
 
     def load_from_file(self, path, filename):
         name, ext = os.path.splitext(filename)
         ext = ext.upper()
-
-        if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
-            _, second_ext = os.path.splitext(name)
-            if second_ext.upper() == '.PREVIEW':
+        if filename not in self.loaded_embeddings:
+            # if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
+            #     _, second_ext = os.path.splitext(name)
+            #     if second_ext.upper() == '.PREVIEW':
+            #         self.loaded_embeddings[filename] = None
+            #         return
+            #
+            #     embed_image = Image.open(path)
+            #     if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
+            #         data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
+            #         name = data.get('name', name)
+            #     else:
+            #         data = extract_image_data_embed(embed_image)
+            #         if data:
+            #             name = data.get('name', name)
+            #         else:
+            #             # if data is None, means this is not an embeding, just a preview image
+            #             self.loaded_embeddings[filename] = None
+            #             return
+            if ext in ['.BIN', '.PT']:
+                data = torch.load(path, map_location="cpu")
+            elif ext in ['.SAFETENSORS']:
+                data = safetensors.torch.load_file(path, device="cpu")
+            else:
+                self.loaded_embeddings[filename] = None
                 return
 
-            embed_image = Image.open(path)
-            if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
-                data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
-                name = data.get('name', name)
-            else:
-                data = extract_image_data_embed(embed_image)
-                if data:
-                    name = data.get('name', name)
-                else:
-                    # if data is None, means this is not an embeding, just a preview image
+            # textual inversion embeddings
+            if 'string_to_param' in data:
+                param_dict = data['string_to_param']
+                if hasattr(param_dict, '_parameters'):
+                    param_dict = getattr(param_dict, '_parameters')  # fix for torch 1.12.1 loading saved file from torch 1.11
+                if len(param_dict) != 1:
+                    logging.error(f'embedding file {filename} has multiple terms in it')
+                    self.loaded_embeddings[filename] = None
                     return
-        elif ext in ['.BIN', '.PT']:
-            data = torch.load(path, map_location="cpu")
-        elif ext in ['.SAFETENSORS']:
-            data = safetensors.torch.load_file(path, device="cpu")
-        else:
-            return
+                emb = next(iter(param_dict.items()))[1]
+                vec = emb.detach().to(devices.device, dtype=torch.float32)
+                shape = vec.shape[-1]
+                vectors = vec.shape[0]
+            elif type(data) == dict and 'clip_g' in data and 'clip_l' in data:  # SDXL embedding
+                vec = {k: v.detach().to(devices.device, dtype=torch.float32) for k, v in data.items()}
+                shape = data['clip_g'].shape[-1] + data['clip_l'].shape[-1]
+                vectors = data['clip_g'].shape[0]
+            # diffuser concepts
+            elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor:
+                if len(data.keys()) != 1:
+                    logging.error(f"embedding file '{filename}' has multiple terms in it")
+                    self.loaded_embeddings[filename] = None
+                    return
+                emb = next(iter(data.values()))
+                if len(emb.shape) == 1:
+                    emb = emb.unsqueeze(0)
+                vec = emb.detach().to(devices.device, dtype=torch.float32)
+                shape = vec.shape[-1]
+                vectors = vec.shape[0]
+            else:
+                logging.error(f"Couldn't identify {filename} as neither textual inversion embedding nor diffuser concept.")
+                self.loaded_embeddings[filename] = None
+                return
 
+            embedding = Embedding(vec, name)
+            embedding.step = data.get('step', None)
+            embedding.sd_checkpoint = data.get('sd_checkpoint', None)
+            embedding.sd_checkpoint_name = data.get('sd_checkpoint_name', None)
+            embedding.vectors = vectors
+            embedding.shape = shape
+            embedding.filename = path
+            embedding.set_hash(hashes.sha256(embedding.filename, "textual_inversion/" + name) or '')
 
-        # textual inversion embeddings
-        if 'string_to_param' in data:
-            param_dict = data['string_to_param']
-            param_dict = getattr(param_dict, '_parameters', param_dict)  # fix for torch 1.12.1 loading saved file from torch 1.11
-            assert len(param_dict) == 1, 'embedding file has multiple terms in it'
-            emb = next(iter(param_dict.items()))[1]
-            vec = emb.detach().to(devices.device, dtype=torch.float32)
-            shape = vec.shape[-1]
-            vectors = vec.shape[0]
-        elif type(data) == dict and 'clip_g' in data and 'clip_l' in data:  # SDXL embedding
-            vec = {k: v.detach().to(devices.device, dtype=torch.float32) for k, v in data.items()}
-            shape = data['clip_g'].shape[-1] + data['clip_l'].shape[-1]
-            vectors = data['clip_g'].shape[0]
-        elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor: # diffuser concepts
-            assert len(data.keys()) == 1, 'embedding file has multiple terms in it'
+            # cache the loaded embedding
+            self.loaded_embeddings[filename] = embedding
 
-            emb = next(iter(data.values()))
-            if len(emb.shape) == 1:
-                emb = emb.unsqueeze(0)
-            vec = emb.detach().to(devices.device, dtype=torch.float32)
-            shape = vec.shape[-1]
-            vectors = vec.shape[0]
-        else:
-            raise Exception(f"Couldn't identify {filename} as neither textual inversion embedding nor diffuser concept.")
+        ## textual inversion embeddings
+        #if 'string_to_param' in data:
+        #    param_dict = data['string_to_param']
+        #    param_dict = getattr(param_dict, '_parameters', param_dict)  # fix for torch 1.12.1 loading saved file from torch 1.11
+        #    assert len(param_dict) == 1, 'embedding file has multiple terms in it'
+        #    emb = next(iter(param_dict.items()))[1]
+        ## diffuser concepts
+        #elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor:
+        #    assert len(data.keys()) == 1, 'embedding file has multiple terms in it'
 
-        embedding = Embedding(vec, name)
-        embedding.step = data.get('step', None)
-        embedding.sd_checkpoint = data.get('sd_checkpoint', None)
-        embedding.sd_checkpoint_name = data.get('sd_checkpoint_name', None)
-        embedding.vectors = vectors
-        embedding.shape = shape
-        embedding.filename = path
-        embedding.set_hash(hashes.sha256(embedding.filename, "textual_inversion/" + name) or '')
-
-        if self.expected_shape == -1 or self.expected_shape == embedding.shape:
-            self.register_embedding(embedding, shared.sd_model)
-        else:
-            self.skipped_embeddings[name] = embedding
+        embedding = self.loaded_embeddings.get(filename)
+        if embedding:
+            if self.expected_shape == -1 or self.expected_shape == embedding.shape:
+                self.register_embedding(embedding, shared.sd_model)
+            else:
+                self.skipped_embeddings[name] = embedding
 
     def load_from_dir(self, embdir):
         if not os.path.isdir(embdir.path):
@@ -386,7 +423,7 @@ def validate_train_inputs(model_name, learn_rate, batch_size, gradient_step, dat
         assert log_directory, "Log directory is empty"
 
 
-def train_embedding(id_task, embedding_name, learn_rate, batch_size, gradient_step, data_root, log_directory, training_width, training_height, varsize, steps, clip_grad_mode, clip_grad_value, shuffle_tags, tag_drop_out, latent_sampling_method, use_weight, create_image_every, save_embedding_every, template_filename, save_image_with_stored_embedding, preview_from_txt2img, preview_prompt, preview_negative_prompt, preview_steps, preview_sampler_index, preview_cfg_scale, preview_seed, preview_width, preview_height):
+def train_embedding(request: starlette.requests.Request, id_task, embedding_name, learn_rate, batch_size, gradient_step, data_root, log_directory, training_width, training_height, varsize, steps, clip_grad_mode, clip_grad_value, shuffle_tags, tag_drop_out, latent_sampling_method, use_weight, create_image_every, save_embedding_every, template_filename, save_image_with_stored_embedding, preview_from_txt2img, preview_prompt, preview_negative_prompt, preview_steps, preview_sampler_index, preview_cfg_scale, preview_seed, preview_width, preview_height):
     from modules import processing
 
     save_embedding_every = save_embedding_every or 0
@@ -585,6 +622,7 @@ def train_embedding(id_task, embedding_name, learn_rate, batch_size, gradient_st
                         do_not_save_samples=True,
                         do_not_reload_embeddings=True,
                     )
+                    p.set_request(request)
 
                     if preview_from_txt2img:
                         p.prompt = preview_prompt

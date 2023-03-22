@@ -5,6 +5,7 @@ import modules.scripts as scripts
 from modules import deepbooru, images, processing, shared
 from modules.processing import Processed
 from modules.shared import opts, state
+from modules.system_monitor import monitor_call_context
 
 
 class Script(scripts.Script):
@@ -19,6 +20,19 @@ class Script(scripts.Script):
         final_denoising_strength = gr.Slider(minimum=0, maximum=1, step=0.01, label='Final denoising strength', value=0.5, elem_id=self.elem_id("final_denoising_strength"))
         denoising_curve = gr.Dropdown(label="Denoising strength curve", choices=["Aggressive", "Linear", "Lazy"], value="Linear")
         append_interrogation = gr.Dropdown(label="Append interrogated prompt at each iteration", choices=["None", "CLIP", "DeepBooru"], value="None")
+        tab_id = "tab_img2img"
+        function_name = "modules.img2img.img2img"
+        loops.change(
+            None,
+            inputs=[],
+            outputs=[loops],
+            _js=f"""
+                monitorMutiplier(
+                    '{tab_id}',
+                    '{function_name}',
+                    'script.loopback.loops',
+                    extractor = (loops) => loops)"""
+        )
 
         return [loops, final_denoising_strength, denoising_curve, append_interrogation]
 
@@ -92,7 +106,12 @@ class Script(scripts.Script):
 
                 state.job = f"Iteration {i + 1}/{loops}, batch {n + 1}/{batch_count}"
 
-                processed = processing.process_images(p)
+                with monitor_call_context(
+                        p.get_request(),
+                        processing.get_function_name_from_processing(p),
+                        "script.loopback.batch",
+                        decoded_params=processing.build_decoded_params_from_processing(p)):
+                    processed = processing.process_images(p)
 
                 # Generation cancelled.
                 if state.interrupted:

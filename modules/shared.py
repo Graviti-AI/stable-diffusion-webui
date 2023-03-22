@@ -2,9 +2,13 @@ import sys
 
 import gradio as gr
 
-from modules import shared_cmd_options, shared_gradio_themes, options, shared_items, sd_models_types
+from modules import (
+    shared_items, util, shared_cmd_options, shared_gradio_themes, options, sd_models_types)
+import modules.styles
 from modules.paths_internal import models_path, script_path, data_path, sd_configs_path, sd_default_config, sd_model_file, default_sd_model_file, extensions_dir, extensions_builtin_dir  # noqa: F401
-from modules import util
+from modules.paths import Paths
+
+from typing import Optional
 
 cmd_opts = shared_cmd_options.cmd_opts
 parser = shared_cmd_options.parser
@@ -29,17 +33,49 @@ loaded_hypernetworks = []
 
 state = None
 
-prompt_styles = None
+def prompt_styles(request: gr.Request) -> modules.styles.StyleDatabase:
+    filename = Paths(request).styles_filename()
+    return modules.styles.StyleDatabase(filename)
+
+
+def reload_style(request: gr.Request):
+    return prompt_styles(request).reload()
+
+#prompt_styles = None
 
 interrogator = None
+
+
 
 face_restorers = []
 
 options_templates = None
-opts = None
+opts: Optional[options.Options] = None
 restricted_opts = None
 
-sd_model: sd_models_types.WebuiSdModel = None
+
+class Shared(sys.modules[__name__].__class__):
+    """
+    this class is here to provide sd_model field as a property, so that it can be created and loaded on demand rather than
+    at program startup.
+    """
+
+    sd_model_val = None
+
+    @property
+    def sd_model(self) -> sd_models_types.WebuiSdModel:
+        import modules.sd_models
+
+        return modules.sd_models.model_data.get_sd_model()
+
+    @sd_model.setter
+    def sd_model(self, value):
+        import modules.sd_models
+
+        modules.sd_models.model_data.set_sd_model(value)
+
+sd_model: Optional[sd_models_types.WebuiSdModel] = None
+sys.modules[__name__].__class__ = Shared
 
 settings_components = None
 """assinged from ui.py, a mapping on setting names to gradio components repsponsible for those settings"""

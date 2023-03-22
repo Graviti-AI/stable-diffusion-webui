@@ -1,4 +1,5 @@
 from contextlib import closing
+import gradio as gr
 
 import modules.scripts
 from modules import processing
@@ -6,16 +7,19 @@ from modules.generation_parameters_copypaste import create_override_settings_dic
 from modules.shared import opts, cmd_opts
 import modules.shared as shared
 from modules.ui import plaintext_to_html
-import gradio as gr
+from modules.paths import Paths
+from modules.system_monitor import (
+    generate_function_name, monitor_call_context)
 
 
-def txt2img(id_task: str, prompt: str, negative_prompt: str, prompt_styles, steps: int, sampler_name: str, n_iter: int, batch_size: int, cfg_scale: float, height: int, width: int, enable_hr: bool, denoising_strength: float, hr_scale: float, hr_upscaler: str, hr_second_pass_steps: int, hr_resize_x: int, hr_resize_y: int, hr_checkpoint_name: str, hr_sampler_name: str, hr_prompt: str, hr_negative_prompt, override_settings_texts, request: gr.Request, *args):
+def txt2img(request: gr.Request, id_task: str, prompt: str, negative_prompt: str, prompt_styles, steps: int, sampler_name: str, n_iter: int, batch_size: int, cfg_scale: float, height: int, width: int, enable_hr: bool, denoising_strength: float, hr_scale: float, hr_upscaler: str, hr_second_pass_steps: int, hr_resize_x: int, hr_resize_y: int, hr_checkpoint_name: str, hr_sampler_name: str, hr_prompt: str, hr_negative_prompt, override_settings_texts, *args):
     override_settings = create_override_settings_dict(override_settings_texts)
 
+    paths = Paths(request)
     p = processing.StableDiffusionProcessingTxt2Img(
         sd_model=shared.sd_model,
-        outpath_samples=opts.outdir_samples or opts.outdir_txt2img_samples,
-        outpath_grids=opts.outdir_grids or opts.outdir_txt2img_grids,
+        outpath_samples=paths.outdir_txt2img_samples(),
+        outpath_grids=paths.outdir_txt2img_grids(),
         prompt=prompt,
         styles=prompt_styles,
         negative_prompt=negative_prompt,
@@ -39,6 +43,7 @@ def txt2img(id_task: str, prompt: str, negative_prompt: str, prompt_styles, step
         hr_negative_prompt=hr_negative_prompt,
         override_settings=override_settings,
     )
+    p.set_request(request)
 
     p.scripts = modules.scripts.scripts_txt2img
     p.script_args = args
@@ -49,10 +54,15 @@ def txt2img(id_task: str, prompt: str, negative_prompt: str, prompt_styles, step
         print(f"\ntxt2img: {prompt}", file=shared.progress_print_out)
 
     with closing(p):
-        processed = modules.scripts.scripts_txt2img.run(p, *args)
+        with monitor_call_context(
+                request,
+                generate_function_name(txt2img),
+                generate_function_name(txt2img),
+                decoded_params=processing.build_decoded_params_from_processing(p)):
+            processed = modules.scripts.scripts_txt2img.run(p, *args)
 
-        if processed is None:
-            processed = processing.process_images(p)
+            if processed is None:
+                processed = processing.process_images(p)
 
     shared.total_tqdm.clear()
 

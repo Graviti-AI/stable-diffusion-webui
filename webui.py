@@ -3,55 +3,88 @@ from __future__ import annotations
 import os
 import time
 
-from modules import timer
-from modules import initialize_util
-from modules import initialize
+from modules import initialize_util, initialize  # noqa: F401
+from modules.state_holder import make_state_holder
+from modules.launch_utils import startup_timer
 
-startup_timer = timer.startup_timer
 startup_timer.record("launcher")
 
 initialize.imports()
 
 initialize.check_versions()
 
+MAX_ANYIO_WORKER_THREAD = 64
+
 
 def create_api(app):
     from modules.api.api import Api
-    from modules.call_queue import queue_lock
+    from modules.call_queue import submit_to_gpu_worker
 
-    api = Api(app, queue_lock)
+    api = Api(app, submit_to_gpu_worker)
     return api
 
 
-def api_only():
+def api_only(server_port: int = 0):
     from fastapi import FastAPI
     from modules.shared_cmd_options import cmd_opts
 
     initialize.initialize()
 
     app = FastAPI()
+    make_state_holder(app)
     initialize_util.setup_middleware(app)
     api = create_api(app)
+
+    from modules.api.daemon_api import DaemonApi
+    DaemonApi(app)
 
     from modules import script_callbacks
     script_callbacks.before_ui_callback()
     script_callbacks.app_started_callback(None, app)
 
     print(f"Startup time: {startup_timer.summary()}.")
+    if not server_port:
+        server_port = cmd_opts.port if cmd_opts.port else 7861
     api.launch(
         server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1",
-        port=cmd_opts.port if cmd_opts.port else 7861,
+        port=server_port,
         root_path=f"/{cmd_opts.subpath}" if cmd_opts.subpath else ""
     )
 
 
-def webui():
+def stop_route(request):
+    from fastapi import Response, HTTPException, status
+    from modules import shared
+
+    if shared.state is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="shared.state is not initialized.")
+    shared.state.server_command = "stop"
+    return Response("Stopping.")
+
+
+def webui(server_port: int = 0):
     from modules.shared_cmd_options import cmd_opts
+    from modules import shared
+    from fastapi import FastAPI, HTTPException, status
 
     launch_api = cmd_opts.api
     initialize.initialize()
+    if not server_port:
+        server_port = cmd_opts.port if cmd_opts.port else 7861
+    if shared.state is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="shared.state is not initialized.")
+    shared.state.server_port = server_port
 
     from modules import shared, ui_tempdir, script_callbacks, ui, progress, ui_extra_networks
+
+    if shared.opts is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="shared.opts is not initialized.")
 
     while 1:
         if shared.opts.clean_temp_dir_at_start:
@@ -65,7 +98,7 @@ def webui():
         startup_timer.record("create ui")
 
         if not cmd_opts.no_gradio_queue:
-            shared.demo.queue(64)
+            shared.demo.queue(MAX_ANYIO_WORKER_THREAD)
 
         gradio_auth_creds = list(initialize_util.get_gradio_auth_creds()) or None
 
@@ -79,7 +112,7 @@ def webui():
         app, local_url, share_url = shared.demo.launch(
             share=cmd_opts.share,
             server_name=initialize_util.gradio_server_name(),
-            server_port=cmd_opts.port,
+            server_port=server_port,
             ssl_keyfile=cmd_opts.tls_keyfile,
             ssl_certfile=cmd_opts.tls_certfile,
             ssl_verify=cmd_opts.disable_tls_verify,
@@ -88,12 +121,16 @@ def webui():
             inbrowser=auto_launch_browser,
             prevent_thread_lock=True,
             allowed_paths=cmd_opts.gradio_allowed_path,
+            max_threads=MAX_ANYIO_WORKER_THREAD,
             app_kwargs={
                 "docs_url": "/docs",
                 "redoc_url": "/redoc",
             },
             root_path=f"/{cmd_opts.subpath}" if cmd_opts.subpath else "",
         )
+        make_state_holder(app)
+        if cmd_opts.add_stop_route:
+            app.add_route("/_stop", stop_route, methods=["POST"])
 
         startup_timer.record("gradio launch")
 
@@ -110,7 +147,11 @@ def webui():
 
         if launch_api:
             create_api(app)
+        from modules.api.daemon_api import DaemonApi
+        DaemonApi(app)
 
+        from modules.ui_common import add_static_filedir_to_demo
+        add_static_filedir_to_demo(app, route="components")
         ui_extra_networks.add_pages_to_demo(app)
 
         startup_timer.record("add APIs")
@@ -118,11 +159,23 @@ def webui():
         with startup_timer.subcategory("app_started_callback"):
             script_callbacks.app_started_callback(shared.demo, app)
 
-        timer.startup_record = startup_timer.dump()
+        import modules.launch_utils
+        modules.launch_utils.startup_record = startup_timer.dump()
         print(f"Startup time: {startup_timer.summary()}.")
 
+        import gradio
+        @app.on_event("shutdown")
+        def shutdown_event():
+            gradio.close_all()
+
+        if cmd_opts.subpath:
+            redirector = FastAPI()
+            redirector.get("/")
+            gradio.mount_gradio_app(redirector, shared.demo, path=f"/{cmd_opts.subpath}")
+
+        server_command = None
         try:
-            while True:
+            while shared.state and True:
                 server_command = shared.state.wait_for_server_command(timeout=5)
                 if server_command:
                     if server_command in ("stop", "restart"):
@@ -152,6 +205,14 @@ def webui():
         startup_timer.record("scripts unloaded callback")
         initialize.initialize_rest(reload_script_modules=True)
 
+        from modules import sd_hijack, sd_hijack_optimizations
+        script_callbacks.on_list_optimizers(sd_hijack_optimizations.list_optimizers)
+        sd_hijack.list_optimizers()
+        startup_timer.record("scripts list_optimizers")
+
+        # disable auto restart
+        if cmd_opts.disable_auto_restart:
+            break
 
 if __name__ == "__main__":
     from modules.shared_cmd_options import cmd_opts

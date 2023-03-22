@@ -8,12 +8,15 @@ import gradio as gr
 
 from modules import images as imgutil
 from modules.generation_parameters_copypaste import create_override_settings_dict, parse_generation_parameters
-from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images
+from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images, build_decoded_params_from_processing
 from modules.shared import opts, state
 import modules.shared as shared
 import modules.processing as processing
 from modules.ui import plaintext_to_html
+from modules.paths import Paths
 import modules.scripts
+from modules.system_monitor import (
+    generate_function_name, monitor_call_context)
 
 
 def process_batch(p, input_dir, output_dir, inpaint_mask_dir, args, to_scale=False, scale_by=1.0, use_png_info=False, png_info_props=None, png_info_dir=None):
@@ -104,41 +107,56 @@ def process_batch(p, input_dir, output_dir, inpaint_mask_dir, args, to_scale=Fal
             p.sampler_name = parsed_parameters.get("Sampler", sampler_name)
             p.steps = int(parsed_parameters.get("Steps", steps))
 
-        proc = modules.scripts.scripts_img2img.run(p, *args)
-        if proc is None:
-            if output_dir:
-                p.outpath_samples = output_dir
-                p.override_settings['save_to_dirs'] = False
-                if p.n_iter > 1 or p.batch_size > 1:
-                    p.override_settings['samples_filename_pattern'] = f'{image_path.stem}-[generation_number]'
-                else:
-                    p.override_settings['samples_filename_pattern'] = f'{image_path.stem}'
-            process_images(p)
+        with monitor_call_context(
+                p.get_request(),
+                generate_function_name(img2img),
+                f"{generate_function_name(img2img)}.batch",
+                decoded_params=build_decoded_params_from_processing(p)):
+            proc = modules.scripts.scripts_img2img.run(p, *args)
+            if proc is None:
+                if output_dir:
+                    p.outpath_samples = output_dir
+                    p.override_settings['save_to_dirs'] = False
+                    if p.n_iter > 1 or p.batch_size > 1:
+                        p.override_settings['samples_filename_pattern'] = f'{image_path.stem}-[generation_number]'
+                    else:
+                        p.override_settings['samples_filename_pattern'] = f'{image_path.stem}'
+                process_images(p)
 
 
-def img2img(id_task: str, mode: int, prompt: str, negative_prompt: str, prompt_styles, init_img, sketch, init_img_with_mask, inpaint_color_sketch, inpaint_color_sketch_orig, init_img_inpaint, init_mask_inpaint, steps: int, sampler_name: str, mask_blur: int, mask_alpha: float, inpainting_fill: int, n_iter: int, batch_size: int, cfg_scale: float, image_cfg_scale: float, denoising_strength: float, selected_scale_tab: int, height: int, width: int, scale_by: float, resize_mode: int, inpaint_full_res: bool, inpaint_full_res_padding: int, inpainting_mask_invert: int, img2img_batch_input_dir: str, img2img_batch_output_dir: str, img2img_batch_inpaint_mask_dir: str, override_settings_texts, img2img_batch_use_png_info: bool, img2img_batch_png_info_props: list, img2img_batch_png_info_dir: str, request: gr.Request, *args):
+def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_prompt: str, prompt_styles, init_img, sketch, init_img_with_mask, inpaint_color_sketch, inpaint_color_sketch_orig, init_img_inpaint, init_mask_inpaint, steps: int, sampler_name: int, mask_blur: int, mask_alpha: float, inpainting_fill: int, n_iter: int, batch_size: int, cfg_scale: float, image_cfg_scale: float, denoising_strength: float, selected_scale_tab: int, height: int, width: int, scale_by: float, resize_mode: int, inpaint_full_res: bool, inpaint_full_res_padding: int, inpainting_mask_invert: int, img2img_batch_input_dir: str, img2img_batch_output_dir: str, img2img_batch_inpaint_mask_dir: str, override_settings_texts, img2img_batch_use_png_info: bool, img2img_batch_png_info_props: list, img2img_batch_png_info_dir: str, *args):
     override_settings = create_override_settings_dict(override_settings_texts)
 
     is_batch = mode == 5
 
     if mode == 0:  # img2img
+        if not init_img:
+            raise Exception("initialize image is not present")
         image = init_img
         mask = None
     elif mode == 1:  # img2img sketch
+        if not sketch:
+            raise Exception("sketch image is not present")
         image = sketch
         mask = None
     elif mode == 2:  # inpaint
+        if not init_img_with_mask or "image" not in init_img_with_mask or "mask" not in init_img_with_mask:
+            raise Exception("initialize image or mask image is not present")
         image, mask = init_img_with_mask["image"], init_img_with_mask["mask"]
         mask = processing.create_binary_mask(mask)
     elif mode == 3:  # inpaint sketch
         image = inpaint_color_sketch
         orig = inpaint_color_sketch_orig or inpaint_color_sketch
+        if not image or not orig:
+            raise Exception("inpaint sketch image or original image is not present")
         pred = np.any(np.array(image) != np.array(orig), axis=-1)
         mask = Image.fromarray(pred.astype(np.uint8) * 255, "L")
         mask = ImageEnhance.Brightness(mask).enhance(1 - mask_alpha / 100)
         blur = ImageFilter.GaussianBlur(mask_blur)
         image = Image.composite(image.filter(blur), orig, mask.filter(blur))
     elif mode == 4:  # inpaint upload mask
+        if not init_img_inpaint or not init_mask_inpaint:
+            raise Exception("inpaint initialize image or inpaint initialize mask image is not present")
         image = init_img_inpaint
         mask = init_mask_inpaint
     else:
@@ -157,10 +175,11 @@ def img2img(id_task: str, mode: int, prompt: str, negative_prompt: str, prompt_s
 
     assert 0. <= denoising_strength <= 1., 'can only work with strength in [0.0, 1.0]'
 
+    paths = Paths(request)
     p = StableDiffusionProcessingImg2Img(
         sd_model=shared.sd_model,
-        outpath_samples=opts.outdir_samples or opts.outdir_img2img_samples,
-        outpath_grids=opts.outdir_grids or opts.outdir_img2img_grids,
+        outpath_samples=paths.outdir_img2img_samples(),
+        outpath_grids=paths.outdir_img2img_grids(),
         prompt=prompt,
         negative_prompt=negative_prompt,
         styles=prompt_styles,
@@ -183,6 +202,7 @@ def img2img(id_task: str, mode: int, prompt: str, negative_prompt: str, prompt_s
         inpainting_mask_invert=inpainting_mask_invert,
         override_settings=override_settings,
     )
+    p.set_request(request)
 
     p.scripts = modules.scripts.scripts_img2img
     p.script_args = args
@@ -203,9 +223,14 @@ def img2img(id_task: str, mode: int, prompt: str, negative_prompt: str, prompt_s
 
             processed = Processed(p, [], p.seed, "")
         else:
-            processed = modules.scripts.scripts_img2img.run(p, *args)
-            if processed is None:
-                processed = process_images(p)
+            with monitor_call_context(
+                    request,
+                    generate_function_name(img2img),
+                    generate_function_name(img2img),
+                    decoded_params=build_decoded_params_from_processing(p)):
+                processed = modules.scripts.scripts_img2img.run(p, *args)
+                if processed is None:
+                    processed = process_images(p)
 
     shared.total_tqdm.clear()
 

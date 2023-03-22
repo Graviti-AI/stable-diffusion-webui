@@ -1,10 +1,13 @@
 import json
 import sys
+import logging
 
 import gradio as gr
 
 from modules import errors
 from modules.shared_cmd_options import cmd_opts
+
+logger = logging.getLogger(__name__)
 
 
 class OptionInfo:
@@ -88,7 +91,7 @@ class Options:
                 assert not cmd_opts.freeze_settings, "changing settings is disabled"
 
                 info = self.data_labels.get(key, None)
-                if info.do_not_save:
+                if info and info.do_not_save:
                     return
 
                 comp_args = info.component_args if info else None
@@ -155,10 +158,12 @@ class Options:
         return data_label.default
 
     def save(self, filename):
-        assert not cmd_opts.freeze_settings, "saving settings is disabled"
+        #assert not cmd_opts.freeze_settings, "saving settings is disabled"
 
-        with open(filename, "w", encoding="utf8") as file:
-            json.dump(self.data, file, indent=4)
+        #with open(filename, "w", encoding="utf8") as file:
+        #    json.dump(self.data, file, indent=4)
+        logger.warning(f"Tring to save settings in modules.options to {filename}, while it is disabled")
+        pass
 
     def same_type(self, x, y):
         if x is None or y is None:
@@ -197,6 +202,9 @@ class Options:
 
     def onchange(self, key, func, call=True):
         item = self.data_labels.get(key)
+        if item is None:
+            logger.error(f"Trying to set onchange for {key}, but it is not in data_labels")
+            return
         item.onchange = func
 
         if call:

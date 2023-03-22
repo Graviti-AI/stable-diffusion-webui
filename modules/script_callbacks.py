@@ -1,12 +1,17 @@
 import inspect
 import os
+import logging
 from collections import namedtuple
 from typing import Optional, Dict, Any
 
 from fastapi import FastAPI
 from gradio import Blocks
+import gradio as gr
 
-from modules import errors, timer
+from modules.launch_utils import startup_timer
+from modules import errors
+
+logger = logging.getLogger(__name__)
 
 
 def report_exception(c, job):
@@ -125,8 +130,10 @@ callback_map = dict(
     callbacks_on_reload=[],
     callbacks_list_optimizers=[],
     callbacks_list_unets=[],
+    callbacks_state_updated=[],
 )
-
+script_interfaces = dict()
+page_load_callbacks = dict()
 
 def clear_callbacks():
     for callback_list in callback_map.values():
@@ -137,7 +144,7 @@ def app_started_callback(demo: Optional[Blocks], app: FastAPI):
     for c in callback_map['callbacks_app_started']:
         try:
             c.callback(demo, app)
-            timer.startup_timer.record(os.path.basename(c.script))
+            startup_timer.record(os.path.basename(c.script))
         except Exception:
             report_exception(c, 'app_started_callback')
 
@@ -153,17 +160,25 @@ def app_reload_callback():
 def model_loaded_callback(sd_model):
     for c in callback_map['callbacks_model_loaded']:
         try:
-            c.callback(sd_model)
+            if sd_model:
+                c.callback(sd_model)
         except Exception:
             report_exception(c, 'model_loaded_callback')
 
 
 def ui_tabs_callback():
+    global script_interfaces
     res = []
 
     for c in callback_map['callbacks_ui_tabs']:
         try:
-            res += c.callback() or []
+            interfaces = c.callback()
+            for interface in interfaces:
+                if interface:
+                    if interface[-1] in script_interfaces:
+                        logger.warning(f"Interface {interface[-1]} is already registered")
+                    script_interfaces[interface[-1]] = interface
+            res += interfaces or []
         except Exception:
             report_exception(c, 'ui_tabs_callback')
 
@@ -304,6 +319,34 @@ def list_unets_callback():
             report_exception(c, 'list_unets')
 
     return res
+
+
+def state_updated_callback(state):
+    for c in callback_map['callbacks_state_updated']:
+        try:
+            c.callback(state)
+        except Exception:
+            report_exception(c, 'state_updated')
+
+
+def page_load_callback_factory(interface_list: list[tuple[str, int, int, Blocks]]):
+    def page_load_callback(request: gr.Request, *args):
+        output = list(args)
+        for interface_name, start_index, end_index, interface in interface_list:
+            if interface_name in page_load_callbacks:
+                if len(page_load_callbacks[interface_name]) > 1:
+                    raise ValueError(f"Interface {interface_name} has more than one page load callback")
+                try:
+                    interface_outputs: list = page_load_callbacks[interface_name][0].callback(
+                        request, interface, *args[start_index:end_index])
+                    if len(interface_outputs) != (end_index - start_index):
+                        raise ValueError(f"Page load callback of {interface_name} does not have the same number of outputs as input args")
+                    for idx, item in enumerate(interface_outputs):
+                        output[start_index + idx] = item
+                except Exception:
+                    report_exception(page_load_callbacks[interface_name][0], 'page_load')
+        return output
+    return page_load_callback
 
 
 def add_callback(callbacks, fun):
@@ -480,3 +523,29 @@ def on_list_unets(callback):
     The function will be called with one argument, a list, and shall add objects of type modules.sd_unet.SdUnetOption to it."""
 
     add_callback(callback_map['callbacks_list_unets'], callback)
+
+
+def on_state_updated(callback):
+    """register a function to be called when shared.state is updated.
+    The callback is called with one argument:
+      - shared.state.
+    """
+
+    add_callback(callback_map['callbacks_state_updated'], callback)
+
+
+def on_page_load(interface_name: str, callback):
+    """register a function to be called in "demo.load", which could be used to initialize the components in the interfaces.
+    Each interface can only has only one callback, since it will only be updated once for each page load for a user.
+    The callback is called with:
+        - gr.Request
+        - gr.Blocks
+        - *components
+    The return value should be either the updated components or gr.update
+    """
+    global page_load_callbacks
+
+    if interface_name in page_load_callbacks:
+        raise ValueError(f"Interface {interface_name} already has a page load callback")
+    page_load_callbacks[interface_name] = []
+    add_callback(page_load_callbacks[interface_name], callback)

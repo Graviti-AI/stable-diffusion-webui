@@ -8,8 +8,9 @@ import gradio as gr
 from PIL import Image, ImageDraw
 
 from modules import images
-from modules.processing import Processed, process_images
+from modules.processing import Processed, process_images, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import opts, state
+from modules.system_monitor import monitor_call_context
 
 
 # this function is taken from https://github.com/parlance-zz/g-diffuser-bot
@@ -136,6 +137,19 @@ class Script(scripts.Script):
         direction = gr.CheckboxGroup(label="Outpainting direction", choices=['left', 'right', 'up', 'down'], value=['left', 'right', 'up', 'down'], elem_id=self.elem_id("direction"))
         noise_q = gr.Slider(label="Fall-off exponent (lower=higher detail)", minimum=0.0, maximum=4.0, step=0.01, value=1.0, elem_id=self.elem_id("noise_q"))
         color_variation = gr.Slider(label="Color variation", minimum=0.0, maximum=1.0, step=0.01, value=0.05, elem_id=self.elem_id("color_variation"))
+        tab_id = "tab_img2img"
+        function_name = "modules.img2img.img2img"
+        pixels.change(
+            None,
+            inputs=[],
+            outputs=[pixels],
+            _js=f"""
+                monitorMutiplier(
+                    '{tab_id}',
+                    '{function_name}',
+                    'script.outpainting_mk_2.batch_count',
+                    extractor = (pixels) => Math.ceil((pixels * 2 + 512) * (pixels * 2 + 512) / 512 / 512))"""
+        )
 
         return [info, pixels, mask_blur, direction, noise_q, color_variation]
 
@@ -243,7 +257,12 @@ class Script(scripts.Script):
             ), fill="black")
             p.latent_mask = latent_mask
 
-            proc = process_images(p)
+            with monitor_call_context(
+                    p.get_request(),
+                    get_function_name_from_processing(p),
+                    "script.outpainting_mk_2.expand",
+                    decoded_params=build_decoded_params_from_processing(p)):
+                proc = process_images(p)
 
             if initial_seed_and_info[0] is None:
                 initial_seed_and_info[0] = proc.seed

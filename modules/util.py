@@ -17,6 +17,13 @@ def listfiles(dirname):
 def html_path(filename):
     return os.path.join(script_path, "html", filename)
 
+def list_extension_html(dirpath, filename):
+    path = os.path.join(script_path, dirpath, filename)
+    if os.path.exists(path):
+        with open(path, encoding="utf8") as file:
+            return file.read()
+    return ""
+
 
 def html(filename):
     path = html_path(filename)

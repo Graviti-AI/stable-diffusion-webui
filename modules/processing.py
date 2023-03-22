@@ -202,6 +202,9 @@ class StableDiffusionProcessing:
 
     is_api: bool = field(default=False, init=False)
 
+    _global_prompt_styles = None
+    _request = None
+
     def __post_init__(self):
         if self.sampler_index is not None:
             print("sampler_index argument for StableDiffusionProcessing does not do anything; use sampler_name", file=sys.stderr)
@@ -232,6 +235,16 @@ class StableDiffusionProcessing:
 
         self.cached_uc = StableDiffusionProcessing.cached_uc
         self.cached_c = StableDiffusionProcessing.cached_c
+
+    def global_prompt_styles(self):
+        return self._global_prompt_styles
+
+    def set_request(self, request):
+        self._request = request
+        self._global_prompt_styles = shared.prompt_styles(request.request)
+
+    def get_request(self):
+        return self._request
 
     @property
     def sd_model(self):
@@ -388,21 +401,25 @@ class StableDiffusionProcessing:
     def setup_prompts(self):
         if isinstance(self.prompt,list):
             self.all_prompts = self.prompt
+            #self.all_prompts = [self.global_prompt_styles().apply_styles_to_prompt(x, self.styles) for x in self.prompt]
         elif isinstance(self.negative_prompt, list):
             self.all_prompts = [self.prompt] * len(self.negative_prompt)
         else:
             self.all_prompts = self.batch_size * self.n_iter * [self.prompt]
+            #self.all_prompts = self.batch_size * self.n_iter * [self.global_prompt_styles().apply_styles_to_prompt(self.prompt, self.styles)]
 
         if isinstance(self.negative_prompt, list):
             self.all_negative_prompts = self.negative_prompt
+            #self.all_negative_prompts = [self.global_prompt_styles().apply_negative_styles_to_prompt(x, self.styles) for x in self.negative_prompt]
         else:
             self.all_negative_prompts = [self.negative_prompt] * len(self.all_prompts)
+            #self.all_negative_prompts = self.batch_size * self.n_iter * [self.negative_prompt]
 
         if len(self.all_prompts) != len(self.all_negative_prompts):
             raise RuntimeError(f"Received a different number of prompts ({len(self.all_prompts)}) and negative prompts ({len(self.all_negative_prompts)})")
 
-        self.all_prompts = [shared.prompt_styles.apply_styles_to_prompt(x, self.styles) for x in self.all_prompts]
-        self.all_negative_prompts = [shared.prompt_styles.apply_negative_styles_to_prompt(x, self.styles) for x in self.all_negative_prompts]
+        self.all_prompts = [self.global_prompt_styles().apply_styles_to_prompt(x, self.styles) for x in self.all_prompts]
+        self.all_negative_prompts = [self.global_prompt_styles().apply_negative_styles_to_prompt(x, self.styles) for x in self.all_negative_prompts]
 
         self.main_prompt = self.all_prompts[0]
         self.main_negative_prompt = self.all_negative_prompts[0]
@@ -706,10 +723,12 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
 
 
 def process_images(p: StableDiffusionProcessing) -> Processed:
+    # Run preprocess before everything else
     if p.scripts is not None:
+        p.scripts.preprocess(p)
         p.scripts.before_process(p)
 
-    stored_opts = {k: opts.data[k] for k in p.override_settings.keys()}
+    stored_opts = {k: getattr(opts, k) for k in p.override_settings.keys()}
 
     try:
         # if no checkpoint override or the override checkpoint can't be found, remove override entry and load opts checkpoint
@@ -725,7 +744,9 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
                 sd_models.reload_model_weights()
 
             if k == 'sd_vae':
-                sd_vae.reload_vae_weights()
+                vae_file_path = os.path.join(sd_vae.vae_path, v)
+                if os.path.exists(vae_file_path):
+                    sd_vae.reload_vae_weights(vae_file=vae_file_path)
 
         sd_models.apply_token_merging(p.sd_model, p.get_token_merging_ratio())
 
@@ -740,7 +761,11 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
                 setattr(opts, k, v)
 
                 if k == 'sd_vae':
-                    sd_vae.reload_vae_weights()
+                    vae_file_path = os.path.join(sd_vae.vae_path, v)
+                    if os.path.exists(vae_file_path):
+                        sd_vae.reload_vae_weights(vae_file=vae_file_path)
+                    else:
+                        sd_vae.reload_vae_weights()
 
     return res
 
@@ -1135,6 +1160,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
 
     def sample(self, conditioning, unconditional_conditioning, seeds, subseeds, subseed_strength, prompts):
         self.sampler = sd_samplers.create_sampler(self.sampler_name, self.sd_model)
+        self.sampler.set_request(self.get_request())
 
         x = self.rng.next()
         samples = self.sampler.sample(self, x, conditioning, unconditional_conditioning, image_conditioning=self.txt2img_image_conditioning(x))
@@ -1179,6 +1205,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
         img2img_sampler_name = self.hr_sampler_name or self.sampler_name
 
         self.sampler = sd_samplers.create_sampler(img2img_sampler_name, self.sd_model)
+        self.sampler.set_request(self.get_request())
 
         if self.latent_scale_mode is not None:
             for i in range(samples.shape[0]):
@@ -1282,8 +1309,8 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
         else:
             self.all_hr_negative_prompts = self.batch_size * self.n_iter * [self.hr_negative_prompt]
 
-        self.all_hr_prompts = [shared.prompt_styles.apply_styles_to_prompt(x, self.styles) for x in self.all_hr_prompts]
-        self.all_hr_negative_prompts = [shared.prompt_styles.apply_negative_styles_to_prompt(x, self.styles) for x in self.all_hr_negative_prompts]
+        self.all_hr_prompts = [self.global_prompt_styles().apply_styles_to_prompt(x, self.styles) for x in self.all_hr_prompts]
+        self.all_hr_negative_prompts = [self.global_prompt_styles().apply_negative_styles_to_prompt(x, self.styles) for x in self.all_hr_negative_prompts]
 
     def calculate_hr_conds(self):
         if self.hr_c is not None:
@@ -1390,6 +1417,7 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
         self.image_cfg_scale: float = self.image_cfg_scale if shared.sd_model.cond_stage_key == "edit" else None
 
         self.sampler = sd_samplers.create_sampler(self.sampler_name, self.sd_model)
+        self.sampler.set_request(self.get_request())
         crop_region = None
 
         image_mask = self.image_mask
@@ -1537,3 +1565,33 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
 
     def get_token_merging_ratio(self, for_hr=False):
         return self.token_merging_ratio or ("token_merging_ratio" in self.override_settings and opts.token_merging_ratio) or opts.token_merging_ratio_img2img or opts.token_merging_ratio
+
+
+def build_decoded_params_from_processing(p: StableDiffusionProcessing) -> dict:
+    decoded_params = {}
+    if isinstance(p, StableDiffusionProcessing):
+        decoded_params = {
+            'steps': p.steps,
+            'restore_faces': p.restore_faces,
+            'n_iter': p.n_iter,
+            'batch_size': p.batch_size,
+            "width": p.width,
+            "height": p.height,
+        }
+    if isinstance(p, StableDiffusionProcessingTxt2Img):
+        decoded_params.update({
+            'enable_hr': p.enable_hr,
+            'hr_scale': p.hr_scale,
+            'hr_second_pass_steps': p.hr_second_pass_steps,
+            'hr_resize_x': p.hr_resize_x,
+            'hr_resize_y': p.hr_resize_y,
+        })
+    return decoded_params
+
+
+def get_function_name_from_processing(p: StableDiffusionProcessing) -> str:
+    if isinstance(p, StableDiffusionProcessingTxt2Img):
+        return "modules.txt2img.txt2img"
+    if isinstance(p, StableDiffusionProcessingImg2Img):
+        return "modules.img2img.img2img"
+    return "modules.txt2img.txt2img"

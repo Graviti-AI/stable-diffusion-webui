@@ -7,6 +7,7 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules import processing, shared, sd_samplers, sd_samplers_common
+from modules.system_monitor import monitor_call_context
 
 import torch
 import k_diffusion as K
@@ -213,6 +214,11 @@ class Script(scripts.Script):
         p.extra_generation_params["Randomness"] = randomness
         p.extra_generation_params["Sigma Adjustment"] = sigma_adjustment
 
-        processed = processing.process_images(p)
+        with monitor_call_context(
+                p.get_request(),
+                processing.get_function_name_from_processing(p),
+                "script.img2imgalt",
+                decoded_params=processing.build_decoded_params_from_processing(p)):
+            processed = processing.process_images(p)
 
         return processed

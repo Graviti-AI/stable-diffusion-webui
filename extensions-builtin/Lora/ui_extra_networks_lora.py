@@ -3,6 +3,8 @@ import os
 import network
 import networks
 
+import gradio as gr
+
 from modules import shared, ui_extra_networks
 from modules.ui_extra_networks import quote_js
 from ui_edit_user_metadata import LoraUserMetadataEditor
@@ -11,9 +13,24 @@ from ui_edit_user_metadata import LoraUserMetadataEditor
 class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Lora')
+        self.min_model_size_mb = 1
+        self.max_model_size_mb = 1e3
 
-    def refresh(self):
+    def refresh_metadata(self):
+        for name, network_on_disk in networks.available_networks.items():
+            if name not in self.metadata:
+                path, ext = os.path.splitext(network_on_disk.filename)
+                metadata_path = "".join([path, ".meta"])
+                metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+                if metadata is not None:
+                    self.metadata[name] = metadata
+
+    def refresh(self, request: gr.Request):
         networks.list_available_networks()
+        self.refresh_metadata()
+
+    def get_items_count(self):
+        return len(networks.available_networks)
 
     def create_item(self, name, index=None, enable_filter=True):
         lora_on_disk = networks.available_networks.get(name)
@@ -21,6 +38,15 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         path, ext = os.path.splitext(lora_on_disk.filename)
 
         alias = lora_on_disk.get_alias()
+        search_term = self.search_terms_from_path(lora_on_disk.filename)
+        metadata = self.metadata.get(name, None)
+        if metadata is not None:
+            search_term = " ".join([
+                search_term,
+                ", ".join(metadata["tags"]),
+                ", ".join(metadata["trigger_word"]),
+                metadata["model_name"],
+                metadata["sha256"]])
 
         item = {
             "name": name,
@@ -28,9 +54,9 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
             "shorthash": lora_on_disk.shorthash,
             "preview": self.find_preview(path),
             "description": self.find_description(path),
-            "search_term": self.search_terms_from_path(lora_on_disk.filename) + " " + (lora_on_disk.hash or ""),
+            "search_term": search_term,
             "local_preview": f"{path}.{shared.opts.samples_format}",
-            "metadata": lora_on_disk.metadata,
+            "metadata": metadata,
             "sort_keys": {'default': index, **self.get_sort_keys(lora_on_disk.filename)},
             "sd_version": lora_on_disk.sd_version.name,
         }
@@ -38,7 +64,9 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         self.read_user_metadata(item)
         activation_text = item["user_metadata"].get("activation text")
         preferred_weight = item["user_metadata"].get("preferred weight", 0.0)
-        item["prompt"] = quote_js(f"<lora:{alias}:") + " + " + (str(preferred_weight) if preferred_weight else "opts.extra_networks_default_multiplier") + " + " + quote_js(">")
+        item["prompt"] = quote_js(f"<lora:{alias}:") + " + " + (
+            str(preferred_weight)
+            if preferred_weight else "opts.extra_networks_default_multiplier") + " + " + quote_js(">")
 
         if activation_text:
             item["prompt"] += " + " + quote_js(" " + activation_text)
@@ -53,7 +81,9 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         if shared.opts.lora_show_all or not enable_filter:
             pass
         elif sd_version == network.SdVersion.Unknown:
-            model_version = network.SdVersion.SDXL if shared.sd_model.is_sdxl else network.SdVersion.SD2 if shared.sd_model.is_sd2 else network.SdVersion.SD1
+            model_version = (network.SdVersion.SDXL
+                             if shared.sd_model.is_sdxl else network.SdVersion.SD2
+                             if shared.sd_model.is_sd2 else network.SdVersion.SD1)
             if model_version.name in shared.opts.lora_hide_unknown_for_versions:
                 return None
         elif shared.sd_model.is_sdxl and sd_version != network.SdVersion.SDXL:

@@ -3,11 +3,13 @@ import io
 import os
 import time
 import datetime
+import uuid
+
+import starlette.requests
 import uvicorn
 import ipaddress
 import requests
 import gradio as gr
-from threading import Lock
 from io import BytesIO
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -148,7 +150,10 @@ def api_middleware(app: FastAPI):
     @app.middleware("http")
     async def log_and_time(req: Request, call_next):
         ts = time.time()
-        res: Response = await call_next(req)
+        try:
+            res: Response = await call_next(req)
+        except Exception as e:
+            return handle_exception(req, e)
         duration = str(round(time.time() - ts, 4))
         res.headers["X-Process-Time"] = duration
         endpoint = req.scope.get('path', 'err')
@@ -198,7 +203,7 @@ def api_middleware(app: FastAPI):
 
 
 class Api:
-    def __init__(self, app: FastAPI, queue_lock: Lock):
+    def __init__(self, app: FastAPI, submit_to_gpu_worker: callable):
         if shared.cmd_opts.api_auth:
             self.credentials = {}
             for auth in shared.cmd_opts.api_auth.split(","):
@@ -207,7 +212,7 @@ class Api:
 
         self.router = APIRouter()
         self.app = app
-        self.queue_lock = queue_lock
+        self.submit_to_gpu_worker = submit_to_gpu_worker
         api_middleware(self.app)
         self.add_api_route("/sdapi/v1/txt2img", self.text2imgapi, methods=["POST"], response_model=models.TextToImageResponse)
         self.add_api_route("/sdapi/v1/img2img", self.img2imgapi, methods=["POST"], response_model=models.ImageToImageResponse)
@@ -336,7 +341,7 @@ class Api:
                         script_args[alwayson_script.args_from + idx] = request.alwayson_scripts[alwayson_script_name]["args"][idx]
         return script_args
 
-    def text2imgapi(self, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI):
+    def text2imgapi(self, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI, request: starlette.requests.Request):
         script_runner = scripts.scripts_txt2img
         if not script_runner.scripts:
             script_runner.initialize_scripts(False)
@@ -362,13 +367,16 @@ class Api:
 
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
-
-        with self.queue_lock:
+        def txt2img_inference():
+            from modules.paths import Paths
             with closing(StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)) as p:
                 p.is_api = True
+                p.set_request(request)
                 p.scripts = script_runner
-                p.outpath_grids = opts.outdir_txt2img_grids
-                p.outpath_samples = opts.outdir_txt2img_samples
+
+                paths = Paths(request)
+                p.outpath_grids = paths.outdir_txt2img_grids()
+                p.outpath_samples = paths.outdir_txt2img_samples()
 
                 try:
                     shared.state.begin(job="scripts_txt2img")
@@ -378,15 +386,18 @@ class Api:
                     else:
                         p.script_args = tuple(script_args) # Need to pass args as tuple here
                         processed = process_images(p)
+                    return processed
                 finally:
                     shared.state.end()
                     shared.total_tqdm.clear()
+
+        processed = self.submit_to_gpu_worker(txt2img_inference, timeout=60 * 10)()
 
         b64images = list(map(encode_pil_to_base64, processed.images)) if send_images else []
 
         return models.TextToImageResponse(images=b64images, parameters=vars(txt2imgreq), info=processed.js())
 
-    def img2imgapi(self, img2imgreq: models.StableDiffusionImg2ImgProcessingAPI):
+    def img2imgapi(self, img2imgreq: models.StableDiffusionImg2ImgProcessingAPI, request: Request):
         init_images = img2imgreq.init_images
         if init_images is None:
             raise HTTPException(status_code=404, detail="Init image not found")
@@ -423,13 +434,17 @@ class Api:
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
 
-        with self.queue_lock:
+        def img2img_inference():
+            from modules.paths import Paths
             with closing(StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)) as p:
+                p.set_request(request)
                 p.init_images = [decode_base64_to_image(x) for x in init_images]
                 p.is_api = True
                 p.scripts = script_runner
-                p.outpath_grids = opts.outdir_img2img_grids
-                p.outpath_samples = opts.outdir_img2img_samples
+
+                paths = Paths(request)
+                p.outpath_grids = paths.outdir_img2img_grids()
+                p.outpath_samples = paths.outdir_img2img_samples()
 
                 try:
                     shared.state.begin(job="scripts_img2img")
@@ -439,9 +454,11 @@ class Api:
                     else:
                         p.script_args = tuple(script_args) # Need to pass args as tuple here
                         processed = process_images(p)
+                    return processed
                 finally:
                     shared.state.end()
                     shared.total_tqdm.clear()
+        processed = self.submit_to_gpu_worker(img2img_inference, timeout=60 * 10)()
 
         b64images = list(map(encode_pil_to_base64, processed.images)) if send_images else []
 
@@ -451,24 +468,32 @@ class Api:
 
         return models.ImageToImageResponse(images=b64images, parameters=vars(img2imgreq), info=processed.js())
 
-    def extras_single_image_api(self, req: models.ExtrasSingleImageRequest):
+    def extras_single_image_api(self, req: models.ExtrasSingleImageRequest, request: Request):
+        task_id = uuid.uuid4().hex
         reqDict = setUpscalers(req)
 
         reqDict['image'] = decode_base64_to_image(reqDict['image'])
 
-        with self.queue_lock:
-            result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
+        def extra_single_image_inference():
+            result = postprocessing.run_extras(
+                gr.Request(request), f"task({task_id})", extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
+            return result
+        result = self.submit_to_gpu_worker(extra_single_image_inference, timeout=60 * 10)()
 
         return models.ExtrasSingleImageResponse(image=encode_pil_to_base64(result[0][0]), html_info=result[1])
 
-    def extras_batch_images_api(self, req: models.ExtrasBatchImagesRequest):
+    def extras_batch_images_api(self, req: models.ExtrasBatchImagesRequest, request: Request):
+        task_id = uuid.uuid4().hex
         reqDict = setUpscalers(req)
 
         image_list = reqDict.pop('imageList', [])
         image_folder = [decode_base64_to_image(x.data) for x in image_list]
 
-        with self.queue_lock:
-            result = postprocessing.run_extras(extras_mode=1, image_folder=image_folder, image="", input_dir="", output_dir="", save_output=False, **reqDict)
+        def extra_batch_images_inference():
+            result = postprocessing.run_extras(
+                gr.Request(request), f"task({task_id})", extras_mode=1, image_folder=image_folder, image="", input_dir="", output_dir="", save_output=False, **reqDict)
+            return result
+        result = self.submit_to_gpu_worker(extra_batch_images_inference, timeout=60 * 10)()
 
         return models.ExtrasBatchImagesResponse(images=list(map(encode_pil_to_base64, result[0])), html_info=result[1])
 
@@ -525,13 +550,15 @@ class Api:
         img = img.convert('RGB')
 
         # Override object param
-        with self.queue_lock:
+        def interrogate():
             if interrogatereq.model == "clip":
                 processed = shared.interrogator.interrogate(img)
             elif interrogatereq.model == "deepdanbooru":
                 processed = deepbooru.model.tag(img)
             else:
                 raise HTTPException(status_code=404, detail="Model not found")
+            return processed
+        processed = self.submit_to_gpu_worker(interrogate, timeout=60 * 10)()
 
         return models.InterrogateResponse(caption=processed)
 
@@ -618,10 +645,11 @@ class Api:
     def get_realesrgan_models(self):
         return [{"name":x.name,"path":x.data_path, "scale":x.scale} for x in get_realesrgan_models(None)]
 
-    def get_prompt_styles(self):
+    def get_prompt_styles(self, request: Request):
         styleList = []
-        for k in shared.prompt_styles.styles:
-            style = shared.prompt_styles.styles[k]
+        prompt_styles = shared.prompt_styles(request)
+        for k in prompt_styles.styles:
+            style = prompt_styles.styles[k]
             styleList.append({"name":style[0], "prompt": style[1], "negative_prompt": style[2]})
 
         return styleList
@@ -646,9 +674,8 @@ class Api:
             "skipped": convert_embeddings(db.skipped_embeddings),
         }
 
-    def refresh_checkpoints(self):
-        with self.queue_lock:
-            shared.refresh_checkpoints()
+    def refresh_checkpoints(self, request: starlette.requests.Request):
+        shared.refresh_checkpoints(request)
 
     def refresh_vae(self):
         with self.queue_lock:
@@ -689,7 +716,7 @@ class Api:
         finally:
             shared.state.end()
 
-    def train_embedding(self, args: dict):
+    def train_embedding(self, request: starlette.requests.Request, args: dict):
         try:
             shared.state.begin(job="train_embedding")
             apply_optimizations = shared.opts.training_xattention_optimizations
@@ -698,6 +725,7 @@ class Api:
             if not apply_optimizations:
                 sd_hijack.undo_optimizations()
             try:
+                args['request'] = request
                 embedding, filename = train_embedding(**args) # can take a long time to complete
             except Exception as e:
                 error = e
@@ -710,7 +738,7 @@ class Api:
         finally:
             shared.state.end()
 
-    def train_hypernetwork(self, args: dict):
+    def train_hypernetwork(self, request: starlette.requests.Request, args: dict):
         try:
             shared.state.begin(job="train_hypernetwork")
             shared.loaded_hypernetworks = []
@@ -720,6 +748,7 @@ class Api:
             if not apply_optimizations:
                 sd_hijack.undo_optimizations()
             try:
+                args['request'] = request
                 hypernetwork, filename = train_hypernetwork(**args)
             except Exception as e:
                 error = e

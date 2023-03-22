@@ -5,6 +5,8 @@ import os
 import re
 
 import gradio as gr
+
+import modules.call_utils
 from modules.paths import data_path
 from modules import shared, ui_tempdir, script_callbacks, processing
 from PIL import Image
@@ -61,8 +63,8 @@ def image_from_url_text(filedata):
 
     if type(filedata) == dict and filedata.get("is_file", False):
         filename = filedata["name"]
-        is_in_right_dir = ui_tempdir.check_tmp_file(shared.demo, filename)
-        assert is_in_right_dir, 'trying to open image file outside of allowed directories'
+        # is_in_right_dir = ui_tempdir.check_tmp_file(shared.demo, filename)
+        # assert is_in_right_dir, 'trying to open image file outside of allowed directories'
 
         filename = filename.rsplit('?', 1)[0]
         return Image.open(filename)
@@ -92,10 +94,10 @@ def add_paste_fields(tabname, init_img, fields, override_settings_component=None
         modules.ui.img2img_paste_fields = fields
 
 
-def create_buttons(tabs_list):
+def create_buttons(tabs_list, visible=True, suffix=""):
     buttons = {}
     for tab in tabs_list:
-        buttons[tab] = gr.Button(f"Send to {tab}", elem_id=f"{tab}_tab")
+        buttons[tab] = gr.Button(f"Send to {tab}", elem_id=f"{tab}_tab{suffix}", visible=visible)
     return buttons
 
 
@@ -207,7 +209,7 @@ def restore_old_hires_fix_params(res):
     res['Hires resize-2'] = height
 
 
-def parse_generation_parameters(x: str):
+def parse_generation_parameters(x: str, request: gr.Request):
     """parses generation parameters string, the one you see in text field under the picture in UI:
 ```
 girl with an artist's beret, determined, blue eyes, desert scene, computer monitors, heavy makeup, by Alphonse Mucha and Charlie Bowater, ((eyeshadow)), (coquettish), detailed, intricate
@@ -226,7 +228,7 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model
     done_with_prompt = False
 
     *lines, lastline = x.strip().split("\n")
-    if len(re_param.findall(lastline)) < 3:
+    if len(re_param.findall(lastline)) < 1:
         lines.append(lastline)
         lastline = ''
 
@@ -241,7 +243,7 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model
             prompt += ("" if prompt == "" else "\n") + line
 
     if shared.opts.infotext_styles != "Ignore":
-        found_styles, prompt, negative_prompt = shared.prompt_styles.extract_styles_from_prompt(prompt, negative_prompt)
+        found_styles, prompt, negative_prompt = shared.prompt_styles(request).extract_styles_from_prompt(prompt, negative_prompt)
 
         if shared.opts.infotext_styles == "Apply":
             res["Styles array"] = found_styles
@@ -362,20 +364,22 @@ def create_override_settings_dict(text_pairs):
 
 
 def connect_paste(button, paste_fields, input_comp, override_settings_component, tabname):
-    def paste_func(prompt):
+    def paste_func(prompt, request: gr.Request):
         if not prompt and not shared.cmd_opts.hide_ui_dir_config:
             filename = os.path.join(data_path, "params.txt")
             if os.path.exists(filename):
                 with open(filename, "r", encoding="utf8") as file:
                     prompt = file.read()
 
-        params = parse_generation_parameters(prompt)
+        params = parse_generation_parameters(prompt, request)
         script_callbacks.infotext_pasted_callback(prompt, params)
         res = []
 
         for output, key in paste_fields:
             if callable(key):
-                v = key(params)
+                # append request to func args if necessary
+                args = modules.call_utils.special_args(key, [params, ], request)
+                v = key(*args)
             else:
                 v = params.get(key, None)
 

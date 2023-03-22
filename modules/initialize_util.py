@@ -3,8 +3,9 @@ import os
 import signal
 import sys
 import re
+from typing import Iterable
 
-from modules.timer import startup_timer
+from modules.launch_utils import startup_timer
 
 
 def gradio_server_name():
@@ -104,14 +105,14 @@ def validate_tls_options():
     startup_timer.record("TLS")
 
 
-def get_gradio_auth_creds():
+def get_gradio_auth_creds() -> Iterable[tuple[str, ...]]:
     """
     Convert the gradio_auth and gradio_auth_path commandline arguments into
     an iterable of (username, password) tuples.
     """
     from modules.shared_cmd_options import cmd_opts
 
-    def process_credential_line(s):
+    def process_credential_line(s) -> tuple[str, ...] | None:
         s = s.strip()
         if not s:
             return None
@@ -165,14 +166,14 @@ def configure_sigint_handler():
 
 def configure_opts_onchange():
     from modules import shared, sd_models, sd_vae, ui_tempdir, sd_hijack
-    from modules.call_queue import wrap_queued_call
+    from modules.call_queue import submit_to_gpu_worker
 
-    shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: sd_models.reload_model_weights()), call=False)
-    shared.opts.onchange("sd_vae", wrap_queued_call(lambda: sd_vae.reload_vae_weights()), call=False)
-    shared.opts.onchange("sd_vae_overrides_per_model_preferences", wrap_queued_call(lambda: sd_vae.reload_vae_weights()), call=False)
+    #shared.opts.onchange("sd_model_checkpoint", submit_to_gpu_worker(lambda: sd_models.reload_model_weights()), call=False)
+    #shared.opts.onchange("sd_vae", submit_to_gpu_worker(lambda: sd_vae.reload_vae_weights()), call=False)
+    #shared.opts.onchange("sd_vae_overrides_per_model_preferences", submit_to_gpu_worker(lambda: sd_vae.reload_vae_weights()), call=False)
     shared.opts.onchange("temp_dir", ui_tempdir.on_tmpdir_changed)
     shared.opts.onchange("gradio_theme", shared.reload_gradio_theme)
-    shared.opts.onchange("cross_attention_optimization", wrap_queued_call(lambda: sd_hijack.model_hijack.redo_hijack(shared.sd_model)), call=False)
+    shared.opts.onchange("cross_attention_optimization", submit_to_gpu_worker(lambda: sd_hijack.model_hijack.redo_hijack(shared.sd_model)), call=False)
     startup_timer.record("opts onchange")
 
 

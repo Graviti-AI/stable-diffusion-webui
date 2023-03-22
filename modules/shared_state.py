@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 
-from modules import errors, shared, devices
+from modules import errors, shared, devices, script_callbacks
 from typing import Optional
 
 log = logging.getLogger(__name__)
@@ -13,24 +13,34 @@ class State:
     skipped = False
     interrupted = False
     job = ""
-    job_no = 0
-    job_count = 0
+    _job_no = 0
+    _job_count = 0
     processing_has_refined_job_count = False
     job_timestamp = '0'
-    sampling_step = 0
-    sampling_steps = 0
-    current_latent = None
+    _sampling_step = 0
+    _sampling_steps = 0
+    _current_latent = None
     current_image = None
     current_image_sampling_step = 0
     id_live_preview = 0
     textinfo = None
     time_start = None
     server_start = None
+    server_port = 0
     _server_command_signal = threading.Event()
     _server_command: Optional[str] = None
 
     def __init__(self):
         self.server_start = time.time()
+
+    @property
+    def current_latent(self):
+        return self._current_latent
+
+    @current_latent.setter
+    def current_latent(self, value):
+        self._current_latent = value
+        script_callbacks.state_updated_callback(self)
 
     @property
     def need_restart(self) -> bool:
@@ -55,6 +65,42 @@ class State:
         self._server_command = value
         self._server_command_signal.set()
 
+    @property
+    def job_count(self):
+        return self._job_count
+
+    @job_count.setter
+    def job_count(self, value):
+        self._job_count = value
+        script_callbacks.state_updated_callback(self)
+
+    @property
+    def job_no(self):
+        return self._job_no
+
+    @job_no.setter
+    def job_no(self, value):
+        self._job_no = value
+        script_callbacks.state_updated_callback(self)
+
+    @property
+    def sampling_steps(self):
+        return self._sampling_steps
+
+    @sampling_steps.setter
+    def sampling_steps(self, value):
+        self._sampling_steps = value
+        script_callbacks.state_updated_callback(self)
+
+    @property
+    def sampling_step(self):
+        return self._sampling_step
+
+    @sampling_step.setter
+    def sampling_step(self, value):
+        self._sampling_step = value
+        script_callbacks.state_updated_callback(self)
+
     def wait_for_server_command(self, timeout: Optional[float] = None) -> Optional[str]:
         """
         Wait for server command to get set; return and clear the value and signal.
@@ -67,6 +113,8 @@ class State:
         return None
 
     def request_restart(self) -> None:
+        import modules.call_utils
+        modules.call_utils.check_insecure_calls()
         self.interrupt()
         self.server_command = "restart"
         log.info("Received restart request")
@@ -74,10 +122,12 @@ class State:
     def skip(self):
         self.skipped = True
         log.info("Received skip request")
+        script_callbacks.state_updated_callback(self)
 
     def interrupt(self):
         self.interrupted = True
         log.info("Received interrupt request")
+        script_callbacks.state_updated_callback(self)
 
     def nextjob(self):
         if shared.opts.live_previews_enable and shared.opts.show_progress_every_n_steps == -1:
@@ -86,6 +136,7 @@ class State:
         self.job_no += 1
         self.sampling_step = 0
         self.current_image_sampling_step = 0
+        script_callbacks.state_updated_callback(self)
 
     def dict(self):
         obj = {
@@ -120,6 +171,8 @@ class State:
         log.info("Starting job %s", job)
 
     def end(self):
+        if self.time_start is None:
+            raise RuntimeError("State.end() called without State.begin()")
         duration = time.time() - self.time_start
         log.info("Ending job %s (%.2f seconds)", self.job, duration)
         self.job = ""

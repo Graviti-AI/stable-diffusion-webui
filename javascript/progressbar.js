@@ -20,10 +20,10 @@ function request(url, data, handler, errorHandler) {
                     handler(js);
                 } catch (error) {
                     console.error(error);
-                    errorHandler();
+                    errorHandler(xhr.status)
                 }
             } else {
-                errorHandler();
+                errorHandler(xhr.status)
             }
         }
     };
@@ -57,15 +57,24 @@ function setTitle(progress) {
     }
 }
 
+function uuidv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+}
 
 function randomId() {
-    return "task(" + Math.random().toString(36).slice(2, 7) + Math.random().toString(36).slice(2, 7) + Math.random().toString(36).slice(2, 7) + ")";
+    if (typeof crypto.randomUUID == "function") {
+        return "task(" + crypto.randomUUID() +")";
+    } else {
+        return "task(" + uuidv4() +")";
+    }
 }
 
 // starts sending progress requests to "/internal/progress" uri, creating progressbar above progressbarContainer element and
 // preview inside gallery element. Cleans up all created stuff when the task is over and calls atEnd.
 // calls onProgress every time there is a progress update
-function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgress, inactivityTimeout = 40) {
+function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgress, inactivityTimeout = 60) {
     var dateStart = new Date();
     var wasEverActive = false;
     var parentProgressbar = progressbarContainer.parentNode;
@@ -92,10 +101,13 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
         divProgress = null;
     };
 
-    var funProgress = function(id_task) {
-        request("./internal/progress", {id_task: id_task, live_preview: false}, function(res) {
-            if (res.completed) {
+    var lastFailedAt = null;
+    var funProgress = function(id_task, id_live_preview=false) {
+        request("./internal/progress", {id_task: id_task, id_live_preview: id_live_preview}, function(res) {
+            lastFailedAt = null;
+            if(res.completed){
                 removeProgressBar();
+                console.log("remove progress bar: res.completed");
                 return;
             }
 
@@ -124,12 +136,8 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
 
             if (res.active) wasEverActive = true;
 
-            if (!res.active && wasEverActive) {
-                removeProgressBar();
-                return;
-            }
-
             if (elapsedFromStart > inactivityTimeout && !res.queued && !res.active) {
+                console.log("remove progress bar: elapsedFromStart > inactivityTimeout && !res.queued && !res.active");
                 removeProgressBar();
                 return;
             }
@@ -172,10 +180,27 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
             setTimeout(() => {
                 funLivePreview(id_task, res.id_live_preview);
             }, opts.live_preview_refresh_period || 500);
-        }, function() {
-            removeProgressBar();
+        }, function(status){
+            if(lastFailedAt == null) {
+                lastFailedAt = new Date()
+            }
+            var failedElapsed = (new Date() - lastFailedAt) / 1000
+            // network error: retry for 5m
+            // server error: retry for 30s
+            // retry interval is at least 15s
+            if (failedElapsed < (status === 0 ? 60 * 5 : 30)) {
+                console.log("progress request error")
+                setTimeout(() => {
+                    // reset dateStart to prevent progress is removed due to timeout
+                    dateStart = new Date()
+                    funProgress(id_task, id_live_preview)
+                }, Math.min(Math.max(failedElapsed, 1), 15)*1000)
+            } else {
+                console.log("remove progress bar: progress request is failed")
+                removeProgressBar()
+            }
         });
-    };
+    }
 
     funProgress(id_task, 0);
 

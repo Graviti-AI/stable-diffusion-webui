@@ -12,8 +12,14 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules import images, sd_samplers, processing, sd_models, sd_vae, sd_samplers_kdiffusion, errors
-from modules.processing import process_images, Processed, StableDiffusionProcessingTxt2Img
+from modules.processing import (
+    process_images,
+    Processed,
+    StableDiffusionProcessingTxt2Img,
+    build_decoded_params_from_processing,
+    get_function_name_from_processing)
 from modules.shared import opts, state
+import modules.call_utils
 import modules.shared as shared
 import modules.sd_samplers
 import modules.sd_models
@@ -21,6 +27,7 @@ import modules.sd_vae
 import re
 
 from modules.ui_components import ToolButton
+from modules.system_monitor import monitor_call_context
 
 fill_values_symbol = "\U0001f4d2"  # 📒
 
@@ -227,6 +234,19 @@ class AxisOptionTxt2Img(AxisOption):
         self.is_img2img = False
 
 
+def get_user_sd_model_list(request: gr.Request):
+    sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
+    sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
+    result = []
+    if "choices" in sd_checkpoint_component_args:
+        result = sd_checkpoint_component_args["choices"]
+    return sorted(result, key=str.casefold)
+
+
+def get_user_style_list(request: gr.Request):
+    return list(shared.prompt_styles(request).styles)
+
+
 axis_options = [
     AxisOption("Nothing", str, do_nothing, format_value=format_nothing),
     AxisOption("Seed", int, apply_field("seed")),
@@ -241,7 +261,7 @@ axis_options = [
     AxisOptionTxt2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers if x.name not in opts.hide_samplers]),
     AxisOptionTxt2Img("Hires sampler", str, apply_field("hr_sampler_name"), confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
     AxisOptionImg2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
-    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_remove_path, confirm=confirm_checkpoints, cost=1.0, choices=lambda: sorted(sd_models.checkpoints_list, key=str.casefold)),
+    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_remove_path, confirm=confirm_checkpoints, cost=1.0, choices=get_user_sd_model_list),
     AxisOption("Negative Guidance minimum sigma", float, apply_field("s_min_uncond")),
     AxisOption("Sigma Churn", float, apply_field("s_churn")),
     AxisOption("Sigma min", float, apply_field("s_tmin")),
@@ -259,7 +279,7 @@ axis_options = [
     AxisOptionTxt2Img("Hires upscaler", str, apply_field("hr_upscaler"), choices=lambda: [*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]]),
     AxisOptionImg2Img("Cond. Image Mask Weight", float, apply_field("inpainting_mask_weight")),
     AxisOption("VAE", str, apply_vae, cost=0.7, choices=lambda: ['None'] + list(sd_vae.vae_dict)),
-    AxisOption("Styles", str, apply_styles, choices=lambda: list(shared.prompt_styles.styles)),
+    AxisOption("Styles", str, apply_styles, choices=get_user_style_list),
     AxisOption("UniPC Order", int, apply_uni_pc_order, cost=0.5),
     AxisOption("Face restore", str, apply_face_restore, format_value=format_value),
     AxisOption("Token merging ratio", float, apply_override('token_merging_ratio')),
@@ -419,18 +439,59 @@ class Script(scripts.Script):
                     x_values = gr.Textbox(label="X values", lines=1, elem_id=self.elem_id("x_values"))
                     x_values_dropdown = gr.Dropdown(label="X values", visible=False, multiselect=True, interactive=True)
                     fill_x_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_x_tool_button", visible=False)
+                    tab_id = "tab_txt2img"
+                    function_name = "modules.txt2img.txt2img"
+                    if is_img2img:
+                        tab_id = "tab_img2img"
+                        function_name = "modules.img2img.img2img"
+                    x_values.change(
+                        None,
+                        inputs=[],
+                        outputs=[x_values],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.x', extractor = (values) => values.split(',').length)"
+                    )
+                    x_values_dropdown.change(
+                        None,
+                        inputs=[],
+                        outputs=[x_values_dropdown],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.x', extractor = (values) => values.length)"
+                    )
 
                 with gr.Row():
                     y_type = gr.Dropdown(label="Y type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[0].label, type="index", elem_id=self.elem_id("y_type"))
                     y_values = gr.Textbox(label="Y values", lines=1, elem_id=self.elem_id("y_values"))
                     y_values_dropdown = gr.Dropdown(label="Y values", visible=False, multiselect=True, interactive=True)
                     fill_y_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_y_tool_button", visible=False)
+                    y_values.change(
+                        None,
+                        inputs=[],
+                        outputs=[y_values],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.y', extractor = (values) => values.split(',').length)"
+                    )
+                    y_values_dropdown.change(
+                        None,
+                        inputs=[],
+                        outputs=[y_values_dropdown],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.y', extractor = (values) => values.length)"
+                    )
 
                 with gr.Row():
                     z_type = gr.Dropdown(label="Z type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[0].label, type="index", elem_id=self.elem_id("z_type"))
                     z_values = gr.Textbox(label="Z values", lines=1, elem_id=self.elem_id("z_values"))
                     z_values_dropdown = gr.Dropdown(label="Z values", visible=False, multiselect=True, interactive=True)
                     fill_z_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_z_tool_button", visible=False)
+                    z_values.change(
+                        None,
+                        inputs=[],
+                        outputs=[z_values],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.z', extractor = (values) => values.split(',').length)"
+                    )
+                    z_values_dropdown.change(
+                        None,
+                        inputs=[],
+                        outputs=[z_values_dropdown],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.z', extractor = (values) => values.length)"
+                    )
 
         with gr.Row(variant="compact", elem_id="axis_options"):
             with gr.Column():
@@ -459,13 +520,14 @@ class Script(scripts.Script):
         xz_swap_args = [x_type, x_values, x_values_dropdown, z_type, z_values, z_values_dropdown]
         swap_xz_axes_button.click(swap_axes, inputs=xz_swap_args, outputs=xz_swap_args)
 
-        def fill(axis_type, csv_mode):
+        def fill(request: gr.Request, axis_type, csv_mode):
             axis = self.current_axis_options[axis_type]
+            args = modules.call_utils.special_args(axis.choices, [], request)
             if axis.choices:
                 if csv_mode:
-                    return list_to_csv_string(axis.choices()), gr.update()
+                    return list_to_csv_string(axis.choices(*args)), gr.update()
                 else:
-                    return gr.update(), axis.choices()
+                    return gr.update(), axis.choices(*args)
             else:
                 return gr.update(), gr.update()
 
@@ -473,12 +535,13 @@ class Script(scripts.Script):
         fill_y_button.click(fn=fill, inputs=[y_type, csv_mode], outputs=[y_values, y_values_dropdown])
         fill_z_button.click(fn=fill, inputs=[z_type, csv_mode], outputs=[z_values, z_values_dropdown])
 
-        def select_axis(axis_type, axis_values, axis_values_dropdown, csv_mode):
+        def select_axis(request: gr.Request, axis_type, axis_values, axis_values_dropdown, csv_mode):
             choices = self.current_axis_options[axis_type].choices
             has_choices = choices is not None
 
             if has_choices:
-                choices = choices()
+                args = modules.call_utils.special_args(choices, [], request)
+                choices = choices(*args)
                 if csv_mode:
                     if axis_values_dropdown:
                         axis_values = list_to_csv_string(list(filter(lambda x: x in choices, axis_values_dropdown)))
@@ -695,7 +758,12 @@ class Script(scripts.Script):
             z_opt.apply(pc, z, zs)
 
             try:
-                res = process_images(pc)
+                with monitor_call_context(
+                        p.get_request(),
+                        get_function_name_from_processing(p),
+                        "script.xyz_grid.cell",
+                        decoded_params=build_decoded_params_from_processing(pc)):
+                    res = process_images(pc)
             except Exception as e:
                 errors.display(e, "generating image for xyz plot")
 
@@ -772,7 +840,7 @@ class Script(scripts.Script):
             for g in range(grid_count):
                 # TODO: See previous comment about intentional data misalignment.
                 adj_g = g-1 if g > 0 else g
-                images.save_image(processed.images[g], p.outpath_grids, "xyz_grid", info=processed.infotexts[g], extension=opts.grid_format, prompt=processed.all_prompts[adj_g], seed=processed.all_seeds[adj_g], grid=True, p=processed)
+                images.save_image(processed.images[g], p.outpath_grids, "xyz_grid", info=processed.infotexts[g], extension=opts.grid_format, prompt=processed.all_prompts[adj_g], seed=processed.all_seeds[adj_g], grid=True, p=p)
 
         if not include_sub_grids:
             # Done with sub-grids, drop all related information:

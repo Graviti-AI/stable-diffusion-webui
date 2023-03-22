@@ -311,3 +311,18 @@ class ScriptInfo(BaseModel):
     is_alwayson: bool = Field(default=None, title="IsAlwayson", description="Flag specifying whether this script is an alwayson script")
     is_img2img: bool = Field(default=None, title="IsImg2img", description="Flag specifying whether this script is an img2img script")
     args: List[ScriptArg] = Field(title="Arguments", description="List of script's arguments")
+
+
+class GetDaemonStatusResponse(BaseModel):
+    status: str = Field(title="status")
+
+
+class UpdateStatusRequest(BaseModel):
+    status: str = Field(title="status")
+
+
+class GetTaskCountResponse(BaseModel):
+    current_task: str = Field(title="CurrentTask")
+    queued_tasks: dict = Field(title="QueuedTasks")
+    finished_task_count: int = Field(title="FinishedTaskCount")
+    failed_task_count: int = Field(title="FailedTaskCount")

@@ -21,7 +21,7 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             with FormRow():
                 with gr.Tabs(elem_id="extras_resize_mode"):
                     with gr.TabItem('Scale by', elem_id="extras_scale_by_tab") as tab_scale_by:
-                        upscaling_resize = gr.Slider(minimum=1.0, maximum=8.0, step=0.05, label="Resize", value=4, elem_id="extras_upscaling_resize")
+                        upscaling_resize = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="Resize", value=2, elem_id="extras_upscaling_resize")
 
                     with gr.TabItem('Scale to', elem_id="extras_scale_to_tab") as tab_scale_to:
                         with FormRow():
@@ -119,7 +119,7 @@ class ScriptPostprocessingUpscaleSimple(ScriptPostprocessingUpscale):
     def ui(self):
         with FormRow():
             upscaler_name = gr.Dropdown(label='Upscaler', choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name)
-            upscale_by = gr.Slider(minimum=0.05, maximum=8.0, step=0.05, label="Upscale by", value=2)
+            upscale_by = gr.Slider(minimum=0.05, maximum=4.0, step=0.05, label="Upscale by", value=2)
 
         return {
             "upscale_by": upscale_by,

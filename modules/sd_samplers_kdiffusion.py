@@ -5,14 +5,86 @@ from modules import sd_samplers_common, sd_samplers_extra, sd_samplers_cfg_denoi
 from modules.sd_samplers_cfg_denoiser import CFGDenoiser  # noqa: F401
 from modules.script_callbacks import ExtraNoiseParams, extra_noise_callback
 
+import gradio as gr
+
 from modules.shared import opts
 import modules.shared as shared
 
+from tqdm.auto import trange
+
+
+@torch.no_grad()
+def sample_dpmpp_2m_alt(model, x, sigmas, extra_args=None, callback=None, disable=None):
+    """DPM-Solver++(2M)."""
+    extra_args = {} if extra_args is None else extra_args
+    s_in = x.new_ones([x.shape[0]])
+    sigma_fn = lambda t: t.neg().exp()
+    t_fn = lambda sigma: sigma.log().neg()
+    old_denoised = None
+
+    for i in trange(len(sigmas) - 1, disable=disable):
+        denoised = model(x, sigmas[i] * s_in, **extra_args)
+        if callback is not None:
+            callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+        t, t_next = t_fn(sigmas[i]), t_fn(sigmas[i + 1])
+        h = t_next - t
+        if old_denoised is None or sigmas[i + 1] == 0:
+            x = (sigma_fn(t_next) / sigma_fn(t)) * x - (-h).expm1() * denoised
+        else:
+            h_last = t - t_fn(sigmas[i - 1])
+            r = h_last / h
+            denoised_d = (1 + 1 / (2 * r)) * denoised - (1 / (2 * r)) * old_denoised
+            x = (sigma_fn(t_next) / sigma_fn(t)) * x - (-h).expm1() * denoised_d
+        sigma_progress = i / len(sigmas)
+        adjustment_factor = 1 + (0.15 * (sigma_progress * sigma_progress))
+        old_denoised = denoised * adjustment_factor
+    return x
+
+
+k_diffusion.sampling.sample_dpmpp_2m_alt = sample_dpmpp_2m_alt
+
+
+@torch.no_grad()
+def sample_dpmpp_2m_v1(model, x, sigmas, extra_args=None, callback=None, disable=None):
+    """DPM-Solver++(2M)."""
+    extra_args = {} if extra_args is None else extra_args
+    s_in = x.new_ones([x.shape[0]])
+    sigma_fn = lambda t: t.neg().exp()
+    t_fn = lambda sigma: sigma.log().neg()
+    old_denoised = None
+
+    for i in trange(len(sigmas) - 1, disable=disable):
+        denoised = model(x, sigmas[i] * s_in, **extra_args)
+        if callback is not None:
+            callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+        t, t_next = t_fn(sigmas[i]), t_fn(sigmas[i + 1])
+        h = t_next - t
+        if old_denoised is None or sigmas[i + 1] == 0:
+            x = (sigma_fn(t_next) / sigma_fn(t)) * x - (-h).expm1() * denoised
+        else:
+            h_last = t - t_fn(sigmas[i - 1])
+            r = h_last / h
+            denoised_d = (1 + 1 / (2 * r)) * denoised - (1 / (2 * r)) * old_denoised
+            x = (sigma_fn(t_next) / sigma_fn(t)) * x - (-h).expm1() * denoised_d
+        sigma_progress = i / len(sigmas)
+        adjustment_factor = 1 + (0.15 * (sigma_progress * sigma_progress))
+        old_denoised = denoised * adjustment_factor
+    return x
+
+
+k_diffusion.sampling.sample_dpmpp_2m_v1 = sample_dpmpp_2m_v1
+
+
 samplers_k_diffusion = [
     ('DPM++ 2M Karras', 'sample_dpmpp_2m', ['k_dpmpp_2m_ka'], {'scheduler': 'karras'}),
+    ('DPM++ 2M', 'sample_dpmpp_2m', ['k_dpmpp_2m'], {}),
+    ('DPM++ SDE', 'sample_dpmpp_sde', ['k_dpmpp_sde'], {"second_order": True, "brownian_noise": True}),
     ('DPM++ SDE Karras', 'sample_dpmpp_sde', ['k_dpmpp_sde_ka'], {'scheduler': 'karras', "second_order": True, "brownian_noise": True}),
     ('DPM++ 2M SDE Exponential', 'sample_dpmpp_2m_sde', ['k_dpmpp_2m_sde_exp'], {'scheduler': 'exponential', "brownian_noise": True}),
     ('DPM++ 2M SDE Karras', 'sample_dpmpp_2m_sde', ['k_dpmpp_2m_sde_ka'], {'scheduler': 'karras', "brownian_noise": True}),
+    ('DPM++ 2M alt', 'sample_dpmpp_2m_alt', ['k_dpmpp_2m_alt'], {}),
+    ('DPM++ 2M alt Karras', 'sample_dpmpp_2m_alt', ['k_dpmpp_2m_alt_ka'], {'scheduler': 'karras'}),
+    ('DPM++ 2M Karras Sharp v1', 'sample_dpmpp_2m_v1', ['k_dpmpp_2m_ka_v1'], {'scheduler': 'karras'}),
     ('Euler a', 'sample_euler_ancestral', ['k_euler_a', 'k_euler_ancestral'], {"uses_ensd": True}),
     ('Euler', 'sample_euler', ['k_euler'], {}),
     ('LMS', 'sample_lms', ['k_lms'], {}),
@@ -20,8 +92,6 @@ samplers_k_diffusion = [
     ('DPM2', 'sample_dpm_2', ['k_dpm_2'], {'discard_next_to_last_sigma': True, "second_order": True}),
     ('DPM2 a', 'sample_dpm_2_ancestral', ['k_dpm_2_a'], {'discard_next_to_last_sigma': True, "uses_ensd": True, "second_order": True}),
     ('DPM++ 2S a', 'sample_dpmpp_2s_ancestral', ['k_dpmpp_2s_a'], {"uses_ensd": True, "second_order": True}),
-    ('DPM++ 2M', 'sample_dpmpp_2m', ['k_dpmpp_2m'], {}),
-    ('DPM++ SDE', 'sample_dpmpp_sde', ['k_dpmpp_sde'], {"second_order": True, "brownian_noise": True}),
     ('DPM++ 2M SDE', 'sample_dpmpp_2m_sde', ['k_dpmpp_2m_sde_ka'], {"brownian_noise": True}),
     ('DPM++ 2M SDE Heun', 'sample_dpmpp_2m_sde', ['k_dpmpp_2m_sde_heun'], {"brownian_noise": True, "solver_type": "heun"}),
     ('DPM++ 2M SDE Heun Karras', 'sample_dpmpp_2m_sde', ['k_dpmpp_2m_sde_heun_ka'], {'scheduler': 'karras', "brownian_noise": True, "solver_type": "heun"}),
@@ -87,6 +157,13 @@ class KDiffusionSampler(sd_samplers_common.Sampler):
 
         self.model_wrap_cfg = CFGDenoiserKDiffusion(self)
         self.model_wrap = self.model_wrap_cfg.inner_model
+        self._request = None
+
+    def set_request(self, request: gr.Request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
 
     def get_sigmas(self, p, steps):
         discard_next_to_last_sigma = self.config is not None and self.config.options.get('discard_next_to_last_sigma', False)

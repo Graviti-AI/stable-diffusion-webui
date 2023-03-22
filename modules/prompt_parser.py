@@ -79,6 +79,7 @@ def get_learned_conditioning_prompt_schedules(prompts, base_steps, hires_steps=N
         class CollectSteps(lark.Visitor):
             def scheduled(self, tree):
                 s = tree.children[-2]
+                assert not isinstance(s, lark.Tree), "You used an invalid stable diffusion prompt syntax, which probably introduced by an extension which we do not support yet"
                 v = float(s)
                 if use_old_scheduling:
                     v = v*steps if v<1 else v

@@ -5,8 +5,9 @@ import gradio as gr
 from PIL import Image, ImageDraw
 
 from modules import images, devices
-from modules.processing import Processed, process_images
+from modules.processing import Processed, process_images, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import opts, state
+from modules.system_monitor import monitor_call_context
 
 
 class Script(scripts.Script):
@@ -24,6 +25,19 @@ class Script(scripts.Script):
         mask_blur = gr.Slider(label='Mask blur', minimum=0, maximum=64, step=1, value=4, elem_id=self.elem_id("mask_blur"))
         inpainting_fill = gr.Radio(label='Masked content', choices=['fill', 'original', 'latent noise', 'latent nothing'], value='fill', type="index", elem_id=self.elem_id("inpainting_fill"))
         direction = gr.CheckboxGroup(label="Outpainting direction", choices=['left', 'right', 'up', 'down'], value=['left', 'right', 'up', 'down'], elem_id=self.elem_id("direction"))
+        tab_id = "tab_img2img"
+        function_name = "modules.img2img.img2img"
+        pixels.change(
+            None,
+            inputs=[],
+            outputs=[pixels],
+            _js=f"""
+                monitorMutiplier(
+                    '{tab_id}',
+                    '{function_name}',
+                    'script.poor_mans_outpainting.batch_count',
+                    extractor = (pixels) => Math.ceil((pixels * 2 + 512) * (pixels * 2 + 512) / 512 / 512))"""
+        )
 
         return [pixels, mask_blur, inpainting_fill, direction]
 
@@ -114,7 +128,12 @@ class Script(scripts.Script):
             p.latent_mask = work_latent_mask[i]
 
             state.job = f"Batch {i + 1} out of {batch_count}"
-            processed = process_images(p)
+            with monitor_call_context(
+                    p.get_request(),
+                    get_function_name_from_processing(p),
+                    "script.poor_mans_outpainting.batch",
+                    decoded_params=build_decoded_params_from_processing(p)):
+                processed = process_images(p)
 
             if initial_seed is None:
                 initial_seed = processed.seed

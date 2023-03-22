@@ -11,7 +11,10 @@ import html
 import shutil
 import errno
 
+import gradio.routes
+
 from modules import extensions, shared, paths, config_states, errors, restart
+
 from modules.paths_internal import config_states_dir
 from modules.call_queue import wrap_gradio_gpu_call
 
@@ -21,6 +24,7 @@ STYLE_PRIMARY = ' style="color: var(--primary-400)"'
 
 def check_access():
     assert not shared.cmd_opts.disable_extension_access, "extension access disabled because of command line flags"
+    assert shared.cmd_opts.enable_insecure_calls, "forbidden"
 
 
 def apply_and_restart(disable_list, update_list, disable_all):
@@ -96,7 +100,7 @@ def restore_config_state(confirmed, config_state_name, restore_type):
     return ""
 
 
-def check_updates(id_task, disable_list):
+def check_updates(request: gradio.routes.Request, id_task, disable_list):
     check_access()
 
     disabled = json.loads(disable_list)
@@ -335,7 +339,7 @@ def normalize_git_url(url):
     return url
 
 
-def install_extension_from_url(dirname, url, branch_name=None):
+def install_extension_from_url(request: gradio.routes.Request, dirname, url, branch_name=None):
     check_access()
 
     if isinstance(dirname, str):
@@ -393,15 +397,15 @@ def install_extension_from_url(dirname, url, branch_name=None):
         shutil.rmtree(tmpdir, True)
 
 
-def install_extension_from_index(url, hide_tags, sort_column, filter_text):
-    ext_table, message = install_extension_from_url(None, url)
+def install_extension_from_index(request: gr.Request, url, hide_tags, sort_column, filter_text):
+    ext_table, message = install_extension_from_url(request, url)
 
     code, _ = refresh_available_extensions_from_data(hide_tags, sort_column, filter_text)
 
     return code, ext_table, message, ''
 
 
-def refresh_available_extensions(url, hide_tags, sort_column):
+def refresh_available_extensions(request: gradio.routes.Request, url, hide_tags, sort_column):
     global available_extensions
 
     import urllib.request
@@ -415,7 +419,7 @@ def refresh_available_extensions(url, hide_tags, sort_column):
     return url, code, gr.CheckboxGroup.update(choices=tags), '', ''
 
 
-def refresh_available_extensions_for_tags(hide_tags, sort_column, filter_text):
+def refresh_available_extensions_for_tags(request: gradio.routes.Request, hide_tags, sort_column, filter_text):
     code, _ = refresh_available_extensions_from_data(hide_tags, sort_column, filter_text)
 
     return code, ''

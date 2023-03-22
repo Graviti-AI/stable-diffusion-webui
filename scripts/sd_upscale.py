@@ -5,8 +5,9 @@ import gradio as gr
 from PIL import Image
 
 from modules import processing, shared, images, devices
-from modules.processing import Processed
+from modules.processing import Processed, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import opts, state
+from modules.system_monitor import monitor_call_context
 
 
 class Script(scripts.Script):
@@ -17,9 +18,27 @@ class Script(scripts.Script):
         return is_img2img
 
     def ui(self, is_img2img):
+        tab_id = "tab_txt2img"
+        function_name = "modules.txt2img.txt2img"
+        if is_img2img:
+            tab_id = "tab_img2img"
+            function_name = "modules.img2img.img2img"
         info = gr.HTML("<p style=\"margin-bottom:0.75em\">Will upscale the image by the selected scale factor; use width and height sliders to set tile size</p>")
         overlap = gr.Slider(minimum=0, maximum=256, step=16, label='Tile overlap', value=64, elem_id=self.elem_id("overlap"))
-        scale_factor = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label='Scale Factor', value=2.0, elem_id=self.elem_id("scale_factor"))
+        scale_factor = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label='Scale Factor', value=1.0, elem_id=self.elem_id("scale_factor"))
+        scale_factor.change(
+            None,
+            inputs=[],
+            outputs=[scale_factor],
+            _js=f"""
+                monitorMutiplier(
+                    '{tab_id}',
+                    '{function_name}',
+                    'script.sd_upscale.step',
+                    extractor = (scale_factor) => {{
+                        return (scale_factor + 1) * (scale_factor + 1);
+                    }})"""
+        )
         upscaler_index = gr.Radio(label='Upscaler', choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index", elem_id=self.elem_id("upscaler_index"))
 
         return [info, overlap, upscaler_index, scale_factor]
@@ -76,7 +95,12 @@ class Script(scripts.Script):
                 p.init_images = work[i * batch_size:(i + 1) * batch_size]
 
                 state.job = f"Batch {i + 1 + n * batch_count} out of {state.job_count}"
-                processed = processing.process_images(p)
+                with monitor_call_context(
+                        p.get_request(),
+                        get_function_name_from_processing(p),
+                        "script.sd_upscale.step",
+                        decoded_params=build_decoded_params_from_processing(p)):
+                    processed = processing.process_images(p)
 
                 if initial_info is None:
                     initial_info = processed.info

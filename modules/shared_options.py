@@ -1,3 +1,5 @@
+from typing import Optional
+
 import gradio as gr
 
 from modules import localization, ui_components, shared_items, shared, interrogate, shared_gradio_themes
@@ -5,8 +7,12 @@ from modules.paths_internal import models_path, script_path, data_path, sd_confi
 from modules.shared_cmd_options import cmd_opts
 from modules.options import options_section, OptionInfo, OptionHTML
 
+
+def list_samplers():
+    import modules.sd_samplers
+    return modules.sd_samplers.all_samplers
 options_templates = {}
-hide_dirs = shared.hide_dirs
+hide_dirs = {"value": shared.hide_dirs, "visible": not cmd_opts.hide_ui_dir_config}
 
 restricted_opts = {
     "samples_filename_pattern",
@@ -99,7 +105,7 @@ options_templates.update(options_section(('face-restoration', "Face restoration"
 }))
 
 options_templates.update(options_section(('system', "System"), {
-    "auto_launch_browser": OptionInfo("Local", "Automatically open webui in browser on startup", gr.Radio, lambda: {"choices": ["Disable", "Local", "Remote"]}),
+    "auto_launch_browser": OptionInfo("Disable", "Automatically open webui in browser on startup", gr.Radio, lambda: {"choices": ["Disable", "Local", "Remote"]}),
     "show_warnings": OptionInfo(False, "Show warnings in console.").needs_reload_ui(),
     "show_gradio_deprecation_warnings": OptionInfo(True, "Show gradio deprecation warnings in console.").needs_reload_ui(),
     "memmon_poll_rate": OptionInfo(8, "VRAM usage polls per second during generation.", gr.Slider, {"minimum": 0, "maximum": 40, "step": 1}).info("0 = disable"),
@@ -132,10 +138,17 @@ options_templates.update(options_section(('training', "Training"), {
     "training_tensorboard_flush_every": OptionInfo(120, "How often, in seconds, to flush the pending tensorboard events and summaries to disk."),
 }))
 
+
+def _list_checkpoint_tiles(request: Optional[gr.Request] = None):
+    if request:
+        return {"choices": shared_items.list_checkpoint_tiles(request)}
+    return {"choices": []}
+
+
 options_templates.update(options_section(('sd', "Stable Diffusion"), {
-    "sd_model_checkpoint": OptionInfo(None, "Stable Diffusion checkpoint", gr.Dropdown, lambda: {"choices": shared_items.list_checkpoint_tiles()}, refresh=shared_items.refresh_checkpoints, infotext='Model hash'),
+    "sd_model_checkpoint": OptionInfo(None, "Stable Diffusion checkpoint", gr.Dropdown, _list_checkpoint_tiles, refresh=shared_items.refresh_checkpoints, infotext='Model hash'),
     "sd_checkpoints_limit": OptionInfo(1, "Maximum number of checkpoints loaded at the same time", gr.Slider, {"minimum": 1, "maximum": 10, "step": 1}),
-    "sd_checkpoints_keep_in_cpu": OptionInfo(True, "Only keep one model on device").info("will keep models other than the currently used one in RAM rather than VRAM"),
+    "sd_checkpoints_keep_in_cpu": OptionInfo(False, "Only keep one model on device").info("will keep models other than the currently used one in RAM rather than VRAM"),
     "sd_checkpoint_cache": OptionInfo(0, "Checkpoints to cache in RAM", gr.Slider, {"minimum": 0, "maximum": 10, "step": 1}).info("obsolete; set to 0 and use the two settings above instead"),
     "sd_unet": OptionInfo("Automatic", "SD Unet", gr.Dropdown, lambda: {"choices": shared_items.sd_unet_items()}, refresh=shared_items.refresh_unet_list).info("choose Unet model: Automatic = use one with same filename as checkpoint; None = use Unet from checkpoint"),
     "enable_quantization": OptionInfo(False, "Enable quantization in K samplers for sharper and cleaner results. This may change existing seeds").needs_reload_ui(),

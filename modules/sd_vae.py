@@ -125,7 +125,9 @@ class VaeResolution:
         return self.vae, self.source
 
 
-def is_automatic():
+def is_automatic(vae_title=None):
+    if vae_title:
+        return vae_title in {"Automatic", "auto"}
     return shared.opts.sd_vae in {"Automatic", "auto"}  # "auto" for people with old config
 
 
@@ -139,6 +141,20 @@ def resolve_vae_from_setting() -> VaeResolution:
 
     if not is_automatic():
         print(f"Couldn't find VAE named {shared.opts.sd_vae}; using None instead")
+
+    return VaeResolution(resolved=False)
+
+
+def resolve_vae_from_user(vae_title) -> VaeResolution:
+    if vae_title == "None":
+        return VaeResolution()
+
+    specified_vae = vae_dict.get(vae_title, None)
+    if specified_vae is not None:
+        return VaeResolution(specified_vae, 'user specified')
+
+    if not is_automatic(vae_title):
+        print(f"Couldn't find VAE named {vae_title}; using None instead")
 
     return VaeResolution(resolved=False)
 
@@ -165,12 +181,16 @@ def resolve_vae_near_checkpoint(checkpoint_file) -> VaeResolution:
     return VaeResolution(resolved=False)
 
 
-def resolve_vae(checkpoint_file) -> VaeResolution:
+def resolve_vae(checkpoint_file, vae_title='None') -> VaeResolution:
     if shared.cmd_opts.vae_path is not None:
         return VaeResolution(shared.cmd_opts.vae_path, 'from commandline argument')
 
-    if shared.opts.sd_vae_overrides_per_model_preferences and not is_automatic():
+    if shared.opts.sd_vae_overrides_per_model_preferences and not is_automatic(vae_title):
         return resolve_vae_from_setting()
+
+    res = resolve_vae_from_user(vae_title)
+    if res.resolved:
+        return res
 
     res = resolve_vae_from_user_metadata(checkpoint_file)
     if res.resolved:

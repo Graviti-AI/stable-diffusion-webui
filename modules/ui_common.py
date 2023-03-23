@@ -5,6 +5,7 @@ import platform
 import sys
 
 import gradio as gr
+import gradio.routes
 import subprocess as sp
 
 from modules import call_queue, shared
@@ -31,7 +32,7 @@ def plaintext_to_html(text):
     return text
 
 
-def save_files(js_data, images, do_make_zip, index):
+def save_files(request: gradio.routes.Request, js_data, images, do_make_zip, index):
     import csv
     filenames = []
     fullfns = []

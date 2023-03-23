@@ -4,6 +4,8 @@ import threading
 import traceback
 import time
 
+import gradio.routes
+
 from modules import shared, progress
 
 queue_lock = threading.Lock()
@@ -20,7 +22,7 @@ def wrap_queued_call(func):
 
 
 def wrap_gradio_gpu_call(func, extra_outputs=None):
-    def f(*args, **kwargs):
+    def f(request: gradio.routes.Request, *args, **kwargs):
 
         # if the first argument is a string that says "task(...)", it is treated as a job id
         if len(args) > 0 and type(args[0]) == str and args[0][0:5] == "task(" and args[0][-1] == ")":
@@ -34,7 +36,7 @@ def wrap_gradio_gpu_call(func, extra_outputs=None):
             progress.start_task(id_task)
 
             try:
-                res = func(*args, **kwargs)
+                res = func(request, *args, **kwargs)
             finally:
                 progress.finish_task(id_task)
 
@@ -46,14 +48,14 @@ def wrap_gradio_gpu_call(func, extra_outputs=None):
 
 
 def wrap_gradio_call(func, extra_outputs=None, add_stats=False):
-    def f(*args, extra_outputs_array=extra_outputs, **kwargs):
+    def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
         run_memmon = shared.opts.memmon_poll_rate > 0 and not shared.mem_mon.disabled and add_stats
         if run_memmon:
             shared.mem_mon.monitor()
         t = time.perf_counter()
 
         try:
-            res = list(func(*args, **kwargs))
+            res = list(func(request, *args, **kwargs))
         except Exception as e:
             # When printing out our debug argument list, do not print out more than a MB of text
             max_debug_str_len = 131072 # (1024*1024)/8

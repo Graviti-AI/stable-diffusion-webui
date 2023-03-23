@@ -2,9 +2,11 @@ import argparse
 import datetime
 import json
 import os
+import pathlib
 import sys
 import time
 
+import starlette.requests
 from PIL import Image
 import gradio as gr
 import tqdm
@@ -269,8 +271,35 @@ class State:
 state = State()
 state.server_start = time.time()
 
-styles_filename = cmd_opts.styles_file
-prompt_styles = modules.styles.StyleDatabase(styles_filename)
+
+def styles_filename(request: starlette.requests.Request = None) -> str:
+    u = current_user(request)
+    work_dir = pathlib.Path('.').joinpath(u.uid)
+    if not work_dir.exists():
+        work_dir.mkdir()
+    return str(work_dir.joinpath('styles.csv'))
+
+
+def prompt_styles(request: starlette.requests.Request = None) -> modules.styles.StyleDatabase:
+    filename = styles_filename(request)
+    return modules.styles.StyleDatabase(filename)
+
+
+def reload_style(request: starlette.requests.Request):
+    return prompt_styles(request).reload()
+
+
+def current_user(request: starlette.requests.Request):
+    from modules.user import User
+    if request:
+        uid = request.headers.get('User-Id', '')
+    else:
+        uid = ''
+    if not uid:
+        # consider user as anonymous if User-Id is not present in request headers
+        uid = 'anonymous'
+    return User(uid, '')
+
 
 interrogator = modules.interrogate.InterrogateModels("interrogate")
 

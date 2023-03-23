@@ -1,12 +1,13 @@
 import os
 
+import gradio.routes
 from PIL import Image
 
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, generation_parameters_copypaste
 from modules.shared import opts
 
 
-def run_postprocessing(extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
+def run_postprocessing(request: gradio.routes.Request, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
     devices.torch_gc()
 
     shared.state.begin()

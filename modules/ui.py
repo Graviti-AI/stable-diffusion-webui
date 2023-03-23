@@ -16,6 +16,7 @@ import gradio as gr
 import gradio.routes
 import gradio.utils
 import numpy as np
+import starlette.requests
 from PIL import Image, PngImagePlugin
 from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call
 
@@ -111,26 +112,27 @@ def visit(x, func, path=""):
         func(path + "/" + str(x.label), x)
 
 
-def add_style(name: str, prompt: str, negative_prompt: str):
+def add_style(request: gradio.routes.Request, name: str, prompt: str, negative_prompt: str):
     if name is None:
         return [gr_show() for x in range(4)]
 
     style = modules.styles.PromptStyle(name, prompt, negative_prompt)
-    shared.prompt_styles.styles[style.name] = style
+    prompt_styles = shared.prompt_styles(request.request)
+    prompt_styles.styles[style.name] = style
     # Save all loaded prompt styles: this allows us to update the storage format in the future more easily, because we
     # reserialize all styles every time we save them
-    shared.prompt_styles.save_styles(shared.styles_filename)
+    prompt_styles.save_styles(shared.styles_filename(request.request))
 
-    return [gr.Dropdown.update(visible=True, choices=list(shared.prompt_styles.styles)) for _ in range(2)]
+    return [gr.Dropdown.update(visible=True, choices=list(prompt_styles.styles)) for _ in range(2)]
 
 
-def calc_resolution_hires(enable, width, height, hr_scale, hr_resize_x, hr_resize_y):
+def calc_resolution_hires(request: gradio.routes.Request, enable, width, height, hr_scale, hr_resize_x, hr_resize_y):
     from modules import processing, devices
 
     if not enable:
         return ""
 
-    p = processing.StableDiffusionProcessingTxt2Img(width=width, height=height, enable_hr=True, hr_scale=hr_scale, hr_resize_x=hr_resize_x, hr_resize_y=hr_resize_y)
+    p = processing.StableDiffusionProcessingTxt2Img(width=width, height=height, enable_hr=True, hr_scale=hr_scale, hr_resize_x=hr_resize_x, hr_resize_y=hr_resize_y, global_prompt_styles=shared.prompt_styles(request.request))
 
     with devices.autocast():
         p.init([""], [0], [0])
@@ -138,9 +140,9 @@ def calc_resolution_hires(enable, width, height, hr_scale, hr_resize_x, hr_resiz
     return f"resize: from <span class='resolution'>{p.width}x{p.height}</span> to <span class='resolution'>{p.hr_resize_x or p.hr_upscale_to_x}x{p.hr_resize_y or p.hr_upscale_to_y}</span>"
 
 
-def apply_styles(prompt, prompt_neg, styles):
-    prompt = shared.prompt_styles.apply_styles_to_prompt(prompt, styles)
-    prompt_neg = shared.prompt_styles.apply_negative_styles_to_prompt(prompt_neg, styles)
+def apply_styles(request: gradio.routes.Request, prompt, prompt_neg, styles):
+    prompt = shared.prompt_styles(request.request).apply_styles_to_prompt(prompt, styles)
+    prompt_neg = shared.prompt_styles(request.request).apply_negative_styles_to_prompt(prompt_neg, styles)
 
     return [gr.Textbox.update(value=prompt), gr.Textbox.update(value=prompt_neg), gr.Dropdown.update(value=[])]
 
@@ -337,9 +339,12 @@ def create_toprow(is_img2img):
                     outputs=[prompt, negative_prompt],
                 )
 
+            def current_prompt_styles(request: starlette.requests.Request = None):
+                return {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}
+
             with gr.Row(elem_id=f"{id_part}_styles_row"):
-                prompt_styles = gr.Dropdown(label="Styles", elem_id=f"{id_part}_styles", choices=[k for k, v in shared.prompt_styles.styles.items()], value=[], multiselect=True)
-                create_refresh_button(prompt_styles, shared.prompt_styles.reload, lambda: {"choices": [k for k, v in shared.prompt_styles.styles.items()]}, f"refresh_{id_part}_styles")
+                prompt_styles = gr.Dropdown(label="Styles", elem_id=f"{id_part}_styles", choices=[], value=[], multiselect=True)
+                create_refresh_button(prompt_styles, lambda _: _, current_prompt_styles, f"refresh_{id_part}_styles")
 
     return prompt, prompt_styles, negative_prompt, submit, button_interrogate, button_deepbooru, prompt_style_apply, save_style, paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button
 
@@ -382,9 +387,32 @@ def apply_setting(key, value):
 
 
 def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id):
-    def refresh():
-        refresh_method()
-        args = refreshed_args() if callable(refreshed_args) else refreshed_args
+    def refresh(request: gradio.routes.Request):
+        refresh_method(request.request)
+
+        if callable(refreshed_args):
+            inputs = list()
+            # check if refresh function has special arguments gradio.routes.Request
+            # If yes, this value will be loaded into the inputs array and give to refresh function.
+            import inspect
+            signature = inspect.signature(refreshed_args)
+            positional_args = []
+            for i, param in enumerate(signature.parameters.values()):
+                if param.kind not in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
+                    break
+                positional_args.append(param)
+            for i, param in enumerate(positional_args):
+                import starlette.requests
+                if param.annotation == starlette.requests.Request:
+                    if inputs is not None:
+                        inputs.insert(i, request.request)
+            # call refresh func
+            if inputs:
+                args = refreshed_args(*inputs)
+            else:
+                args = refreshed_args()
+        else:
+            args = refreshed_args
 
         for k, v in args.items():
             setattr(refresh_component, k, v)
@@ -1407,7 +1435,7 @@ def create_ui():
     script_callbacks.ui_settings_callback()
     opts.reorder()
 
-    def run_settings(*args):
+    def run_settings(request: gradio.routes.Request, *args):
         changed = []
 
         for key, value, comp in zip(opts.data_labels.keys(), args, components):
@@ -1630,7 +1658,7 @@ def create_ui():
             outputs=[component_dict[k] for k in component_keys],
         )
 
-        def modelmerger(*args):
+        def modelmerger(request: gradio.routes.Request, *args):
             try:
                 results = modules.extras.run_modelmerger(*args)
             except Exception as e:

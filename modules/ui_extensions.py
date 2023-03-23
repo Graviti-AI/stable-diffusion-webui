@@ -12,6 +12,8 @@ import html
 import shutil
 import errno
 
+import gradio.routes
+
 from modules import extensions, shared, paths
 from modules.call_queue import wrap_gradio_gpu_call
 
@@ -50,7 +52,7 @@ def apply_and_restart(disable_list, update_list):
     shared.state.need_restart = True
 
 
-def check_updates(id_task, disable_list):
+def check_updates(request: gradio.routes.Request, id_task, disable_list):
     check_access()
 
     disabled = json.loads(disable_list)
@@ -120,7 +122,7 @@ def normalize_git_url(url):
     return url
 
 
-def install_extension_from_url(dirname, url):
+def install_extension_from_url(request: gradio.routes.Request, dirname, url):
     check_access()
 
     assert url, 'No URL specified'
@@ -167,7 +169,7 @@ def install_extension_from_url(dirname, url):
         shutil.rmtree(tmpdir, True)
 
 
-def install_extension_from_index(url, hide_tags, sort_column):
+def install_extension_from_index(request: gradio.routes.Request, url, hide_tags, sort_column):
     ext_table, message = install_extension_from_url(None, url)
 
     code, _ = refresh_available_extensions_from_data(hide_tags, sort_column)
@@ -175,7 +177,7 @@ def install_extension_from_index(url, hide_tags, sort_column):
     return code, ext_table, message
 
 
-def refresh_available_extensions(url, hide_tags, sort_column):
+def refresh_available_extensions(request: gradio.routes.Request, url, hide_tags, sort_column):
     global available_extensions
 
     import urllib.request
@@ -189,7 +191,7 @@ def refresh_available_extensions(url, hide_tags, sort_column):
     return url, code, gr.CheckboxGroup.update(choices=tags), ''
 
 
-def refresh_available_extensions_for_tags(hide_tags, sort_column):
+def refresh_available_extensions_for_tags(request: gradio.routes.Request, hide_tags, sort_column):
     code, _ = refresh_available_extensions_from_data(hide_tags, sort_column)
 
     return code, ''

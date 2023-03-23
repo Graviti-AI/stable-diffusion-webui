@@ -2,6 +2,8 @@ import base64
 import io
 import time
 import datetime
+
+import starlette.requests
 import uvicorn
 from threading import Lock
 from io import BytesIO
@@ -215,7 +217,7 @@ class Api:
                     script_args[alwayson_script.args_from:alwayson_script.args_to] = request.alwayson_scripts[alwayson_script_name]["args"]
         return script_args
 
-    def text2imgapi(self, txt2imgreq: StableDiffusionTxt2ImgProcessingAPI):
+    def text2imgapi(self, request: starlette.requests.Request, txt2imgreq: StableDiffusionTxt2ImgProcessingAPI):
         script_runner = scripts.scripts_txt2img
         if not script_runner.scripts:
             script_runner.initialize_scripts(False)
@@ -239,7 +241,7 @@ class Api:
 
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
-
+        args['global_prompt_styles'] = shared.prompt_styles(request)
         with self.queue_lock:
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
             p.scripts = script_runner
@@ -259,7 +261,7 @@ class Api:
 
         return TextToImageResponse(images=b64images, parameters=vars(txt2imgreq), info=processed.js())
 
-    def img2imgapi(self, img2imgreq: StableDiffusionImg2ImgProcessingAPI):
+    def img2imgapi(self, request: Request, img2imgreq: StableDiffusionImg2ImgProcessingAPI):
         init_images = img2imgreq.init_images
         if init_images is None:
             raise HTTPException(status_code=404, detail="Init image not found")
@@ -293,6 +295,7 @@ class Api:
 
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
+        args['global_prompt_styles'] = shared.prompt_styles(request)
 
         with self.queue_lock:
             p = StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)
@@ -463,10 +466,10 @@ class Api:
     def get_realesrgan_models(self):
         return [{"name":x.name,"path":x.data_path, "scale":x.scale} for x in get_realesrgan_models(None)]
 
-    def get_prompt_styles(self):
+    def get_prompt_styles(self, request: Request):
         styleList = []
-        for k in shared.prompt_styles.styles:
-            style = shared.prompt_styles.styles[k]
+        for k in shared.prompt_styles(request).styles:
+            style = shared.prompt_styles(request).styles[k]
             styleList.append({"name":style[0], "prompt": style[1], "negative_prompt": style[2]})
 
         return styleList
@@ -531,7 +534,7 @@ class Api:
             shared.state.end()
             return PreprocessResponse(info = 'preprocess error: {error}'.format(error = e))
 
-    def train_embedding(self, args: dict):
+    def train_embedding(self, request: starlette.requests.Request, args: dict):
         try:
             shared.state.begin()
             apply_optimizations = shared.opts.training_xattention_optimizations
@@ -540,6 +543,7 @@ class Api:
             if not apply_optimizations:
                 sd_hijack.undo_optimizations()
             try:
+                args['request'] = request
                 embedding, filename = train_embedding(**args) # can take a long time to complete
             except Exception as e:
                 error = e
@@ -552,7 +556,7 @@ class Api:
             shared.state.end()
             return TrainResponse(info = "train embedding error: {msg}".format(msg = msg))
 
-    def train_hypernetwork(self, args: dict):
+    def train_hypernetwork(self, request: starlette.requests.Request, args: dict):
         try:
             shared.state.begin()
             shared.loaded_hypernetworks = []
@@ -562,6 +566,7 @@ class Api:
             if not apply_optimizations:
                 sd_hijack.undo_optimizations()
             try:
+                args['request'] = request
                 hypernetwork, filename = train_hypernetwork(**args)
             except Exception as e:
                 error = e

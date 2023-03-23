@@ -468,8 +468,9 @@ class Api:
 
     def get_prompt_styles(self, request: Request):
         styleList = []
-        for k in shared.prompt_styles(request).styles:
-            style = shared.prompt_styles(request).styles[k]
+        prompt_styles = shared.prompt_styles(request)
+        for k in prompt_styles.styles:
+            style = prompt_styles.styles[k]
             styleList.append({"name":style[0], "prompt": style[1], "negative_prompt": style[2]})
 
         return styleList

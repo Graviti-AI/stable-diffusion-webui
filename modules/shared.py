@@ -328,7 +328,7 @@ def list_checkpoint_tiles():
     return modules.sd_models.checkpoint_tiles()
 
 
-def refresh_checkpoints():
+def refresh_checkpoints(request: starlette.requests.Request):
     import modules.sd_models
     return modules.sd_models.list_models()
 

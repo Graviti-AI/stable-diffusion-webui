@@ -23,7 +23,7 @@ from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_grad
 
 from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing
 from modules.ui_components import FormRow, FormGroup, ToolButton, FormHTML
-from modules.paths import script_path, data_path
+from modules.paths import script_path, data_path, Paths
 
 from modules.shared import opts, cmd_opts, restricted_opts
 
@@ -122,7 +122,7 @@ def add_style(request: gradio.routes.Request, name: str, prompt: str, negative_p
     prompt_styles.styles[style.name] = style
     # Save all loaded prompt styles: this allows us to update the storage format in the future more easily, because we
     # reserialize all styles every time we save them
-    prompt_styles.save_styles(shared.styles_filename(request.request))
+    prompt_styles.save_styles(Paths.paths(request.request).styles_filename())
 
     return [gr.Dropdown.update(visible=True, choices=list(prompt_styles.styles)) for _ in range(2)]
 

@@ -67,7 +67,7 @@ class Paths:
 
         return Paths(work_dir, model_dir)
 
-    def __int__(self, work_dir, model_dir):
+    def __init__(self, work_dir, model_dir):
         self._work_dir = work_dir
         self._model_dir = model_dir
 

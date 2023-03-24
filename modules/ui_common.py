@@ -10,6 +10,7 @@ import subprocess as sp
 
 from modules import call_queue, shared
 from modules.generation_parameters_copypaste import image_from_url_text
+from modules.paths import Paths
 import modules.images
 
 folder_symbol = '\U0001f4c2'  # 📂
@@ -47,7 +48,7 @@ def save_files(request: gradio.routes.Request, js_data, images, do_make_zip, ind
     data = json.loads(js_data)
 
     p = MyObject(data)
-    path = shared.opts.outdir_save
+    save_to = Paths.paths(request).save_dir()
     save_to_dirs = shared.opts.use_save_to_dirs_for_ui
     extension: str = shared.opts.samples_format
     start_index = 0
@@ -57,9 +58,7 @@ def save_files(request: gradio.routes.Request, js_data, images, do_make_zip, ind
         images = [images[index]]
         start_index = index
 
-    os.makedirs(shared.opts.outdir_save, exist_ok=True)
-
-    with open(os.path.join(shared.opts.outdir_save, "log.csv"), "a", encoding="utf8", newline='') as file:
+    with open(os.path.join(save_to, "log.csv"), "a", encoding="utf8", newline='') as file:
         at_start = file.tell() == 0
         writer = csv.writer(file)
         if at_start:
@@ -71,9 +70,9 @@ def save_files(request: gradio.routes.Request, js_data, images, do_make_zip, ind
             is_grid = image_index < p.index_of_first_image
             i = 0 if is_grid else (image_index - p.index_of_first_image)
 
-            fullfn, txt_fullfn = modules.images.save_image(image, path, "", seed=p.all_seeds[i], prompt=p.all_prompts[i], extension=extension, info=p.infotexts[image_index], grid=is_grid, p=p, save_to_dirs=save_to_dirs)
+            fullfn, txt_fullfn = modules.images.save_image(image, save_to, "", seed=p.all_seeds[i], prompt=p.all_prompts[i], extension=extension, info=p.infotexts[image_index], grid=is_grid, p=p, save_to_dirs=save_to_dirs)
 
-            filename = os.path.relpath(fullfn, path)
+            filename = os.path.relpath(fullfn, save_to)
             filenames.append(filename)
             fullfns.append(fullfn)
             if txt_fullfn:
@@ -84,7 +83,7 @@ def save_files(request: gradio.routes.Request, js_data, images, do_make_zip, ind
 
     # Make Zip
     if do_make_zip:
-        zip_filepath = os.path.join(path, "images.zip")
+        zip_filepath = os.path.join(save_to, "images.zip")
 
         from zipfile import ZipFile
         with ZipFile(zip_filepath, "w") as zip_file:

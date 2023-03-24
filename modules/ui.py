@@ -6,6 +6,7 @@ import os
 import platform
 import random
 import sys
+import shutil
 import tempfile
 import time
 import traceback
@@ -426,6 +427,20 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
         outputs=[refresh_component]
     )
     return refresh_button
+
+
+def create_upload_button(label, elem_id, destination_dir):
+    def upload(file):
+        file_path = file.name
+        shutil.move(file_path, destination_dir)
+        return
+    upload_button = gr.UploadButton(label=label, elem_id=elem_id, file_types=[".ckpt", ".safetensors", ".bin"])
+    upload_button.upload(
+        fn=upload,
+        inputs=upload_button,
+        outputs=[]
+    )
+    return upload_button
 
 
 def create_output_panel(tabname, outdir):
@@ -1419,6 +1434,7 @@ def create_ui():
             if is_quicksettings:
                 res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
                 create_refresh_button(res, info.refresh, info.component_args, "refresh_" + key)
+                create_upload_button('Upload a Model', 'upload_' + key, sd_models.model_path)
             else:
                 with FormRow():
                     res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))

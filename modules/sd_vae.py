@@ -4,6 +4,7 @@ import os
 import collections
 from collections import namedtuple
 from modules import paths, shared, devices, script_callbacks, sd_models
+import modules.paths
 import glob
 from copy import deepcopy
 
@@ -55,10 +56,12 @@ def get_filename(filepath):
 def refresh_vae_list():
     vae_dict.clear()
 
+    path = modules.paths.Paths.paths(None)
+    model_path = path.models_dir()
     paths = [
-        os.path.join(sd_models.model_path, '**/*.vae.ckpt'),
-        os.path.join(sd_models.model_path, '**/*.vae.pt'),
-        os.path.join(sd_models.model_path, '**/*.vae.safetensors'),
+        os.path.join(model_path, '**/*.vae.ckpt'),
+        os.path.join(model_path, '**/*.vae.pt'),
+        os.path.join(model_path, '**/*.vae.safetensors'),
         os.path.join(vae_path, '**/*.ckpt'),
         os.path.join(vae_path, '**/*.pt'),
         os.path.join(vae_path, '**/*.safetensors'),

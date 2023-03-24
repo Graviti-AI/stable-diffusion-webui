@@ -15,6 +15,7 @@ import modules.shared as shared
 import modules.processing as processing
 from modules.ui import plaintext_to_html
 import modules.images as images
+from modules.paths import Paths
 import modules.scripts
 
 
@@ -119,8 +120,8 @@ def img2img(request: gradio.routes.Request, id_task: str, mode: int, prompt: str
 
     p = StableDiffusionProcessingImg2Img(
         sd_model=shared.sd_model,
-        outpath_samples=opts.outdir_samples or opts.outdir_img2img_samples,
-        outpath_grids=opts.outdir_grids or opts.outdir_img2img_grids,
+        outpath_samples=Paths.paths(request.request).generate_dir("img2img/samples"),
+        outpath_grids=Paths.paths(request.request).generate_dir("img2img/grids"),
         prompt=prompt,
         negative_prompt=negative_prompt,
         styles=prompt_styles,

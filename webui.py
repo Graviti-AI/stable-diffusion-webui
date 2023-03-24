@@ -108,7 +108,7 @@ def initialize():
         return
 
     modelloader.cleanup_models()
-    modules.sd_models.setup_model()
+    modules.sd_models.setup_model(None)
     startup_timer.record("list SD models")
 
     codeformer.setup_model(cmd_opts.codeformer_models_path)
@@ -132,8 +132,9 @@ def initialize():
     modules.textual_inversion.textual_inversion.list_textual_inversion_templates()
     startup_timer.record("refresh textual inversion templates")
 
+    check_points = modules.sd_models.list_models(None)
     try:
-        modules.sd_models.load_model()
+        modules.sd_models.load_model(check_points)
     except Exception as e:
         errors.display(e, "loading stable diffusion model")
         print("", file=sys.stderr)
@@ -143,7 +144,7 @@ def initialize():
 
     shared.opts.data["sd_model_checkpoint"] = shared.sd_model.sd_checkpoint_info.title
 
-    shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights()))
+    shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights(check_points)))
     shared.opts.onchange("sd_vae", wrap_queued_call(lambda: modules.sd_vae.reload_vae_weights()), call=False)
     shared.opts.onchange("sd_vae_as_default", wrap_queued_call(lambda: modules.sd_vae.reload_vae_weights()), call=False)
     shared.opts.onchange("temp_dir", ui_tempdir.on_tmpdir_changed)
@@ -155,7 +156,7 @@ def initialize():
     ui_extra_networks.intialize()
     ui_extra_networks.register_page(ui_extra_networks_textual_inversion.ExtraNetworksPageTextualInversion())
     ui_extra_networks.register_page(ui_extra_networks_hypernets.ExtraNetworksPageHypernetworks())
-    ui_extra_networks.register_page(ui_extra_networks_checkpoints.ExtraNetworksPageCheckpoints())
+    ui_extra_networks.register_page(ui_extra_networks_checkpoints.ExtraNetworksPageCheckpoints(check_points.model_path))
 
     extra_networks.initialize()
     extra_networks.register_extra_network(extra_networks_hypernet.ExtraNetworkHypernet())
@@ -314,16 +315,17 @@ def webui():
             importlib.reload(module)
         startup_timer.record("reload script modules")
 
-        modules.sd_models.list_models()
+        modules.sd_models.list_models(None)
         startup_timer.record("list SD models")
 
         shared.reload_hypernetworks()
         startup_timer.record("reload hypernetworks")
 
+        check_points = modules.sd_models.list_models(None)
         ui_extra_networks.intialize()
         ui_extra_networks.register_page(ui_extra_networks_textual_inversion.ExtraNetworksPageTextualInversion())
         ui_extra_networks.register_page(ui_extra_networks_hypernets.ExtraNetworksPageHypernetworks())
-        ui_extra_networks.register_page(ui_extra_networks_checkpoints.ExtraNetworksPageCheckpoints())
+        ui_extra_networks.register_page(ui_extra_networks_checkpoints.ExtraNetworksPageCheckpoints(check_points.model_path))
 
         extra_networks.initialize()
         extra_networks.register_extra_network(extra_networks_hypernet.ExtraNetworkHypernet())

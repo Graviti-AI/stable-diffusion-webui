@@ -354,7 +354,7 @@ def setup_progressbar(*args, **kwargs):
     pass
 
 
-def apply_setting(key, value):
+def apply_setting(request: gradio.routes.Request, key, value):
     if value is None:
         return gr.update()
 
@@ -366,7 +366,8 @@ def apply_setting(key, value):
         return gr.update()
 
     if key == "sd_model_checkpoint":
-        ckpt_info = sd_models.get_closet_checkpoint_match(value)
+        checkpoints = modules.sd_models.list_models(request.request)
+        ckpt_info = sd_models.get_closet_checkpoint_match(value, checkpoints)
 
         if ckpt_info is not None:
             value = ckpt_info.title
@@ -391,30 +392,7 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
     def refresh(request: gradio.routes.Request):
         refresh_method(request.request)
 
-        if callable(refreshed_args):
-            inputs = list()
-            # check if refresh function has special arguments gradio.routes.Request
-            # If yes, this value will be loaded into the inputs array and give to refresh function.
-            import inspect
-            signature = inspect.signature(refreshed_args)
-            positional_args = []
-            for i, param in enumerate(signature.parameters.values()):
-                if param.kind not in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
-                    break
-                positional_args.append(param)
-            for i, param in enumerate(positional_args):
-                import starlette.requests
-                if param.annotation == starlette.requests.Request:
-                    if inputs is not None:
-                        inputs.insert(i, request.request)
-            # call refresh func
-            if inputs:
-                args = refreshed_args(*inputs)
-            else:
-                args = refreshed_args()
-        else:
-            args = refreshed_args
-
+        args = get_component_args(refreshed_args, request)
         for k, v in args.items():
             setattr(refresh_component, k, v)
 
@@ -429,15 +407,17 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
     return refresh_button
 
 
-def create_upload_button(label, elem_id, destination_dir):
-    def upload(file):
+def create_upload_button(label, elem_id):
+
+    def upload(request: gradio.routes.Request, file):
+        path = modules.paths.Paths.paths(request)
         file_path = file.name
-        shutil.move(file_path, destination_dir)
-        return
+        shutil.move(file_path, path.models_dir())
+
     upload_button = gr.UploadButton(label=label, elem_id=elem_id, file_types=[".ckpt", ".safetensors", ".bin"])
     upload_button.upload(
         fn=upload,
-        inputs=upload_button,
+        inputs=[upload_button],
         outputs=[]
     )
     return upload_button
@@ -467,11 +447,17 @@ def ordered_ui_categories():
         yield category
 
 
-def get_value_for_setting(key):
+def get_value_for_setting(request: gradio.routes.Request, key):
     value = getattr(opts, key)
 
     info = opts.data_labels[key]
-    args = info.component_args() if callable(info.component_args) else info.component_args or {}
+
+    if callable(info.component_args):
+        args = get_component_args(info.component_args, request)
+    elif info.component_args:
+        args = info.component_args
+    else:
+        args = {}
     args = {k: v for k, v in args.items() if k not in {'precision'}}
 
     return gr.update(value=value, **args)
@@ -487,6 +473,37 @@ def create_override_settings_dropdown(tabname, row):
     )
 
     return dropdown
+
+
+def get_component_args(component_args, request: gradio.routes.Request | None):
+    if callable(component_args):
+        # check if refresh function has special arguments gradio.routes.Request
+        # If yes, this value will be loaded into the inputs array and give to refresh function.
+        import inspect
+        signature = inspect.signature(component_args)
+        positional_args = []
+        for i, param in enumerate(signature.parameters.values()):
+            if param.kind not in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
+                break
+            positional_args.append(param)
+
+        inputs = list()
+        for i, param in enumerate(positional_args):
+            if param.annotation == starlette.requests.Request:
+                if request is not None:
+                    inputs.insert(i, request.request)
+                else:
+                    inputs.insert(i, None)
+            elif param.annotation == gradio.routes.Request:
+                inputs.insert(i, request)
+
+        # call refresh func
+        if inputs:
+            return component_args(*inputs)
+        else:
+            return component_args()
+    else:
+        return component_args
 
 
 def create_ui():
@@ -1055,14 +1072,15 @@ def create_ui():
                 interp_description = gr.HTML(value=update_interp_description("Weighted sum"), elem_id="modelmerger_interp_description")
 
                 with FormRow(elem_id="modelmerger_models"):
-                    primary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="modelmerger_primary_model_name", label="Primary model (A)")
-                    create_refresh_button(primary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_A")
+                    check_points = sd_models.list_models(None)
+                    primary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(check_points), elem_id="modelmerger_primary_model_name", label="Primary model (A)")
+                    create_refresh_button(primary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles(check_points)}, "refresh_checkpoint_A")
 
-                    secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="modelmerger_secondary_model_name", label="Secondary model (B)")
-                    create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_B")
+                    secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(check_points), elem_id="modelmerger_secondary_model_name", label="Secondary model (B)")
+                    create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles(check_points)}, "refresh_checkpoint_B")
 
-                    tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="modelmerger_tertiary_model_name", label="Tertiary model (C)")
-                    create_refresh_button(tertiary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_C")
+                    tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(check_points), elem_id="modelmerger_tertiary_model_name", label="Tertiary model (C)")
+                    create_refresh_button(tertiary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles(check_points)}, "refresh_checkpoint_C")
 
                 custom_name = gr.Textbox(label="Custom Name (Optional)", elem_id="modelmerger_custom_name")
                 interp_amount = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Multiplier (M) - set to 0 to get model A', value=0.3, elem_id="modelmerger_interp_amount")
@@ -1415,7 +1433,7 @@ def create_ui():
         info = opts.data_labels[key]
         t = type(info.default)
 
-        args = info.component_args() if callable(info.component_args) else info.component_args
+        args = get_component_args(info.component_args, None)
 
         if info.component is not None:
             comp = info.component
@@ -1434,7 +1452,7 @@ def create_ui():
             if is_quicksettings:
                 res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
                 create_refresh_button(res, info.refresh, info.component_args, "refresh_" + key)
-                create_upload_button('Upload a Model', 'upload_' + key, sd_models.model_path)
+                create_upload_button('Upload a Model', 'upload_' + key)
             else:
                 with FormRow():
                     res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
@@ -1470,7 +1488,7 @@ def create_ui():
             return opts.dumpjson(), f'{len(changed)} settings changed without save: {", ".join(changed)}.'
         return opts.dumpjson(), f'{len(changed)} settings changed{": " if len(changed) > 0 else ""}{", ".join(changed)}.'
 
-    def run_settings_single(value, key):
+    def run_settings_single(request: gradio.routes.Request, value, key):
         if not opts.same_type(value, opts.data_labels[key].default):
             return gr.update(visible=True), opts.dumpjson()
 
@@ -1479,7 +1497,7 @@ def create_ui():
 
         opts.save(shared.config_filename)
 
-        return get_value_for_setting(key), opts.dumpjson()
+        return get_value_for_setting(request, key), opts.dumpjson()
 
     with gr.Blocks(analytics_enabled=False) as settings_interface:
         with gr.Row():
@@ -1640,11 +1658,14 @@ def create_ui():
             outputs=[text_settings, result],
         )
 
+        def setting_single(request: gradio.routes.Request, value, key):
+            return run_settings_single(request, value, key=key)
+
         for i, k, item in quicksettings_list:
             component = component_dict[k]
 
             component.change(
-                fn=lambda value, k=k: run_settings_single(value, key=k),
+                fn=partial(setting_single, key=k),
                 inputs=[component],
                 outputs=[component, text_settings],
             )
@@ -1657,7 +1678,7 @@ def create_ui():
 
         button_set_checkpoint = gr.Button('Change checkpoint', elem_id='change_checkpoint', visible=False)
         button_set_checkpoint.click(
-            fn=lambda value, _: run_settings_single(value, key='sd_model_checkpoint'),
+            fn=partial(setting_single, key='sd_model_checkpoint'),
             _js="function(v){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || v, null]; }",
             inputs=[component_dict['sd_model_checkpoint'], dummy_component],
             outputs=[component_dict['sd_model_checkpoint'], text_settings],
@@ -1665,8 +1686,8 @@ def create_ui():
 
         component_keys = [k for k in opts.data_labels.keys() if k in component_dict]
 
-        def get_settings_values():
-            return [get_value_for_setting(key) for key in component_keys]
+        def get_settings_values(request: gradio.routes.Request):
+            return [get_value_for_setting(request, key) for key in component_keys]
 
         demo.load(
             fn=get_settings_values,
@@ -1676,12 +1697,12 @@ def create_ui():
 
         def modelmerger(request: gradio.routes.Request, *args):
             try:
-                results = modules.extras.run_modelmerger(*args)
+                results = modules.extras.run_modelmerger(request, *args)
             except Exception as e:
                 print("Error loading/saving model file:", file=sys.stderr)
                 print(traceback.format_exc(), file=sys.stderr)
-                modules.sd_models.list_models()  # to remove the potentially missing models from the list
-                return [*[gr.Dropdown.update(choices=modules.sd_models.checkpoint_tiles()) for _ in range(4)], f"Error merging checkpoints: {e}"]
+                checkpoints = modules.sd_models.list_models(request.request)  # to remove the potentially missing models from the list
+                return [*[gr.Dropdown.update(choices=modules.sd_models.checkpoint_tiles(checkpoints)) for _ in range(4)], f"Error merging checkpoints: {e}"]
             return results
 
         modelmerger_merge.click(fn=lambda: '', inputs=[], outputs=[modelmerger_result])

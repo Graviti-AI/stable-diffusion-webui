@@ -6,15 +6,17 @@ from modules import shared, ui_extra_networks, sd_models
 
 
 class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
-    def __init__(self):
+    def __init__(self, model_path: str):
         super().__init__('Checkpoints')
+        self.model_path = model_path
 
     def refresh(self):
         shared.refresh_checkpoints()
 
     def list_items(self):
         checkpoint: sd_models.CheckpointInfo
-        for name, checkpoint in sd_models.checkpoints_list.items():
+        check_points = sd_models.list_models(None)
+        for name, checkpoint in check_points.checkpoints_list.items():
             path, ext = os.path.splitext(checkpoint.filename)
             yield {
                 "name": checkpoint.name_for_extra,
@@ -27,5 +29,5 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
             }
 
     def allowed_directories_for_previews(self):
-        return [v for v in [shared.cmd_opts.ckpt_dir, sd_models.model_path] if v is not None]
+        return [v for v in [shared.cmd_opts.ckpt_dir, self.model_path] if v is not None]
 

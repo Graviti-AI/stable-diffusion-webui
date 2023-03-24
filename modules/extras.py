@@ -72,7 +72,7 @@ def to_half(tensor, enable):
     return tensor
 
 
-def run_modelmerger(id_task, primary_model_name, secondary_model_name, tertiary_model_name, interp_method, multiplier, save_as_half, custom_name, checkpoint_format, config_source, bake_in_vae, discard_weights):
+def run_modelmerger(request: gradio.routes.Request, id_task, primary_model_name, secondary_model_name, tertiary_model_name, interp_method, multiplier, save_as_half, custom_name, checkpoint_format, config_source, bake_in_vae, discard_weights):
     shared.state.begin()
     shared.state.job = 'model-merge'
 
@@ -117,20 +117,22 @@ def run_modelmerger(id_task, primary_model_name, secondary_model_name, tertiary_
     filename_generator, theta_func1, theta_func2 = theta_funcs[interp_method]
     shared.state.job_count = (1 if theta_func1 else 0) + (1 if theta_func2 else 0)
 
+    checkpoints = sd_models.list_models(request.request)
+
     if not primary_model_name:
         return fail("Failed: Merging requires a primary model.")
 
-    primary_model_info = sd_models.checkpoints_list[primary_model_name]
+    primary_model_info = checkpoints.checkpoints_list[primary_model_name]
 
     if theta_func2 and not secondary_model_name:
         return fail("Failed: Merging requires a secondary model.")
 
-    secondary_model_info = sd_models.checkpoints_list[secondary_model_name] if theta_func2 else None
+    secondary_model_info = checkpoints.checkpoints_list[secondary_model_name] if theta_func2 else None
 
     if theta_func1 and not tertiary_model_name:
         return fail(f"Failed: Interpolation method ({interp_method}) requires a tertiary model.")
 
-    tertiary_model_info = sd_models.checkpoints_list[tertiary_model_name] if theta_func1 else None
+    tertiary_model_info = checkpoints.checkpoints_list[tertiary_model_name] if theta_func1 else None
 
     result_is_inpainting_model = False
     result_is_instruct_pix2pix_model = False
@@ -229,7 +231,7 @@ def run_modelmerger(id_task, primary_model_name, secondary_model_name, tertiary_
             if re.search(regex, key):
                 theta_0.pop(key, None)
 
-    ckpt_dir = shared.cmd_opts.ckpt_dir or sd_models.model_path
+    ckpt_dir = shared.cmd_opts.ckpt_dir or checkpoints.model_path
 
     filename = filename_generator() if custom_name == '' else custom_name
     filename += ".inpainting" if result_is_inpainting_model else ""
@@ -248,7 +250,7 @@ def run_modelmerger(id_task, primary_model_name, secondary_model_name, tertiary_
     else:
         torch.save(theta_0, output_modelname)
 
-    sd_models.list_models()
+    checkpoints = sd_models.list_models(request.request)
 
     create_config(output_modelname, config_source, primary_model_info, secondary_model_info, tertiary_model_info)
 
@@ -256,4 +258,4 @@ def run_modelmerger(id_task, primary_model_name, secondary_model_name, tertiary_
     shared.state.textinfo = "Checkpoint saved"
     shared.state.end()
 
-    return [*[gr.Dropdown.update(choices=sd_models.checkpoint_tiles()) for _ in range(4)], "Checkpoint saved to " + output_modelname]
+    return [*[gr.Dropdown.update(choices=sd_models.checkpoint_tiles(checkpoints)) for _ in range(4)], "Checkpoint saved to " + output_modelname]

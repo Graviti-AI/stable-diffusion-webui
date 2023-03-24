@@ -1,7 +1,12 @@
 import argparse
 import os
+import pathlib
 import sys
+
+import starlette.requests
+
 import modules.safe
+import modules.user
 
 script_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -46,6 +51,47 @@ for d, must_exist, what, options in path_dirs:
         else:
             sys.path.append(d)
         paths[what] = d
+
+
+class Paths:
+    @classmethod
+    def paths(cls, request: starlette.requests):
+        user = modules.user.User.current_user(request)
+        work_dir = pathlib.Path('.').joinpath('workdir').joinpath(user.uid)
+        if not work_dir.exists():
+            work_dir.mkdir(parents=True)
+
+        model_dir = pathlib.Path('.').joinpath('models').joinpath(user.uid)
+        if not work_dir.exists():
+            work_dir.mkdir(parents=True)
+
+        return Paths(work_dir, model_dir)
+
+    def __int__(self, work_dir, model_dir):
+        self._work_dir = work_dir
+        self._model_dir = model_dir
+
+    # dir to store generated images
+    def generate_dir(self, object_type: str):
+        output = self._work_dir.joinpath('generated').joinpath(object_type)
+        if not output.exists():
+            output.mkdir(parents=True)
+        return str(output)
+
+    # filename to store user prompt styles
+    def styles_filename(self) -> str:
+        return str(self._work_dir.joinpath('styles.csv'))
+
+    # dir to store logs and saved images and zips
+    def save_dir(self):
+        save_dir = self._work_dir.joinpath('log').joinpath('images')
+        if not save_dir.exists():
+            save_dir.mkdir(parents=True)
+        return str(save_dir)
+
+    # dir to store user models
+    def models_dir(self):
+        return self._model_dir
 
 
 class Prioritize:

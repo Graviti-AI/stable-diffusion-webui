@@ -126,15 +126,16 @@ def initialize():
     modelloader.load_upscalers()
     startup_timer.record("load upscalers")
 
-    modules.sd_vae.refresh_vae_list()
+    modules.sd_vae.refresh_vae_list(None)
     startup_timer.record("refresh VAE")
 
     modules.textual_inversion.textual_inversion.list_textual_inversion_templates()
     startup_timer.record("refresh textual inversion templates")
 
     check_points = modules.sd_models.list_models(None)
+    sd_model = None
     try:
-        modules.sd_models.load_model(check_points)
+        sd_model = modules.sd_models.load_model(check_points)
     except Exception as e:
         errors.display(e, "loading stable diffusion model")
         print("", file=sys.stderr)
@@ -142,7 +143,7 @@ def initialize():
         exit(1)
     startup_timer.record("load SD checkpoint")
 
-    shared.opts.data["sd_model_checkpoint"] = shared.sd_model.sd_checkpoint_info.title
+    shared.opts.data["sd_model_checkpoint"] = sd_model.sd_checkpoint_info.title
 
     shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights(check_points)))
     shared.opts.onchange("sd_vae", wrap_queued_call(lambda: modules.sd_vae.reload_vae_weights()), call=False)

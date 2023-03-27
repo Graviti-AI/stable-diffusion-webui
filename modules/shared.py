@@ -17,7 +17,7 @@ import modules.styles
 import modules.devices as devices
 from modules import localization, extensions, script_loading, errors, ui_components, shared_items
 from modules.paths import models_path, script_path, data_path, Paths
-
+import modules.system_monitor
 
 demo = None
 
@@ -113,6 +113,7 @@ parser.add_argument("--gradio-queue", action='store_true', help="Uses gradio que
 parser.add_argument("--skip-version-check", action='store_true', help="Do not check versions of torch and xformers")
 parser.add_argument("--no-hashing", action='store_true', help="disable sha256 hashing of checkpoints to help loading performance", default=False)
 parser.add_argument("--no-download-sd-model", action='store_true', help="don't download SD1.5 model even if no model is found in --ckpt-dir", default=False)
+parser.add_argument("--monitor-system-calls", action='store_true', help="monitor system calls", default=True)
 
 
 script_loading.preload_extensions(extensions.extensions_dir, parser)

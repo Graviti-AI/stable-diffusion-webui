@@ -2,6 +2,7 @@ import collections
 import os.path
 import sys
 import gc
+from typing import Any
 
 import starlette.requests
 import torch
@@ -31,7 +32,7 @@ class Checkpoints:
         self.model_path = ''
         self.checkpoints_list: dict[str, CheckpointInfo] = {}
         self.checkpoint_alisases: dict[str, CheckpointInfo] = {}
-        self.checkpoints_loaded: dict[CheckpointInfo] = collections.OrderedDict()
+        self.checkpoints_loaded: dict[CheckpointInfo, Any] = collections.OrderedDict()
 
 
 def make_checkpoints(request: starlette.requests.Request | None) -> Checkpoints:

@@ -1,4 +1,4 @@
-
+import starlette.requests
 
 def realesrgan_models_names():
     import modules.realesrgan_model
@@ -17,7 +17,7 @@ def sd_vae_items():
     return ["Automatic", "None"] + list(modules.sd_vae.vae_dict)
 
 
-def refresh_vae_list():
+def refresh_vae_list(request: starlette.requests.Request):
     import modules.sd_vae
 
-    modules.sd_vae.refresh_vae_list()
+    modules.sd_vae.refresh_vae_list(request)

@@ -1,3 +1,4 @@
+import starlette.routing
 import torch
 import safetensors.torch
 import os
@@ -53,10 +54,10 @@ def get_filename(filepath):
     return os.path.basename(filepath)
 
 
-def refresh_vae_list():
+def refresh_vae_list(request: starlette.routing.Request | None):
     vae_dict.clear()
 
-    path = modules.paths.Paths.paths(None)
+    path = modules.paths.Paths.paths(request)
     model_path = path.models_dir()
     paths = [
         os.path.join(model_path, '**/*.vae.ckpt'),

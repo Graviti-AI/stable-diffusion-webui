@@ -441,16 +441,15 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
                 for file_hash_str, file_name in modelreader:
                     if hash_str == file_hash_str:
                         return file_name
-                return None
         return None
 
     def upload_file(file, hash_str):
         file_path = file.name
-        new_path = shutil.move(file_path, destination_dir)
-        with open(new_path,"rb") as f:
+        with open(file_path,"rb") as f:
             file_bytes = f.read() # read entire file as bytes
             readable_hash = hashlib.sha256(file_bytes).hexdigest()
         if hash_str == readable_hash:
+            new_path = shutil.move(file_path, destination_dir)
             with open(model_list_csv_path, 'a') as csvfile:
                 modelwriter = csv.writer(csvfile, delimiter=',')
                 modelwriter.writerow([hash_str, new_path])
@@ -478,7 +477,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
                     var fr = new FileReader();
                     fr.onload = () => {{
                         resolve(fr.result)
-                        }};
+                    }};
                     fr.readAsArrayBuffer(file);
                 }});
             }}

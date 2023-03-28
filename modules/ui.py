@@ -1,5 +1,6 @@
+import csv
 import html
-import json
+import hashlib
 import math
 import mimetypes
 import os
@@ -429,18 +430,132 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
     return refresh_button
 
 
-def create_upload_button(label, elem_id, destination_dir):
-    def upload(file):
+def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="models.csv"):
+
+    model_list_csv_path = os.path.join(destination_dir, model_tracking_csv)
+
+    def verify_model_existence(hash_str):
+        if os.path.exists(model_list_csv_path):
+            with open(model_list_csv_path) as csvfile:
+                modelreader = csv.reader(csvfile, delimiter=',')
+                for file_hash_str, file_name in modelreader:
+                    if hash_str == file_hash_str:
+                        return file_name
+                return None
+        return None
+
+    def upload_file(file, hash_str):
         file_path = file.name
-        shutil.move(file_path, destination_dir)
-        return
-    upload_button = gr.UploadButton(label=label, elem_id=elem_id, file_types=[".ckpt", ".safetensors", ".bin"])
-    upload_button.upload(
-        fn=upload,
-        inputs=upload_button,
-        outputs=[]
+        new_path = shutil.move(file_path, destination_dir)
+        with open(new_path,"rb") as f:
+            file_bytes = f.read() # read entire file as bytes
+            readable_hash = hashlib.sha256(file_bytes).hexdigest()
+        if hash_str == readable_hash:
+            with open(model_list_csv_path, 'a') as csvfile:
+                modelwriter = csv.writer(csvfile, delimiter=',')
+                modelwriter.writerow([hash_str, new_path])
+            return new_path
+        return None
+    hash_str_id = elem_id+'-hash-str'
+    hash_str = gr.Textbox(label='hash str', elem_id=hash_str_id, visible=False)
+    existing_filepath = gr.Textbox(label='existing filepath', visible=False)
+    uploaded_filepath = gr.Textbox(label='uploaded filepath', visible=False)
+    button_id = "regular-button-" + elem_id
+    hidden_button_id = "hidden-button-" + elem_id
+    upload_button_id = "hidden-upload-button-" + elem_id
+    button = gr.Button(label, elem_id=button_id, variant="primary")
+
+    compute_hash_js = """
+        () => {{
+            const upload_button = document.querySelector(
+                "body > gradio-app").shadowRoot.querySelector(
+                "#{upload_button_id}");
+            var input_box = upload_button.previousElementSibling;
+            var extra_input = input_box.cloneNode();
+            extra_input.id = "input-for-hash-{elem_id}";
+            const readbinaryfile = function (file) {{
+                return new Promise((resolve, reject) => {{
+                    var fr = new FileReader();
+                    fr.onload = () => {{
+                        resolve(fr.result)
+                        }};
+                    fr.readAsArrayBuffer(file);
+                }});
+            }}
+            const Uint8ArrayToHexString = function (ui8array) {{
+                var hexstring = '',
+                    h;
+                for (var i = 0; i < ui8array.length; i++) {{
+                    h = ui8array[i].toString(16);
+                    if (h.length == 1) {{
+                        h = '0' + h;
+                    }}
+                    hexstring += h;
+                }}
+                var p = Math.pow(2, Math.ceil(Math.log2(hexstring.length)));
+                hexstring = hexstring.padStart(p, '0');
+                return hexstring;
+            }}
+            const hashfile = function (file) {{
+                return readbinaryfile(file)
+                    .then(function(result) {{
+                        result = new Uint8Array(result);
+                        return window.crypto.subtle.digest('SHA-256', result);
+                    }}).then(function(result) {{
+                        result = new Uint8Array(result);
+                        var resulthex = Uint8ArrayToHexString(result);
+                        return resulthex;
+                    }});
+            }}
+            extra_input.onchange = async (e) => {{
+                const target = e.target;
+                if (!target.files) return;
+                input_box.files = target.files;
+                const hash_str = await hashfile(input_box.files[0]);
+                const checkpoint_hash_str = document.querySelector(
+                    "body > gradio-app").shadowRoot.querySelector("#{hash_str_id} > label > textarea");
+                checkpoint_hash_str.value = hash_str;
+                const event = new Event("input");
+                checkpoint_hash_str.dispatchEvent(event);
+                const hidden_button = document.querySelector(
+                    "body > gradio-app").shadowRoot.querySelector(
+                    "#{hidden_button_id}");
+                hidden_button.click();
+            }}
+        extra_input.click();
+        }}
+    """.format(
+        upload_button_id=upload_button_id,
+        elem_id=elem_id,
+        hash_str_id=hash_str_id,
+        hidden_button_id=hidden_button_id)
+    button.click(None, None, None, _js=compute_hash_js)
+    hidden_button = gr.Button("Verify hash", elem_id=hidden_button_id, visible=False)
+    hidden_button.click(verify_model_existence, hash_str, existing_filepath, api_name="check_hash")
+    existing_filepath.change(None, existing_filepath, None, _js="""
+        (filepath) => {{
+            if (!filepath) {{
+                const upload_button = document.querySelector(
+                    "body > gradio-app").shadowRoot.querySelector(
+                    "#{upload_button_id}");
+                var input_box = upload_button.previousElementSibling;
+                const event = new Event("change");
+                input_box.dispatchEvent(event);
+            }}
+        }}
+    """.format(upload_button_id=upload_button_id))
+    upload_button = gr.UploadButton(
+        label="Upload a file",
+        elem_id=upload_button_id,
+        file_types=[".ckpt", ".safetensors", ".bin", ".pt"],
+        visible=False
     )
-    return upload_button
+    upload_button.upload(
+        fn=upload_file,
+        inputs=[upload_button, hash_str],
+        outputs=uploaded_filepath
+    )
+    return button
 
 
 def create_output_panel(tabname, outdir):

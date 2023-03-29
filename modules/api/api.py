@@ -243,13 +243,14 @@ class Api:
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
         args['global_prompt_styles'] = shared.prompt_styles(request)
+        args['checkpoints'] = modules.sd_models.make_checkpoints(request)
         with self.queue_lock:
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
             p.scripts = script_runner
             p.outpath_grids = opts.outdir_txt2img_grids
             p.outpath_samples = opts.outdir_txt2img_samples
 
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             if selectable_scripts != None:
                 p.script_args = script_args
                 processed = scripts.scripts_txt2img.run(p, *p.script_args) # Need to pass args as list here
@@ -297,6 +298,7 @@ class Api:
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
         args['global_prompt_styles'] = shared.prompt_styles(request)
+        args['checkpoints'] = modules.sd_models.make_checkpoints(request),
 
         with self.queue_lock:
             p = StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)
@@ -305,7 +307,7 @@ class Api:
             p.outpath_grids = opts.outdir_img2img_grids
             p.outpath_samples = opts.outdir_img2img_samples
 
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             if selectable_scripts != None:
                 p.script_args = script_args
                 processed = scripts.scripts_img2img.run(p, *p.script_args) # Need to pass args as list here
@@ -322,17 +324,19 @@ class Api:
 
         return ImageToImageResponse(images=b64images, parameters=vars(img2imgreq), info=processed.js())
 
-    def extras_single_image_api(self, req: ExtrasSingleImageRequest):
+    def extras_single_image_api(self, req: ExtrasSingleImageRequest, request: starlette.requests.Request):
         reqDict = setUpscalers(req)
 
         reqDict['image'] = decode_base64_to_image(reqDict['image'])
+        reqDict['request'] = request
+        reqDict['checkpoints'] = modules.sd_models.make_checkpoints(request)
 
         with self.queue_lock:
-            result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
+            result = postprocessing.run_extras(request, extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
 
         return ExtrasSingleImageResponse(image=encode_pil_to_base64(result[0][0]), html_info=result[1])
 
-    def extras_batch_images_api(self, req: ExtrasBatchImagesRequest):
+    def extras_batch_images_api(self, req: ExtrasBatchImagesRequest, request: starlette.requests.Request):
         reqDict = setUpscalers(req)
 
         def prepareFiles(file):
@@ -342,9 +346,11 @@ class Api:
 
         reqDict['image_folder'] = list(map(prepareFiles, reqDict['imageList']))
         reqDict.pop('imageList')
+        reqDict['checkpoints'] = modules.sd_models.make_checkpoints(request)
+        reqDict['request'] = request
 
         with self.queue_lock:
-            result = postprocessing.run_extras(extras_mode=1, image="", input_dir="", output_dir="", save_output=False, **reqDict)
+            result = postprocessing.run_extras(request, extras_mode=1, image="", input_dir="", output_dir="", save_output=False, **reqDict)
 
         return ExtrasBatchImagesResponse(images=list(map(encode_pil_to_base64, result[0])), html_info=result[1])
 
@@ -364,7 +370,7 @@ class Api:
 
         return PNGInfoResponse(info=geninfo, items=items)
 
-    def progressapi(self, req: ProgressRequest = Depends()):
+    def progressapi(self, req: ProgressRequest = Depends(), request: starlette.requests.Request = None):
         # copy from check_progress_call of ui.py
 
         if shared.state.job_count == 0:
@@ -384,7 +390,7 @@ class Api:
 
         progress = min(progress, 1)
 
-        shared.state.set_current_image()
+        shared.state.set_current_image(modules.sd_models.make_checkpoints(request))
 
         current_image = None
         if shared.state.current_image and not req.skip_current_image:
@@ -392,7 +398,7 @@ class Api:
 
         return ProgressResponse(progress=progress, eta_relative=eta_relative, state=shared.state.dict(), current_image=current_image, textinfo=shared.state.textinfo)
 
-    def interrogateapi(self, interrogatereq: InterrogateRequest):
+    def interrogateapi(self, interrogatereq: InterrogateRequest, request: starlette.requests.Request):
         image_b64 = interrogatereq.image
         if image_b64 is None:
             raise HTTPException(status_code=404, detail="Image not found")
@@ -403,7 +409,7 @@ class Api:
         # Override object param
         with self.queue_lock:
             if interrogatereq.model == "clip":
-                processed = shared.interrogator.interrogate(img)
+                processed = shared.interrogator.interrogate(request, img)
             elif interrogatereq.model == "deepdanbooru":
                 processed = deepbooru.model.tag(img)
             else:
@@ -500,9 +506,9 @@ class Api:
     def refresh_checkpoints(self, request: starlette.requests.Request):
         shared.refresh_checkpoints(request)
 
-    def create_embedding(self, args: dict):
+    def create_embedding(self, request: starlette.requests.Request, args: dict):
         try:
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             filename = create_embedding(**args) # create empty embedding
             sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings() # reload embeddings so new one can be immediately used
             shared.state.end()
@@ -511,9 +517,9 @@ class Api:
             shared.state.end()
             return TrainResponse(info = "create embedding error: {error}".format(error = e))
 
-    def create_hypernetwork(self, args: dict):
+    def create_hypernetwork(self, request: starlette.requests.Request, args: dict):
         try:
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             filename = create_hypernetwork(**args) # create empty embedding
             shared.state.end()
             return CreateResponse(info = "create hypernetwork filename: {filename}".format(filename = filename))
@@ -521,9 +527,9 @@ class Api:
             shared.state.end()
             return TrainResponse(info = "create hypernetwork error: {error}".format(error = e))
 
-    def preprocess(self, args: dict):
+    def preprocess(self, request: starlette.requests.Request, args: dict):
         try:
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             preprocess(**args) # quick operation unless blip/booru interrogation is enabled
             shared.state.end()
             return PreprocessResponse(info = 'preprocess complete')
@@ -539,7 +545,7 @@ class Api:
 
     def train_embedding(self, request: starlette.requests.Request, args: dict):
         try:
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             apply_optimizations = shared.opts.training_xattention_optimizations
             error = None
             filename = ''
@@ -561,7 +567,7 @@ class Api:
 
     def train_hypernetwork(self, request: starlette.requests.Request, args: dict):
         try:
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             shared.loaded_hypernetworks = []
             apply_optimizations = shared.opts.training_xattention_optimizations
             error = None

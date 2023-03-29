@@ -192,6 +192,7 @@ class State:
     time_start = None
     need_restart = False
     server_start = None
+    checkpoints = None
 
     def skip(self):
         self.skipped = True
@@ -201,7 +202,7 @@ class State:
 
     def nextjob(self):
         if opts.live_previews_enable and opts.show_progress_every_n_steps == -1:
-            self.do_set_current_image()
+            self.do_set_current_image(self.checkpoints)
 
         self.job_no += 1
         self.sampling_step = 0
@@ -221,7 +222,7 @@ class State:
 
         return obj
 
-    def begin(self):
+    def begin(self, checkpoints):
         self.sampling_step = 0
         self.job_count = -1
         self.processing_has_refined_job_count = False
@@ -235,6 +236,7 @@ class State:
         self.interrupted = False
         self.textinfo = None
         self.time_start = time.time()
+        self.checkpoints = checkpoints
 
         devices.torch_gc()
 
@@ -244,23 +246,23 @@ class State:
 
         devices.torch_gc()
 
-    def set_current_image(self):
+    def set_current_image(self, checkpoints):
         """sets self.current_image from self.current_latent if enough sampling steps have been made after the last call to this"""
         if not parallel_processing_allowed:
             return
 
         if self.sampling_step - self.current_image_sampling_step >= opts.show_progress_every_n_steps and opts.live_previews_enable and opts.show_progress_every_n_steps != -1:
-            self.do_set_current_image()
+            self.do_set_current_image(checkpoints)
 
-    def do_set_current_image(self):
+    def do_set_current_image(self, checkpoints):
         if self.current_latent is None:
             return
 
         import modules.sd_samplers
         if opts.show_progress_grid:
-            self.assign_current_image(modules.sd_samplers.samples_to_image_grid(self.current_latent))
+            self.assign_current_image(modules.sd_samplers.samples_to_image_grid(self.current_latent, checkpoints))
         else:
-            self.assign_current_image(modules.sd_samplers.sample_to_image(self.current_latent))
+            self.assign_current_image(modules.sd_samplers.sample_to_image(self.current_latent, checkpoints))
 
         self.current_image_sampling_step = self.sampling_step
 

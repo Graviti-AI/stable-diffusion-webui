@@ -171,8 +171,8 @@ def process_interrogate(interrogation_function, mode, ii_input_dir, ii_output_di
         return [gr.update(), None]
 
 
-def interrogate(image):
-    prompt = shared.interrogator.interrogate(image.convert("RGB"))
+def interrogate(request: starlette.requests.Request, image):
+    prompt = shared.interrogator.interrogate(request, image.convert("RGB"))
     return gr.update() if prompt is None else prompt
 
 
@@ -1072,15 +1072,19 @@ def create_ui():
                 interp_description = gr.HTML(value=update_interp_description("Weighted sum"), elem_id="modelmerger_interp_description")
 
                 with FormRow(elem_id="modelmerger_models"):
-                    check_points = sd_models.list_models(None)
-                    primary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(check_points), elem_id="modelmerger_primary_model_name", label="Primary model (A)")
-                    create_refresh_button(primary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles(check_points)}, "refresh_checkpoint_A")
+                    anonymous_checkpoints = sd_models.list_models(None)
+                    def refresh_user_list_checkpoints(request: gradio.routes.Request):
+                        checkpoints = sd_models.list_models(request)
+                        return {"choices": modules.sd_models.checkpoint_tiles(checkpoints)}
 
-                    secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(check_points), elem_id="modelmerger_secondary_model_name", label="Secondary model (B)")
-                    create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles(check_points)}, "refresh_checkpoint_B")
+                    primary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(anonymous_checkpoints), elem_id="modelmerger_primary_model_name", label="Primary model (A)")
+                    create_refresh_button(primary_model_name, modules.sd_models.list_models, refresh_user_list_checkpoints, "refresh_checkpoint_A")
 
-                    tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(check_points), elem_id="modelmerger_tertiary_model_name", label="Tertiary model (C)")
-                    create_refresh_button(tertiary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles(check_points)}, "refresh_checkpoint_C")
+                    secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(anonymous_checkpoints), elem_id="modelmerger_secondary_model_name", label="Secondary model (B)")
+                    create_refresh_button(secondary_model_name, modules.sd_models.list_models, refresh_user_list_checkpoints, "refresh_checkpoint_B")
+
+                    tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(anonymous_checkpoints), elem_id="modelmerger_tertiary_model_name", label="Tertiary model (C)")
+                    create_refresh_button(tertiary_model_name, modules.sd_models.list_models, refresh_user_list_checkpoints, "refresh_checkpoint_C")
 
                 custom_name = gr.Textbox(label="Custom Name (Optional)", elem_id="modelmerger_custom_name")
                 interp_amount = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Multiplier (M) - set to 0 to get model A', value=0.3, elem_id="modelmerger_interp_amount")

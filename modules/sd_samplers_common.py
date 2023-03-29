@@ -25,14 +25,14 @@ def setup_img2img_steps(p, steps=None):
 approximation_indexes = {"Full": 0, "Approx NN": 1, "Approx cheap": 2}
 
 
-def single_sample_to_image(sample, approximation=None):
+def single_sample_to_image(sample, approximation=None, checkpoints=None):
     if approximation is None:
         approximation = approximation_indexes.get(opts.show_progress_type, 0)
 
     if approximation == 2:
         x_sample = sd_vae_approx.cheap_approximation(sample)
     elif approximation == 1:
-        x_sample = sd_vae_approx.model()(sample.to(devices.device, devices.dtype).unsqueeze(0))[0].detach()
+        x_sample = sd_vae_approx.model(checkpoints)(sample.to(devices.device, devices.dtype).unsqueeze(0))[0].detach()
     else:
         x_sample = processing.decode_first_stage(shared.sd_model, sample.unsqueeze(0))[0]
 
@@ -42,12 +42,12 @@ def single_sample_to_image(sample, approximation=None):
     return Image.fromarray(x_sample)
 
 
-def sample_to_image(samples, index=0, approximation=None):
-    return single_sample_to_image(samples[index], approximation)
+def sample_to_image(samples, index=0, approximation=None, checkpoints=None):
+    return single_sample_to_image(samples[index], approximation, checkpoints)
 
 
-def samples_to_image_grid(samples, approximation=None):
-    return images.image_grid([single_sample_to_image(sample, approximation) for sample in samples])
+def samples_to_image_grid(samples, approximation=None, checkpoints=None):
+    return images.image_grid([single_sample_to_image(sample, approximation, checkpoints) for sample in samples])
 
 
 def store_latent(decoded):

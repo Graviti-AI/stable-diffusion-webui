@@ -1,4 +1,5 @@
 import csv
+import json
 import html
 import hashlib
 import math
@@ -408,11 +409,11 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
     return refresh_button
 
 
-def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="models.csv"):
+def create_upload_button(label, elem_id, model_tracking_csv="models.csv"):
 
-    model_list_csv_path = os.path.join(destination_dir, model_tracking_csv)
 
-    def verify_model_existence(hash_str):
+    def verify_model_existence(request: gradio.routes.Request, hash_str):
+        model_list_csv_path = os.path.join(Paths.paths(request.request).models_dir(), model_tracking_csv)
         if os.path.exists(model_list_csv_path):
             with open(model_list_csv_path) as csvfile:
                 modelreader = csv.reader(csvfile, delimiter=',')
@@ -421,7 +422,10 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
                         return file_name
         return hash_str
 
-    def upload_file(file, hash_str):
+    def upload_file(request: gradio.routes.Request, file, hash_str):
+        destination_dir = Paths.paths(request.request).models_dir()
+        model_list_csv_path = os.path.join(destination_dir, model_tracking_csv)
+
         file_path = file.name
         with open(file_path,"rb") as f:
             file_bytes = f.read() # read entire file as bytes

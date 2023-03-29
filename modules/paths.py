@@ -49,11 +49,11 @@ class Paths:
     @classmethod
     def paths(cls, request: starlette.requests):
         user = modules.user.User.current_user(request)
-        work_dir = pathlib.Path('.').joinpath('workdir').joinpath(user.uid)
+        work_dir = pathlib.Path(data_path).joinpath('workdir').joinpath(user.uid)
         if not work_dir.exists():
             work_dir.mkdir(parents=True)
 
-        model_dir = pathlib.Path('.').joinpath('models').joinpath(user.uid)
+        model_dir = pathlib.Path(data_path).joinpath('models').joinpath(user.uid)
         if not work_dir.exists():
             work_dir.mkdir(parents=True)
 

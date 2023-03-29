@@ -420,7 +420,7 @@ def create_upload_button(label, elem_id, model_tracking_csv="models.csv"):
                 for file_hash_str, file_name in modelreader:
                     if hash_str == file_hash_str:
                         return file_name
-        return None
+        return hash_str
 
     def upload_file(request: gradio.routes.Request, file, hash_str):
         destination_dir = Paths.paths(request.request).models_dir()
@@ -513,9 +513,9 @@ def create_upload_button(label, elem_id, model_tracking_csv="models.csv"):
     button.click(None, None, None, _js=compute_hash_js)
     hidden_button = gr.Button("Verify hash", elem_id=hidden_button_id, visible=False)
     hidden_button.click(verify_model_existence, hash_str, existing_filepath, api_name="check_hash")
-    existing_filepath.change(None, existing_filepath, None, _js="""
-        (filepath) => {{
-            if (!filepath) {{
+    existing_filepath.change(None, [hash_str, existing_filepath], None, _js="""
+        (hash_str, filepath) => {{
+            if (hash_str == filepath) {{
                 const upload_button = document.querySelector(
                     "body > gradio-app").shadowRoot.querySelector(
                     "#{upload_button_id}");

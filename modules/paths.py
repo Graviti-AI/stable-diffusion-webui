@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("--data-dir", type=str, default=os.path.dirname(os.path.dirname(os.path.realpath(__file__))), help="base path where all user data is stored",)
 cmd_opts_pre = parser.parse_known_args()[0]
 data_path = cmd_opts_pre.data_dir
-models_path = os.path.join(data_path, "models")
+models_path = os.path.join(data_path, "models", "default")
 
 # data_path = cmd_opts_pre.data
 sys.path.insert(0, script_path)
@@ -57,11 +57,11 @@ class Paths:
     @classmethod
     def paths(cls, request: starlette.requests):
         user = modules.user.User.current_user(request)
-        work_dir = pathlib.Path('.').joinpath('workdir').joinpath(user.uid)
+        work_dir = pathlib.Path(data_path).joinpath('workdir').joinpath(user.uid)
         if not work_dir.exists():
             work_dir.mkdir(parents=True)
 
-        model_dir = pathlib.Path('.').joinpath('models').joinpath(user.uid)
+        model_dir = pathlib.Path(data_path).joinpath('models').joinpath(user.uid)
         if not work_dir.exists():
             work_dir.mkdir(parents=True)
 

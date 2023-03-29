@@ -509,6 +509,17 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
             extra_input.onchange = async (e) => {{
                 const target = e.target;
                 if (!target.files) return;
+
+                // Launch modal for notification
+                var modal = document.querySelector(
+                    "body > gradio-app").shadowRoot.querySelector("#notification-modal");
+                var modal_content = modal.getElementsByTagName("p")[0];
+                modal_content.innerText = "Start to upload model."
+                modal.style.display = "block";
+                setTimeout(function(){{
+                    modal.style.display = "none";
+                }}, 3000);
+
                 input_box.files = target.files;
                 const hash_str = await hashfile(input_box.files[0]);
                 const checkpoint_hash_str = document.querySelector(
@@ -554,6 +565,19 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
         inputs=[upload_button, hash_str],
         outputs=uploaded_filepath
     )
+    notify_upload_finished_js = """
+        () => {
+            // Launch modal for notification
+            var modal = document.querySelector(
+                "body > gradio-app").shadowRoot.querySelector("#notification-modal");
+            var modal_content = modal.getElementsByTagName("p")[0];
+            modal_content.innerText = "Model uploaded. Use the refresh button to load it."
+            modal.style.display = "block";
+            setTimeout(function(){
+                modal.style.display = "none";
+            }, 3000);
+        }"""
+    uploaded_filepath.change(None, None, None, _js=notify_upload_finished_js)
     return button
 
 

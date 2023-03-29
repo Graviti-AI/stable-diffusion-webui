@@ -31,7 +31,7 @@ class SystemMonitor:
         func_args = {}
         named_args_count = min(len(positional_args), len(args))
         for i in range(named_args_count):
-            func_args[positional_args[i].name] = args[i]
+            func_args[positional_args[i].name] = str(args[i])
         module = inspect.getmodule(func)
 
         func_args.update(**kwargs)

@@ -2,7 +2,7 @@ import os
 
 import torch
 from torch import nn
-from modules import devices, paths
+from modules import devices, paths, sd_models
 
 sd_vae_approx_model = None
 
@@ -31,11 +31,11 @@ class VAEApprox(nn.Module):
         return x
 
 
-def model():
+def model(checkpoints: sd_models.Checkpoints):
     global sd_vae_approx_model
 
     if sd_vae_approx_model is None:
-        model_path = os.path.join(paths.models_path, "VAE-approx", "model.pt")
+        model_path = os.path.join(checkpoints.model_path, "VAE-approx", "model.pt")
         sd_vae_approx_model = VAEApprox()
         if not os.path.exists(model_path):
             model_path = os.path.join(paths.script_path, "models", "VAE-approx", "model.pt")

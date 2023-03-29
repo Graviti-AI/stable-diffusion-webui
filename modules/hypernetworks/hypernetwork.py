@@ -721,7 +721,8 @@ def train_hypernetwork(request: starlette.requests.Request, id_task, hypernetwor
                         sd_model=shared.sd_model,
                         do_not_save_grid=True,
                         do_not_save_samples=True,
-                        global_prompt_styles=shared.prompt_styles(request)
+                        global_prompt_styles=shared.prompt_styles(request),
+                        checkpoints=sd_models.make_checkpoints(request)
                     )
 
                     p.disable_extra_networks = True

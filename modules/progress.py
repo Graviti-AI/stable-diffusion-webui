@@ -3,8 +3,10 @@ import io
 import time
 
 import gradio as gr
+import starlette.requests
 from pydantic import BaseModel, Field
 
+import modules.sd_models
 from modules.shared import opts
 
 import modules.shared as shared
@@ -57,7 +59,7 @@ def setup_progress_api(app):
     return app.add_api_route("/internal/progress", progressapi, methods=["POST"], response_model=ProgressResponse)
 
 
-def progressapi(req: ProgressRequest):
+def progressapi(req: ProgressRequest, request: starlette.requests.Request):
     active = req.id_task == current_task
     queued = req.id_task in pending_tasks
     completed = req.id_task in finished_tasks
@@ -82,7 +84,7 @@ def progressapi(req: ProgressRequest):
     eta = predicted_duration - elapsed_since_start if predicted_duration is not None else None
 
     id_live_preview = req.id_live_preview
-    shared.state.set_current_image()
+    shared.state.set_current_image(modules.sd_models.make_checkpoints(request))
     if opts.live_previews_enable and shared.state.id_live_preview != req.id_live_preview:
         image = shared.state.current_image
         if image is not None:

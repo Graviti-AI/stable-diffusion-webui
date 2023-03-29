@@ -93,6 +93,9 @@ class Paths:
     def models_dir(self):
         return self._model_dir
 
+    def script_path(self):
+        return self._model_dir
+
 
 class Prioritize:
     def __init__(self, name):

@@ -132,10 +132,10 @@ def initialize():
     modules.textual_inversion.textual_inversion.list_textual_inversion_templates()
     startup_timer.record("refresh textual inversion templates")
 
-    check_points = modules.sd_models.list_models(None)
-    sd_model = None
+    anonymous_check_points = modules.sd_models.list_models(None)
+    anonymous_sd_model = None
     try:
-        sd_model = modules.sd_models.load_model(check_points)
+        anonymous_sd_model = modules.sd_models.load_model(anonymous_check_points)
     except Exception as e:
         errors.display(e, "loading stable diffusion model")
         print("", file=sys.stderr)
@@ -143,9 +143,9 @@ def initialize():
         exit(1)
     startup_timer.record("load SD checkpoint")
 
-    shared.opts.data["sd_model_checkpoint"] = sd_model.sd_checkpoint_info.title
+    shared.opts.data["sd_model_checkpoint"] = anonymous_sd_model.sd_checkpoint_info.title
 
-    shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights(check_points)))
+    shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights(anonymous_check_points)))
     shared.opts.onchange("sd_vae", wrap_queued_call(lambda: modules.sd_vae.reload_vae_weights()), call=False)
     shared.opts.onchange("sd_vae_as_default", wrap_queued_call(lambda: modules.sd_vae.reload_vae_weights()), call=False)
     shared.opts.onchange("temp_dir", ui_tempdir.on_tmpdir_changed)
@@ -157,7 +157,7 @@ def initialize():
     ui_extra_networks.intialize()
     ui_extra_networks.register_page(ui_extra_networks_textual_inversion.ExtraNetworksPageTextualInversion())
     ui_extra_networks.register_page(ui_extra_networks_hypernets.ExtraNetworksPageHypernetworks())
-    ui_extra_networks.register_page(ui_extra_networks_checkpoints.ExtraNetworksPageCheckpoints(check_points.model_path))
+    ui_extra_networks.register_page(ui_extra_networks_checkpoints.ExtraNetworksPageCheckpoints(anonymous_check_points.model_path))
 
     extra_networks.initialize()
     extra_networks.register_extra_network(extra_networks_hypernet.ExtraNetworkHypernet())

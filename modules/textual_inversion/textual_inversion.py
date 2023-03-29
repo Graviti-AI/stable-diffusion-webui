@@ -548,7 +548,8 @@ def train_embedding(request: starlette.requests.Request, id_task, embedding_name
                         do_not_save_grid=True,
                         do_not_save_samples=True,
                         do_not_reload_embeddings=True,
-                        global_prompt_styles=shared.prompt_styles(request)
+                        global_prompt_styles=shared.prompt_styles(request),
+                        checkpoints=sd_models.make_checkpoints(request)
                     )
 
                     if preview_from_txt2img:

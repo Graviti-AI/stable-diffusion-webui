@@ -184,9 +184,9 @@ class InterrogateModels:
 
         return caption[0]
 
-    def interrogate(self, pil_image):
+    def interrogate(self, pil_image, checkpoints):
         res = ""
-        shared.state.begin()
+        shared.state.begin(checkpoints)
         shared.state.job = 'interrogate'
         try:
             if shared.cmd_opts.lowvram or shared.cmd_opts.medvram:

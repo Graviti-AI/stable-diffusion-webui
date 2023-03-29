@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from basicsr.utils.download_util import load_file_from_url
 from modules import shared
 from modules.upscaler import Upscaler, UpscalerLanczos, UpscalerNearest, UpscalerNone
-from modules.paths import script_path, models_path
+from modules.paths import script_path, models_path, Paths
 
 
 def load_models(model_path: str, model_url: str = None, command_path: str = None, ext_filter=None, download_name=None, ext_blacklist=None) -> list:
@@ -84,24 +84,31 @@ def cleanup_models():
     # and then enumerate that, but this works for now. In the future, it'd be nice to just have every "model" scaler
     # somehow auto-register and just do these things...
     root_path = script_path
+    user_models_path = Paths.paths(None).models_dir()
+
     src_path = models_path
-    dest_path = os.path.join(models_path, "Stable-diffusion")
+    dest_path = os.path.join(user_models_path, "Stable-diffusion")
     move_files(src_path, dest_path, ".ckpt")
     move_files(src_path, dest_path, ".safetensors")
+
     src_path = os.path.join(root_path, "ESRGAN")
-    dest_path = os.path.join(models_path, "ESRGAN")
+    dest_path = os.path.join(user_models_path, "ESRGAN")
     move_files(src_path, dest_path)
+
     src_path = os.path.join(models_path, "BSRGAN")
-    dest_path = os.path.join(models_path, "ESRGAN")
+    dest_path = os.path.join(user_models_path, "ESRGAN")
     move_files(src_path, dest_path, ".pth")
+
     src_path = os.path.join(root_path, "gfpgan")
-    dest_path = os.path.join(models_path, "GFPGAN")
+    dest_path = os.path.join(user_models_path, "GFPGAN")
     move_files(src_path, dest_path)
+
     src_path = os.path.join(root_path, "SwinIR")
-    dest_path = os.path.join(models_path, "SwinIR")
+    dest_path = os.path.join(user_models_path, "SwinIR")
     move_files(src_path, dest_path)
+
     src_path = os.path.join(root_path, "repositories/latent-diffusion/experiments/pretrained_models/")
-    dest_path = os.path.join(models_path, "LDSR")
+    dest_path = os.path.join(user_models_path, "LDSR")
     move_files(src_path, dest_path)
 
 

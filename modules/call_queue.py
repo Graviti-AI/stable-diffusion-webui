@@ -6,6 +6,7 @@ import time
 
 import gradio.routes
 
+import modules.sd_models
 from modules import shared, progress
 
 queue_lock = threading.Lock()
@@ -43,7 +44,7 @@ def wrap_gradio_gpu_call(func, extra_outputs=None):
                 return extra_outputs_array + [str(e)]
 
         with queue_lock:
-            shared.state.begin()
+            shared.state.begin(modules.sd_models.make_checkpoints(request))
             progress.start_task(id_task)
 
             try:

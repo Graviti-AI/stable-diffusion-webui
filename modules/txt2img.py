@@ -1,7 +1,7 @@
 import gradio.routes
 
 import modules.scripts
-from modules import sd_samplers
+from modules import sd_samplers, sd_models
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessing, Processed, StableDiffusionProcessingTxt2Img, \
     StableDiffusionProcessingImg2Img, process_images
@@ -44,7 +44,8 @@ def txt2img(request: gradio.routes.Request, id_task: str, prompt: str, negative_
         hr_resize_x=hr_resize_x,
         hr_resize_y=hr_resize_y,
         override_settings=override_settings,
-        global_prompt_styles=shared.prompt_styles(request.request)
+        global_prompt_styles=shared.prompt_styles(request.request),
+        checkpoints=sd_models.make_checkpoints(request.request)
     )
 
     p.scripts = modules.scripts.scripts_txt2img

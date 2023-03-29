@@ -83,10 +83,10 @@ def confirm_samplers(p, xs):
 
 
 def apply_checkpoint(p, x, xs):
-    info = modules.sd_models.get_closet_checkpoint_match(x)
+    info = modules.sd_models.get_closet_checkpoint_match(x, p.checkpoints)
     if info is None:
         raise RuntimeError(f"Unknown checkpoint: {x}")
-    modules.sd_models.reload_model_weights(shared.sd_model, info)
+    modules.sd_models.reload_model_weights(p.checkpoints, shared.sd_model, info)
 
 
 def confirm_checkpoints(p, xs):
@@ -341,6 +341,9 @@ def draw_xyz_grid(p, xs, ys, zs, x_labels, y_labels, z_labels, cell, draw_legend
 
 
 class SharedSettingsStackHelper(object):
+    def __init__(self, checkpoints: sd_models.Checkpoints):
+        self.checkpoints = checkpoints
+
     def __enter__(self):
         self.CLIP_stop_at_last_layers = opts.CLIP_stop_at_last_layers
         self.vae = opts.sd_vae
@@ -349,7 +352,7 @@ class SharedSettingsStackHelper(object):
     def __exit__(self, exc_type, exc_value, tb):
         opts.data["sd_vae"] = self.vae
         opts.data["uni_pc_order"] = self.uni_pc_order
-        modules.sd_models.reload_model_weights()
+        modules.sd_models.reload_model_weights(self.checkpoints)
         modules.sd_vae.reload_vae_weights()
 
         opts.data["CLIP_stop_at_last_layers"] = self.CLIP_stop_at_last_layers
@@ -626,7 +629,7 @@ class Script(scripts.Script):
 
             return res
 
-        with SharedSettingsStackHelper():
+        with SharedSettingsStackHelper(p.checkpoints):
             processed = draw_xyz_grid(
                 p,
                 xs=xs,

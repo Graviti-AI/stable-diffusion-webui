@@ -7,7 +7,7 @@ import gradio.routes
 import numpy as np
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance, ImageChops
 
-from modules import devices, sd_samplers
+from modules import devices, sd_samplers, sd_models
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images
 from modules.shared import opts, state
@@ -151,7 +151,8 @@ def img2img(request: gradio.routes.Request, id_task: str, mode: int, prompt: str
         inpaint_full_res_padding=inpaint_full_res_padding,
         inpainting_mask_invert=inpainting_mask_invert,
         override_settings=override_settings,
-        global_prompt_styles=shared.prompt_styles(request.request)
+        global_prompt_styles=shared.prompt_styles(request.request),
+        checkpoints=sd_models.make_checkpoints(request.request),
     )
 
     p.scripts = modules.scripts.scripts_txt2img

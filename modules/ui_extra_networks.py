@@ -65,7 +65,7 @@ class ExtraNetworksPage:
         self.allow_negative_prompt = False
         self.metadata = {}
 
-    def refresh(self):
+    def refresh(self, request: gr.Request):
         pass
 
     def link_preview(self, filename):
@@ -259,11 +259,11 @@ def create_ui(container, button, tabname):
     state_visible = gr.State(value=False)
     button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button])
 
-    def refresh():
+    def refresh(request: gr.Request):
         res = []
 
         for pg in ui.stored_extra_pages:
-            pg.refresh()
+            pg.refresh(request)
             res.append(pg.create_html(ui.tabname))
 
         return res

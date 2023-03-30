@@ -1,5 +1,5 @@
 import json
-import gradio.routes
+import gradio as gr
 import modules.user
 
 
@@ -17,7 +17,7 @@ class SystemMonitor:
     def __init__(self):
         pass
 
-    def on_task(self, request: gradio.routes.Request, func, *args, **kwargs):
+    def on_task(self, request: gr.Request, func, *args, **kwargs):
         # get func args and fun name
         import inspect
         signature = inspect.signature(func)

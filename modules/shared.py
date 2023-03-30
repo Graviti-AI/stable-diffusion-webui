@@ -182,7 +182,7 @@ state = State()
 state.server_start = time.time()
 
 
-def prompt_styles(request: starlette.requests.Request = None) -> modules.styles.StyleDatabase:
+def prompt_styles(request: gr.Request = None) -> modules.styles.StyleDatabase:
     filename = Paths.paths(request).styles_filename()
     return modules.styles.StyleDatabase(filename)
 

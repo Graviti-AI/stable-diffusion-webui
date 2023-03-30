@@ -1,5 +1,6 @@
 import csv
 import html
+import json
 import hashlib
 import math
 import mimetypes
@@ -18,7 +19,6 @@ import gradio as gr
 import gradio.routes
 import gradio.utils
 import numpy as np
-import starlette.requests
 from PIL import Image, PngImagePlugin
 from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call
 
@@ -103,16 +103,16 @@ def visit(x, func, path=""):
         func(path + "/" + str(x.label), x)
 
 
-def add_style(request: gradio.routes.Request, name: str, prompt: str, negative_prompt: str):
+def add_style(request: gr.Request, name: str, prompt: str, negative_prompt: str):
     if name is None:
         return [gr_show() for x in range(4)]
 
     style = modules.styles.PromptStyle(name, prompt, negative_prompt)
-    prompt_styles = shared.prompt_styles(request.request)
+    prompt_styles = shared.prompt_styles(request)
     prompt_styles.styles[style.name] = style
     # Save all loaded prompt styles: this allows us to update the storage format in the future more easily, because we
     # reserialize all styles every time we save them
-    prompt_styles.save_styles(Paths.paths(request.request).styles_filename())
+    prompt_styles.save_styles(Paths.paths(request).styles_filename())
 
     return [gr.Dropdown.update(visible=True, choices=list(prompt_styles.styles)) for _ in range(2)]
 
@@ -329,7 +329,7 @@ def create_toprow(is_img2img):
                     outputs=[prompt, negative_prompt],
                 )
 
-            def current_prompt_styles(request: starlette.requests.Request = None):
+            def current_prompt_styles(request: gr.Request = None):
                 return {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}
 
             with gr.Row(elem_id=f"{id_part}_styles_row"):
@@ -377,7 +377,7 @@ def apply_setting(key, value):
 
 
 def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id):
-    def refresh(request: gradio.routes.Request):
+    def refresh(request: gr.Request):
         refresh_method(request.request)
 
         if callable(refreshed_args):

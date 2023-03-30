@@ -1,6 +1,7 @@
 import json
 import os
 import lora
+import gradio as gr
 
 from modules import shared, ui_extra_networks
 
@@ -9,7 +10,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Lora')
 
-    def refresh(self):
+    def refresh(self, request: gr.Request):
         lora.list_available_loras()
 
     def list_items(self):

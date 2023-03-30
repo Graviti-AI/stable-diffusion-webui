@@ -1,9 +1,10 @@
 import os
 import pathlib
 import sys
-from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir
 
-import starlette.requests
+import gradio as gr
+
+from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir
 
 import modules.safe
 import modules.user
@@ -47,7 +48,7 @@ for d, must_exist, what, options in path_dirs:
 
 class Paths:
     @classmethod
-    def paths(cls, request: starlette.requests):
+    def paths(cls, request: gr.Request):
         user = modules.user.User.current_user(request)
         work_dir = pathlib.Path('.').joinpath('workdir').joinpath(user.uid)
         if not work_dir.exists():

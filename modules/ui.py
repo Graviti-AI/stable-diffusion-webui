@@ -292,11 +292,16 @@ def create_toprow(is_img2img):
                 button_interrogate = gr.Button('Interrogate\nCLIP', elem_id="interrogate")
                 button_deepbooru = gr.Button('Interrogate\nDeepBooru', elem_id="deepbooru")
 
+        def get_sd_model_title_from_setting():
+            key = 'sd_model_checkpoint'
+            return opts.data[key] if key in opts.data else opts.data_labels[key].default
+
         with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
             with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box"):
                 interrupt = gr.Button('Interrupt', elem_id=f"{id_part}_interrupt", elem_classes="generate-box-interrupt")
                 skip = gr.Button('Skip', elem_id=f"{id_part}_skip", elem_classes="generate-box-skip")
                 submit = gr.Button('Generate', elem_id=f"{id_part}_generate", variant='primary')
+                model_title = gr.Textbox(elem_id=f"{id_part}_model_title", value=get_sd_model_title_from_setting(), visible=False)
 
                 skip.click(
                     fn=lambda: shared.state.skip(),
@@ -336,7 +341,7 @@ def create_toprow(is_img2img):
                 prompt_styles = gr.Dropdown(label="Styles", elem_id=f"{id_part}_styles", choices=[], value=[], multiselect=True)
                 create_refresh_button(prompt_styles, lambda _: _, current_prompt_styles, f"refresh_{id_part}_styles")
 
-    return prompt, prompt_styles, negative_prompt, submit, button_interrogate, button_deepbooru, prompt_style_apply, save_style, paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button
+    return prompt, prompt_styles, negative_prompt, submit, button_interrogate, button_deepbooru, prompt_style_apply, save_style, paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, model_title
 
 
 def setup_progressbar(*args, **kwargs):
@@ -627,7 +632,7 @@ def create_ui():
     modules.scripts.scripts_txt2img.initialize_scripts(is_img2img=False)
 
     with gr.Blocks(analytics_enabled=False) as txt2img_interface:
-        txt2img_prompt, txt2img_prompt_styles, txt2img_negative_prompt, submit, _, _, txt2img_prompt_style_apply, txt2img_save_style, txt2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button = create_toprow(is_img2img=False)
+        txt2img_prompt, txt2img_prompt_styles, txt2img_negative_prompt, submit, _, _, txt2img_prompt_style_apply, txt2img_save_style, txt2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, txt2img_model_title = create_toprow(is_img2img=False)
 
         dummy_component = gr.Label(visible=False)
         txt_prompt_img = gr.File(label="", elem_id="txt2img_prompt_image", file_count="single", type="binary", visible=False)
@@ -717,7 +722,7 @@ def create_ui():
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)
 
             txt2img_args = dict(
-                fn=wrap_gradio_gpu_call(modules.txt2img.txt2img, extra_outputs=[None, '', '']),
+                fn=wrap_gradio_gpu_call(modules.txt2img.txt2img, func_name='txt2img', extra_outputs=[None, '', '']),
                 _js="submit",
                 inputs=[
                     dummy_component,
@@ -743,7 +748,7 @@ def create_ui():
                     hr_resize_x,
                     hr_resize_y,
                     override_settings,
-                ] + custom_inputs,
+                ] + custom_inputs + [txt2img_model_title, ],
 
                 outputs=[
                     txt2img_gallery,
@@ -827,7 +832,7 @@ def create_ui():
     modules.scripts.scripts_img2img.initialize_scripts(is_img2img=True)
 
     with gr.Blocks(analytics_enabled=False) as img2img_interface:
-        img2img_prompt, img2img_prompt_styles, img2img_negative_prompt, submit, img2img_interrogate, img2img_deepbooru, img2img_prompt_style_apply, img2img_save_style, img2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button = create_toprow(is_img2img=True)
+        img2img_prompt, img2img_prompt_styles, img2img_negative_prompt, submit, img2img_interrogate, img2img_deepbooru, img2img_prompt_style_apply, img2img_save_style, img2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, img2img_model_title = create_toprow(is_img2img=True)
 
         img2img_prompt_img = gr.File(label="", elem_id="img2img_prompt_image", file_count="single", type="binary", visible=False)
 
@@ -1011,7 +1016,7 @@ def create_ui():
             )
 
             img2img_args = dict(
-                fn=wrap_gradio_gpu_call(modules.img2img.img2img, extra_outputs=[None, '', '']),
+                fn=wrap_gradio_gpu_call(modules.img2img.img2img, func_name='img2img', extra_outputs=[None, '', '']),
                 _js="submit_img2img",
                 inputs=[
                     dummy_component,
@@ -1050,7 +1055,7 @@ def create_ui():
                     img2img_batch_output_dir,
                     img2img_batch_inpaint_mask_dir,
                     override_settings,
-                ] + custom_inputs,
+                ] + custom_inputs + [img2img_model_title, ],
                 outputs=[
                     img2img_gallery,
                     generation_info,
@@ -1605,11 +1610,13 @@ def create_ui():
             return gr.update(visible=True), opts.dumpjson()
 
         if not opts.set(key, value):
-            return gr.update(value=getattr(opts, key)), opts.dumpjson()
+            # the returned extra two values are used to tell img2img/txt2img current loaded model
+            return gr.update(value=getattr(opts, key)), opts.dumpjson(), value, value
 
         opts.save(shared.config_filename)
 
-        return get_value_for_setting(key), opts.dumpjson()
+        # the returned extra two values are used to tell img2img/txt2img current loaded model
+        return get_value_for_setting(key), opts.dumpjson(), value, value
 
     with gr.Blocks(analytics_enabled=False) as settings_interface:
         with gr.Row():
@@ -1779,11 +1786,15 @@ def create_ui():
         for i, k, item in quicksettings_list:
             component = component_dict[k]
             info = opts.data_labels[k]
+            if k == 'sd_model_checkpoint':
+                outputs = [component, text_settings, txt2img_model_title, img2img_model_title]
+            else:
+                outputs = [component, text_settings, dummy_component, dummy_component]
 
             component.change(
                 fn=lambda value, k=k: run_settings_single(value, key=k),
                 inputs=[component],
-                outputs=[component, text_settings],
+                outputs=outputs,
                 show_progress=info.refresh is not None,
             )
 
@@ -1798,7 +1809,7 @@ def create_ui():
             fn=lambda value, _: run_settings_single(value, key='sd_model_checkpoint'),
             _js="function(v){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || v, null]; }",
             inputs=[component_dict['sd_model_checkpoint'], dummy_component],
-            outputs=[component_dict['sd_model_checkpoint'], text_settings],
+            outputs=[component_dict['sd_model_checkpoint'], text_settings, txt2img_model_title, img2img_model_title],
         )
 
         component_keys = [k for k in opts.data_labels.keys() if k in component_dict]
@@ -1857,6 +1868,7 @@ def create_ui():
 
     try:
         if os.path.exists(ui_config_file):
+            import json
             with open(ui_config_file, "r", encoding="utf8") as file:
                 ui_settings = json.load(file)
     except Exception:

@@ -21,7 +21,7 @@ def wrap_queued_call(func):
     return f
 
 
-def wrap_gradio_gpu_call(func, extra_outputs=None):
+def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
     def f(request: gradio.routes.Request, *args, **kwargs):
 
         # if the first argument is a string that says "task(...)", it is treated as a job id
@@ -47,6 +47,8 @@ def wrap_gradio_gpu_call(func, extra_outputs=None):
             progress.start_task(id_task)
 
             try:
+                if func_name in ('txt2img', 'img2img'):
+                    _check_sd_model(model_title=args[-1])
                 res = func(request, *args, **kwargs)
             finally:
                 progress.finish_task(id_task)
@@ -120,3 +122,9 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False):
 
     return f
 
+
+def _check_sd_model(model_title):
+    if not shared.sd_model or shared.sd_model.sd_checkpoint_info.title != model_title:
+        import modules.sd_models
+        checkpoint = modules.sd_models.get_closet_checkpoint_match(model_title)
+        modules.sd_models.reload_model_weights(info=checkpoint)

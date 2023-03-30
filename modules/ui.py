@@ -1748,6 +1748,15 @@ def create_ui():
         shared.tab_names.append(label)
 
     with gr.Blocks(analytics_enabled=False, title="Stable Diffusion") as demo:
+        with gr.Row(elem_id="user-setting", variant="compact"):
+            with gr.Column():
+                gr.HTML(
+                    value="<div class='user_info'><a href='https://webui.graviti.com/user' target='_self'><img "
+                          "src=''"
+                          "=s96-c' /></a><div class='user_info-name'><span></span><a "
+                          "href='https://webui.graviti.com/api/logout' target='_self'>logout</a></div></div>",
+                    show_label=False, elem_id="user-setting_content")
+
         with gr.Row(elem_id="quicksettings", variant="compact"):
             for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
                 component = create_setting_component(k, is_quicksettings=True)

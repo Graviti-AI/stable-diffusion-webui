@@ -361,3 +361,28 @@ function selectCheckpoint(name){
     desiredCheckpointName = name;
     gradioApp().getElementById('change_checkpoint').click()
 }
+
+// get user info
+window.onload = function () {
+    const hostOrigin = location.origin;
+    fetch(`${hostOrigin}/api/user_info`, {method: "GET", credentials: "include"}).then(res => {
+        if (res && res.ok && !res.redirected) {
+            return res.json();
+        }
+    }).then(result => {
+        if (result) {
+            const img = document.querySelector("body > gradio-app").shadowRoot.querySelector("#user-setting_content > div > a > img");
+            if (img) {
+                img.src = result.picture;
+            }
+            const name = document.querySelector("body > gradio-app").shadowRoot.querySelector("#user-setting_content > div > div > span");
+            if (name) {
+                name.innerHTML = result.name;
+            }
+            const logOutLink = document.querySelector("body > gradio-app").shadowRoot.querySelector("#user-setting_content > div > div > a");
+            if (logOutLink) {
+                logOut.target="_self";
+            }
+        }
+    })
+}

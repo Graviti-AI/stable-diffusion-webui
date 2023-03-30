@@ -1,5 +1,6 @@
 import json
 import os
+import gradio.routes
 
 from modules import shared, ui_extra_networks
 
@@ -8,7 +9,7 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Hypernetworks')
 
-    def refresh(self):
+    def refresh(self, request: gradio.routes.Request):
         shared.reload_hypernetworks()
 
     def list_items(self):

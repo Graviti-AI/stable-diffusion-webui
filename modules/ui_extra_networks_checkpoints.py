@@ -2,6 +2,8 @@ import html
 import json
 import os
 
+import gradio.routes
+
 from modules import shared, ui_extra_networks, sd_models
 
 
@@ -9,8 +11,8 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Checkpoints')
 
-    def refresh(self):
-        shared.refresh_checkpoints()
+    def refresh(self, request: gradio.routes.Request):
+        shared.refresh_checkpoints(request.request)
 
     def list_items(self):
         checkpoint: sd_models.CheckpointInfo

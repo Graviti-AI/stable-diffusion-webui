@@ -1924,6 +1924,7 @@ def create_ui():
     visit(train_interface, loadsave, "train")
 
     if not error_loading and (not os.path.exists(ui_config_file) or settings_count != len(ui_settings)):
+        import json
         with open(ui_config_file, "w", encoding="utf8") as file:
             json.dump(ui_settings, file, indent=4)
 

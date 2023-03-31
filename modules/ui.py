@@ -1,7 +1,6 @@
 import csv
 import html
 import json
-import hashlib
 import math
 import mimetypes
 import os
@@ -22,7 +21,7 @@ import numpy as np
 from PIL import Image, PngImagePlugin
 from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call
 
-from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing
+from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing, hashes
 from modules.ui_components import FormRow, FormColumn, FormGroup, ToolButton, FormHTML
 from modules.paths import script_path, data_path, Paths
 
@@ -433,9 +432,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
 
     def upload_file(file, hash_str):
         file_path = file.name
-        with open(file_path,"rb") as f:
-            file_bytes = f.read() # read entire file as bytes
-            readable_hash = hashlib.sha256(file_bytes).hexdigest()
+        readable_hash = hashes.calculate_sha256(file_path)
         if hash_str == readable_hash:
             new_path = shutil.move(file_path, destination_dir)
             with open(model_list_csv_path, 'a') as csvfile:

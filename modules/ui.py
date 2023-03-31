@@ -431,7 +431,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
         if os.path.exists(model_list_csv_path):
             with open(model_list_csv_path) as csvfile:
                 modelreader = csv.reader(csvfile, delimiter=',')
-                for file_hash_str, file_name in modelreader:
+                for file_hash_str, file_name, user_id, timestamp_s in modelreader:
                     if hash_str == file_hash_str:
                         return file_name
         return hash_str

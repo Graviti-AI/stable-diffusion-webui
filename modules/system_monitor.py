@@ -142,7 +142,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
     if not monitor_addr or not system_monitor_api_secret:
         return
 
-    # get func args and fun name
+    # inspect func args
     import inspect
     signature = inspect.signature(func)
     positional_args = []
@@ -161,7 +161,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
         # values need to be converted to json serializable
         func_args[arg_name] = _serialize_object(arg_value)
 
-    # inspect func name
+    # get func name
     module = inspect.getmodule(func)
     func_args.update(**kwargs)
     func_name = func.__name__

@@ -371,15 +371,15 @@ window.onload = function () {
         }
     }).then(result => {
         if (result) {
-            const img = document.querySelector("body > gradio-app").shadowRoot.querySelector("#user-setting_content > div > a > img");
+            const img = document.querySelector("#user-setting_content > div > a > img");
             if (img) {
                 img.src = result.picture;
             }
-            const name = document.querySelector("body > gradio-app").shadowRoot.querySelector("#user-setting_content > div > div > span");
+            const name = document.querySelector("#user-setting_content > div > div > span");
             if (name) {
                 name.innerHTML = result.name;
             }
-            const logOutLink = document.querySelector("body > gradio-app").shadowRoot.querySelector("#user-setting_content > div > div > a");
+            const logOutLink = document.querySelector("#user-setting_content > div > div > a");
             if (logOutLink) {
                 logOut.target="_self";
             }

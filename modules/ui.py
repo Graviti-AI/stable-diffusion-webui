@@ -43,6 +43,7 @@ from modules.textual_inversion import textual_inversion
 import modules.hypernetworks.ui
 from modules.generation_parameters_copypaste import image_from_url_text
 import modules.extras
+import modules.user
 
 warnings.filterwarnings("default" if opts.show_warnings else "ignore", category=UserWarning)
 
@@ -435,14 +436,15 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
                         return file_name
         return hash_str
 
-    def upload_file(file, hash_str):
+    def upload_file(file, hash_str, request: gr.Request):
         file_path = file.name
         readable_hash = hashes.calculate_sha256(file_path)
         if hash_str == readable_hash:
             new_path = shutil.move(file_path, destination_dir)
+            user = modules.user.User.current_user(request)
             with open(model_list_csv_path, 'a') as csvfile:
                 modelwriter = csv.writer(csvfile, delimiter=',')
-                modelwriter.writerow([hash_str, new_path])
+                modelwriter.writerow([hash_str, new_path, user.uid, time.time()])
             return new_path
         return None
     hash_str_id = elem_id+'-hash-str'

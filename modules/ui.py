@@ -468,40 +468,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
             var input_box = upload_button.previousElementSibling;
             var extra_input = input_box.cloneNode();
             extra_input.id = "input-for-hash-{elem_id}";
-            const readbinaryfile = function (file) {{
-                return new Promise((resolve, reject) => {{
-                    var fr = new FileReader();
-                    fr.onload = () => {{
-                        resolve(fr.result)
-                    }};
-                    fr.readAsArrayBuffer(file);
-                }});
-            }}
-            const Uint8ArrayToHexString = function (ui8array) {{
-                var hexstring = '',
-                    h;
-                for (var i = 0; i < ui8array.length; i++) {{
-                    h = ui8array[i].toString(16);
-                    if (h.length == 1) {{
-                        h = '0' + h;
-                    }}
-                    hexstring += h;
-                }}
-                var p = Math.pow(2, Math.ceil(Math.log2(hexstring.length)));
-                hexstring = hexstring.padStart(p, '0');
-                return hexstring;
-            }}
-            const hashfile = function (file) {{
-                return readbinaryfile(file)
-                    .then(function(result) {{
-                        result = new Uint8Array(result);
-                        return window.crypto.subtle.digest('SHA-256', result);
-                    }}).then(function(result) {{
-                        result = new Uint8Array(result);
-                        var resulthex = Uint8ArrayToHexString(result);
-                        return resulthex;
-                    }});
-            }}
+
             extra_input.onchange = async (e) => {{
                 const target = e.target;
                 if (!target.files) return;
@@ -516,7 +483,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
                 }}, 3000);
 
                 input_box.files = target.files;
-                const hash_str = await hashfile(input_box.files[0]);
+                const hash_str = await hashFile(input_box.files[0]);
                 const checkpoint_hash_str = document.querySelector("#{hash_str_id} > label > textarea");
                 checkpoint_hash_str.value = hash_str;
                 const event = new Event("input");
@@ -1959,6 +1926,8 @@ def webpath(fn):
 def javascript_html():
     script_js = os.path.join(script_path, "script.js")
     head = f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
+
+    head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
 
     inline = f"{localization.localization_js(shared.opts.localization)};"
     if cmd_opts.theme is not None:

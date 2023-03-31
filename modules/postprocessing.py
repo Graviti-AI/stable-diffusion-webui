@@ -43,7 +43,8 @@ def run_postprocessing(request: gradio.routes.Request, extras_mode, image, image
     if extras_mode == 2 and output_dir != '':
         outpath = output_dir
     else:
-        outpath = opts.outdir_samples or opts.outdir_extras_samples
+        from modules.paths import Paths
+        outpath = Paths(request).outdir_extras_samples()
 
     infotext = ''
 

@@ -47,7 +47,7 @@ def save_files(request: gr.Request, js_data, images, do_make_zip, index):
     data = json.loads(js_data)
 
     p = MyObject(data)
-    save_to = Paths.paths(request).save_dir()
+    save_to = Paths(request).save_dir()
     save_to_dirs = shared.opts.use_save_to_dirs_for_ui
     extension: str = shared.opts.samples_format
     start_index = 0
@@ -137,8 +137,11 @@ Requested path was: {f}
 
                 buttons = parameters_copypaste.create_buttons(["img2img", "inpaint", "extras"])
 
+            def on_open_folder(request: gr.Request):
+                open_folder(Paths(request).outdir() or outdir)
+
             open_folder_button.click(
-                fn=lambda: open_folder(shared.opts.outdir_samples or outdir),
+                fn=on_open_folder,
                 inputs=[],
                 outputs=[],
             )

@@ -112,7 +112,7 @@ def add_style(request: gr.Request, name: str, prompt: str, negative_prompt: str)
     prompt_styles.styles[style.name] = style
     # Save all loaded prompt styles: this allows us to update the storage format in the future more easily, because we
     # reserialize all styles every time we save them
-    prompt_styles.save_styles(Paths.paths(request).styles_filename())
+    prompt_styles.save_styles(Paths(request).styles_filename())
 
     return [gr.Dropdown.update(visible=True, choices=list(prompt_styles.styles)) for _ in range(2)]
 
@@ -685,7 +685,7 @@ def create_ui():
                     show_progress=False,
                 )
 
-            txt2img_gallery, generation_info, html_info, html_log = create_output_panel("txt2img", opts.outdir_txt2img_samples)
+            txt2img_gallery, generation_info, html_info, html_log = create_output_panel("txt2img", Paths(None).outdir_txt2img_samples())
 
             connect_reuse_seed(seed, reuse_seed, generation_info, dummy_component, is_subseed=False)
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)
@@ -968,7 +968,7 @@ def create_ui():
                                     outputs=[inpaint_controls, mask_alpha],
                                 )
 
-            img2img_gallery, generation_info, html_info, html_log = create_output_panel("img2img", opts.outdir_img2img_samples)
+            img2img_gallery, generation_info, html_info, html_log = create_output_panel("img2img", Paths(None).outdir_img2img_samples())
 
             connect_reuse_seed(seed, reuse_seed, generation_info, dummy_component, is_subseed=False)
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)

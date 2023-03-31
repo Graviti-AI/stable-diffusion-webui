@@ -118,10 +118,11 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
 
     assert 0. <= denoising_strength <= 1., 'can only work with strength in [0.0, 1.0]'
 
+    paths = Paths(request)
     p = StableDiffusionProcessingImg2Img(
         sd_model=shared.sd_model,
-        outpath_samples=Paths.paths(request).generate_dir("img2img/samples"),
-        outpath_grids=Paths.paths(request).generate_dir("img2img/grids"),
+        outpath_samples=paths.outdir_img2img_samples(),
+        outpath_grids=paths.outdir_img2img_grids(),
         prompt=prompt,
         negative_prompt=negative_prompt,
         styles=prompt_styles,

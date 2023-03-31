@@ -47,29 +47,53 @@ for d, must_exist, what, options in path_dirs:
 
 
 class Paths:
-    @classmethod
-    def paths(cls, request: gr.Request):
+    def __init__(self, request: gr.Request | None):
         user = modules.user.User.current_user(request)
-        work_dir = pathlib.Path(data_path).joinpath('workdir').joinpath(user.uid)
+
+        work_dir = pathlib.Path(data_path).joinpath('workdir', user.uid)
         if not work_dir.exists():
             work_dir.mkdir(parents=True)
 
-        model_dir = pathlib.Path(data_path).joinpath('models').joinpath(user.uid)
-        if not work_dir.exists():
-            work_dir.mkdir(parents=True)
+        model_dir = pathlib.Path(data_path).joinpath('models', user.uid)
+        if not model_dir.exists():
+            model_dir.mkdir(parents=True)
 
-        return Paths(work_dir, model_dir)
-
-    def __init__(self, work_dir, model_dir):
         self._work_dir = work_dir
         self._model_dir = model_dir
+        self._output_dir = self._work_dir.joinpath("outputs")
 
-    # dir to store generated images
-    def generate_dir(self, object_type: str):
-        output = self._work_dir.joinpath('generated').joinpath(object_type)
-        if not output.exists():
-            output.mkdir(parents=True)
-        return str(output)
+    @staticmethod
+    def _check_dir(path):
+        if not path.exists():
+            path.mkdir(parents=True)
+        return path
+
+    def outdir(self):
+        return self._check_dir(self._output_dir)
+
+    # 'Output directory for txt2img images
+    def outdir_txt2img_samples(self):
+        return self._check_dir(self._output_dir.joinpath("txt2img", 'samples'))
+
+    # Output directory for img2img images
+    def outdir_img2img_samples(self):
+        return self._check_dir(self._output_dir.joinpath("img2img", 'samples'))
+
+    # Output directory for images from extras tab
+    def outdir_extras_samples(self):
+        return self._check_dir(self._output_dir.joinpath("extras", 'samples'))
+
+    # Output directory for txt2img grids
+    def outdir_txt2img_grids(self):
+        return self._check_dir(self._output_dir.joinpath("txt2img", 'grids'))
+
+    # Output directory for img2img grids
+    def outdir_img2img_grids(self):
+        return self._check_dir(self._output_dir.joinpath("img2img", 'grids'))
+
+    # Directory for saving images using the Save button
+    def outdir_save(self):
+        return self._check_dir(self._work_dir.joinpath('save'))
 
     # filename to store user prompt styles
     def styles_filename(self) -> str:
@@ -77,14 +101,12 @@ class Paths:
 
     # dir to store logs and saved images and zips
     def save_dir(self):
-        save_dir = self._work_dir.joinpath('log').joinpath('images')
-        if not save_dir.exists():
-            save_dir.mkdir(parents=True)
-        return str(save_dir)
+        save_dir = self._work_dir.joinpath('log', 'images')
+        return self._check_dir(save_dir)
 
     # dir to store user models
     def models_dir(self):
-        return self._model_dir
+        return self._check_dir(self._model_dir)
 
 
 class Prioritize:

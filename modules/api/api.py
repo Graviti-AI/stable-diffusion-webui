@@ -305,10 +305,13 @@ class Api:
         args.pop('save_images', None)
         args['global_prompt_styles'] = shared.prompt_styles(request)
         with self.queue_lock:
+            from modules.paths import Paths
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
             p.scripts = script_runner
-            p.outpath_grids = opts.outdir_txt2img_grids
-            p.outpath_samples = opts.outdir_txt2img_samples
+
+            paths = Paths(request)
+            p.outpath_grids = paths.outdir_txt2img_grids()
+            p.outpath_samples = paths.outdir_txt2img_samples()
 
             shared.state.begin()
             if selectable_scripts != None:
@@ -362,11 +365,14 @@ class Api:
         args['global_prompt_styles'] = shared.prompt_styles(request)
 
         with self.queue_lock:
+            from modules.paths import Paths
             p = StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)
             p.init_images = [decode_base64_to_image(x) for x in init_images]
             p.scripts = script_runner
-            p.outpath_grids = opts.outdir_img2img_grids
-            p.outpath_samples = opts.outdir_img2img_samples
+
+            paths = Paths(request)
+            p.outpath_grids = paths.outdir_img2img_grids()
+            p.outpath_samples = paths.outdir_img2img_samples()
 
             shared.state.begin()
             if selectable_scripts != None:

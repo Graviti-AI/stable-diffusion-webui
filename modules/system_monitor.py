@@ -125,7 +125,7 @@ def _serialize_object(obj):
         return result
     elif obj_type is dict:
         result = {}
-        for key, value in obj.elements():
+        for key, value in obj.items():
             result[key] = _serialize_object(value)
         return result
     elif obj_type is Image.Image:

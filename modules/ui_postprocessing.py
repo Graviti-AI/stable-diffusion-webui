@@ -25,7 +25,8 @@ def create_ui():
             script_inputs = scripts.scripts_postproc.setup_ui()
 
         with gr.Column():
-            result_images, html_info_x, html_info, html_log = ui_common.create_output_panel("extras", shared.opts.outdir_extras_samples)
+            from modules.paths import Paths
+            result_images, html_info_x, html_info, html_log = ui_common.create_output_panel("extras", Paths(None).outdir_extras_samples())
 
     tab_single.select(fn=lambda: 0, inputs=[], outputs=[tab_index])
     tab_batch.select(fn=lambda: 1, inputs=[], outputs=[tab_index])

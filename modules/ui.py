@@ -418,7 +418,7 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
     return refresh_button
 
 
-def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="models.csv"):
+def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="models.csv", button_style=""):
 
     model_list_csv_path = os.path.join(destination_dir, model_tracking_csv)
 
@@ -451,11 +451,19 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
     hidden_button_id = "hidden-button-" + elem_id
     upload_button_id = "hidden-upload-button-" + elem_id
     button = gr.Button(label, elem_id=button_id, variant="primary")
+    if button_style:
+        button_css = gr.HTML("""
+        <style>
+        #{button_id} {{
+            {button_style};
+        }}
+        <\style>
+        """.format(button_id=button_id, button_style=button_style))
+    button.style(full_width=False)
 
     compute_hash_js = """
         () => {{
             const upload_button = document.querySelector(
-                "body > gradio-app").shadowRoot.querySelector(
                 "#{upload_button_id}");
             var input_box = upload_button.previousElementSibling;
             var extra_input = input_box.cloneNode();
@@ -499,8 +507,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
                 if (!target.files) return;
 
                 // Launch modal for notification
-                var modal = document.querySelector(
-                    "body > gradio-app").shadowRoot.querySelector("#notification-modal");
+                var modal = document.querySelector("#notification-modal");
                 var modal_content = modal.getElementsByTagName("p")[0];
                 modal_content.innerText = "Start to upload model."
                 modal.style.display = "block";
@@ -510,13 +517,11 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
 
                 input_box.files = target.files;
                 const hash_str = await hashfile(input_box.files[0]);
-                const checkpoint_hash_str = document.querySelector(
-                    "body > gradio-app").shadowRoot.querySelector("#{hash_str_id} > label > textarea");
+                const checkpoint_hash_str = document.querySelector("#{hash_str_id} > label > textarea");
                 checkpoint_hash_str.value = hash_str;
                 const event = new Event("input");
                 checkpoint_hash_str.dispatchEvent(event);
                 const hidden_button = document.querySelector(
-                    "body > gradio-app").shadowRoot.querySelector(
                     "#{hidden_button_id}");
                 hidden_button.click();
             }}
@@ -534,7 +539,6 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
         (hash_str, filepath) => {{
             if (hash_str == filepath) {{
                 const upload_button = document.querySelector(
-                    "body > gradio-app").shadowRoot.querySelector(
                     "#{upload_button_id}");
                 var input_box = upload_button.previousElementSibling;
                 const event = new Event("change");
@@ -556,8 +560,7 @@ def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="mo
     notify_upload_finished_js = """
         () => {
             // Launch modal for notification
-            var modal = document.querySelector(
-                "body > gradio-app").shadowRoot.querySelector("#notification-modal");
+            var modal = document.querySelector("#notification-modal");
             var modal_content = modal.getElementsByTagName("p")[0];
             modal_content.innerText = "Model uploaded. Use the refresh button to load it."
             modal.style.display = "block";
@@ -1564,7 +1567,8 @@ def create_ui():
             if is_quicksettings:
                 res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
                 create_refresh_button(res, info.refresh, info.component_args, "refresh_" + key)
-                create_upload_button('Upload a Model', 'upload_' + key, sd_models.model_path)
+                create_upload_button(
+                    'Upload a Model', 'upload_' + key, sd_models.model_path, button_style="width: 200px !important;")
             else:
                 with FormRow():
                     res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
@@ -1748,19 +1752,19 @@ def create_ui():
         shared.tab_names.append(label)
 
     with gr.Blocks(analytics_enabled=False, title="Stable Diffusion") as demo:
-        with gr.Row(elem_id="user-setting", variant="compact"):
-            with gr.Column():
+        with gr.Row():
+            with gr.Column(scale=3):
+                with gr.Row(elem_id="quicksettings"):
+                    for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
+                        component = create_setting_component(k, is_quicksettings=True)
+                        component_dict[k] = component
+            with gr.Column(elem_id="user-setting", scale=1):
                 gr.HTML(
                     value="<div class='user_info'><a href='https://webui.graviti.com/user' target='_self'><img "
                           "src=''"
                           "=s96-c' /></a><div class='user_info-name'><span></span><a "
                           "href='https://webui.graviti.com/api/logout' target='_self'>logout</a></div></div>",
                     show_label=False, elem_id="user-setting_content")
-
-        with gr.Row(elem_id="quicksettings", variant="compact"):
-            for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
-                component = create_setting_component(k, is_quicksettings=True)
-                component_dict[k] = component
 
         parameters_copypaste.connect_paste_params_buttons()
 

@@ -1,4 +1,3 @@
-import csv
 import html
 import json
 import math
@@ -7,9 +6,7 @@ import os
 import platform
 import random
 import sys
-import shutil
 import tempfile
-import time
 import traceback
 from functools import partial, reduce
 import warnings
@@ -21,7 +18,7 @@ import numpy as np
 from PIL import Image, PngImagePlugin
 from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call
 
-from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing, hashes
+from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing
 from modules.ui_components import FormRow, FormColumn, FormGroup, ToolButton, FormHTML
 from modules.paths import script_path, data_path, Paths
 
@@ -40,10 +37,10 @@ from modules.images import save_image
 from modules.sd_hijack import model_hijack
 from modules.sd_samplers import samplers, samplers_for_img2img
 from modules.textual_inversion import textual_inversion
+from modules.ui_common import create_upload_button
 import modules.hypernetworks.ui
 from modules.generation_parameters_copypaste import image_from_url_text
 import modules.extras
-import modules.user
 
 warnings.filterwarnings("default" if opts.show_warnings else "ignore", category=UserWarning)
 
@@ -421,126 +418,6 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
         outputs=[refresh_component]
     )
     return refresh_button
-
-
-def create_upload_button(label, elem_id, destination_dir, model_tracking_csv="models.csv", button_style=""):
-
-    model_list_csv_path = os.path.join(destination_dir, model_tracking_csv)
-
-    def verify_model_existence(hash_str):
-        if os.path.exists(model_list_csv_path):
-            with open(model_list_csv_path) as csvfile:
-                modelreader = csv.reader(csvfile, delimiter=',')
-                for file_hash_str, file_name, user_id, timestamp_s in modelreader:
-                    if hash_str == file_hash_str:
-                        return file_name
-        return hash_str
-
-    def upload_file(file, hash_str, request: gr.Request):
-        file_path = file.name
-        readable_hash = hashes.calculate_sha256(file_path)
-        if hash_str == readable_hash:
-            new_path = shutil.move(file_path, destination_dir)
-            user = modules.user.User.current_user(request)
-            with open(model_list_csv_path, 'a') as csvfile:
-                modelwriter = csv.writer(csvfile, delimiter=',')
-                modelwriter.writerow([hash_str, new_path, user.uid, time.time()])
-            return new_path
-        return None
-    hash_str_id = elem_id+'-hash-str'
-    hash_str = gr.Textbox(label='hash str', elem_id=hash_str_id, visible=False)
-    existing_filepath = gr.Textbox(label='existing filepath', visible=False)
-    uploaded_filepath = gr.Textbox(label='uploaded filepath', visible=False)
-    button_id = "regular-button-" + elem_id
-    hidden_button_id = "hidden-button-" + elem_id
-    upload_button_id = "hidden-upload-button-" + elem_id
-    button = gr.Button(label, elem_id=button_id, variant="primary")
-    if button_style:
-        button_css = gr.HTML("""
-        <style>
-        #{button_id} {{
-            {button_style};
-        }}
-        <\style>
-        """.format(button_id=button_id, button_style=button_style))
-    button.style(full_width=False)
-
-    compute_hash_js = """
-        () => {{
-            const upload_button = document.querySelector(
-                "#{upload_button_id}");
-            var input_box = upload_button.previousElementSibling;
-            var extra_input = input_box.cloneNode();
-            extra_input.id = "input-for-hash-{elem_id}";
-
-            extra_input.onchange = async (e) => {{
-                const target = e.target;
-                if (!target.files) return;
-
-                // Launch modal for notification
-                var modal = document.querySelector("#notification-modal");
-                var modal_content = modal.getElementsByTagName("p")[0];
-                modal_content.innerText = "Start to upload model."
-                modal.style.display = "block";
-                setTimeout(function(){{
-                    modal.style.display = "none";
-                }}, 3000);
-
-                input_box.files = target.files;
-                const hash_str = await hashFile(input_box.files[0]);
-                const checkpoint_hash_str = document.querySelector("#{hash_str_id} > label > textarea");
-                checkpoint_hash_str.value = hash_str;
-                const event = new Event("input");
-                checkpoint_hash_str.dispatchEvent(event);
-                const hidden_button = document.querySelector(
-                    "#{hidden_button_id}");
-                hidden_button.click();
-            }}
-        extra_input.click();
-        }}
-    """.format(
-        upload_button_id=upload_button_id,
-        elem_id=elem_id,
-        hash_str_id=hash_str_id,
-        hidden_button_id=hidden_button_id)
-    button.click(None, None, None, _js=compute_hash_js)
-    hidden_button = gr.Button("Verify hash", elem_id=hidden_button_id, visible=False)
-    hidden_button.click(verify_model_existence, hash_str, existing_filepath, api_name="check_hash")
-    existing_filepath.change(None, [hash_str, existing_filepath], None, _js="""
-        (hash_str, filepath) => {{
-            if (hash_str == filepath) {{
-                const upload_button = document.querySelector(
-                    "#{upload_button_id}");
-                var input_box = upload_button.previousElementSibling;
-                const event = new Event("change");
-                input_box.dispatchEvent(event);
-            }}
-        }}
-    """.format(upload_button_id=upload_button_id))
-    upload_button = gr.UploadButton(
-        label="Upload a file",
-        elem_id=upload_button_id,
-        file_types=[".ckpt", ".safetensors", ".bin", ".pt"],
-        visible=False
-    )
-    upload_button.upload(
-        fn=upload_file,
-        inputs=[upload_button, hash_str],
-        outputs=uploaded_filepath
-    )
-    notify_upload_finished_js = """
-        () => {
-            // Launch modal for notification
-            var modal = document.querySelector("#notification-modal");
-            var modal_content = modal.getElementsByTagName("p")[0];
-            modal_content.innerText = "Model uploaded. Use the refresh button to load it."
-            modal.style.display = "block";
-            setTimeout(function(){
-                modal.style.display = "none";
-            }, 3000);
-        }"""
-    uploaded_filepath.change(None, None, None, _js=notify_upload_finished_js)
-    return button
 
 
 def create_output_panel(tabname, outdir):

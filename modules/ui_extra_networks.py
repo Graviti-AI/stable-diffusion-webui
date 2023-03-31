@@ -11,6 +11,7 @@ import json
 import html
 
 from modules.generation_parameters_copypaste import image_from_url_text
+from modules.ui_common import create_upload_button
 
 extra_pages = []
 allowed_dirs = set()
@@ -81,7 +82,7 @@ class ExtraNetworksPage:
 
         return ""
 
-    def create_html(self, tabname):
+    def create_html(self, tabname, upload_button_id, return_callbacks=False):
         view = shared.opts.extra_networks_default_view
         items_html = ''
 
@@ -119,11 +120,19 @@ class ExtraNetworksPage:
 
             items_html += self.create_html_for_item(item, tabname)
 
-        if items_html == '':
-            dirs = "".join([f"<li>{x}</li>" for x in self.allowed_directories_for_previews()])
-            items_html = shared.html("extra-networks-no-cards.html").format(dirs=dirs)
-
         self_name_id = self.name.replace(" ", "_")
+
+        # Add a upload model button
+        plus_sign_elem_id=f"{tabname}_{self_name_id}-plus-sign"
+        loading_sign_elem_id=f"{tabname}_{self_name_id}-loading-sign"
+        height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
+        width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
+        items_html += shared.html("extra-networks-upload-button.html").format(
+            style=f"{height}{width}",
+            card_clicked=f'document.querySelector("#{upload_button_id}").click()',
+            plus_sign_elem_id=plus_sign_elem_id,
+            loading_sign_elem_id=loading_sign_elem_id
+        )
 
         res = f"""
 <div id='{tabname}_{self_name_id}_subdirs' class='extra-network-subdirs extra-network-subdirs-{view}'>
@@ -134,6 +143,20 @@ class ExtraNetworksPage:
 </div>
 """
 
+        if return_callbacks:
+            start_upload_callback = f"""
+                var plus_icon = document.querySelector("#{plus_sign_elem_id}");
+                plus_icon.style.display = "none";
+                var loading_icon = document.querySelector("#{loading_sign_elem_id}");
+                loading_icon.style.display = "inline-block";
+            """
+            finish_upload_callback = f"""
+                var plus_icon = document.querySelector("#{plus_sign_elem_id}");
+                plus_icon.style.display = "inline-block";
+                var loading_icon = document.querySelector("#{loading_sign_elem_id}");
+                loading_icon.style.display = "none";
+            """
+            return res, start_upload_callback, finish_upload_callback
         return res
 
     def list_items(self):
@@ -243,7 +266,23 @@ def create_ui(container, button, tabname):
         for page in ui.stored_extra_pages:
             with gr.Tab(page.title):
 
-                page_elem = gr.HTML(page.create_html(ui.tabname))
+                self_name_id = page.name.replace(" ", "_")
+                upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
+                page_html_str, start_upload_callback, finish_upload_callback = page.create_html(
+                    ui.tabname, upload_button_id, return_callbacks=True)
+                page_elem = gr.HTML(page_html_str)
+                # TODO: Need to handle the case where there are multiple sub dirs
+                upload_destination = page.allowed_directories_for_previews()[0] \
+                    if page.allowed_directories_for_previews() else "./"
+                with gr.Row():
+                    create_upload_button(
+                        f"Upload {page.name}",
+                        upload_button_id,
+                        upload_destination,
+                        visible=False,
+                        start_uploading_call_back=start_upload_callback,
+                        finish_uploading_call_back=finish_upload_callback
+                    )
                 ui.pages.append(page_elem)
 
     filter = gr.Textbox('', show_label=False, elem_id=tabname+"_extra_search", placeholder="Search...", visible=False)
@@ -264,7 +303,9 @@ def create_ui(container, button, tabname):
 
         for pg in ui.stored_extra_pages:
             pg.refresh(request)
-            res.append(pg.create_html(ui.tabname))
+            self_name_id = pg.name.replace(" ", "_")
+            upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
+            res.append(pg.create_html(ui.tabname, upload_button_id))
 
         return res
 
@@ -284,7 +325,9 @@ def setup_ui(ui, gallery):
     def save_preview(index, images, filename):
         if len(images) == 0:
             print("There is no image in gallery to save as a preview.")
-            return [page.create_html(ui.tabname) for page in ui.stored_extra_pages]
+            return [page.create_html(
+                ui.tabname,
+                f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button") for page in ui.stored_extra_pages]
 
         index = int(index)
         index = 0 if index < 0 else index
@@ -309,7 +352,9 @@ def setup_ui(ui, gallery):
         else:
             image.save(filename)
 
-        return [page.create_html(ui.tabname) for page in ui.stored_extra_pages]
+        return [page.create_html(
+            ui.tabname,
+            f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button") for page in ui.stored_extra_pages]
 
     ui.button_save_preview.click(
         fn=save_preview,

@@ -1,16 +1,20 @@
 import json
+import csv
 import html
 import os
 import platform
 import sys
+import shutil
+import time
 
 import gradio as gr
 import subprocess as sp
 
-from modules import call_queue, shared
+from modules import call_queue, shared, hashes
 from modules.generation_parameters_copypaste import image_from_url_text
 from modules.paths import Paths
 import modules.images
+import modules.user
 
 folder_symbol = '\U0001f4c2'  # 📂
 
@@ -33,7 +37,6 @@ def plaintext_to_html(text):
 
 
 def save_files(request: gr.Request, js_data, images, do_make_zip, index):
-    import csv
     filenames = []
     fullfns = []
 
@@ -213,3 +216,142 @@ Requested path was: {f}
                 ))
 
             return result_gallery, generation_info if tabname != "extras" else html_info_x, html_info, html_log
+
+
+def create_upload_button(
+        label, elem_id, destination_dir,
+        model_tracking_csv="models.csv", button_style="", visible=True,
+        start_uploading_call_back="", finish_uploading_call_back=""):
+
+    model_list_csv_path = os.path.join(destination_dir, model_tracking_csv)
+
+    def verify_model_existence(hash_str):
+        if os.path.exists(model_list_csv_path):
+            with open(model_list_csv_path) as csvfile:
+                modelreader = csv.reader(csvfile, delimiter=',')
+                for file_hash_str, file_name, user_id, timestamp_s in modelreader:
+                    if hash_str == file_hash_str:
+                        return file_name
+        return hash_str
+
+    def upload_file(file, hash_str, request: gr.Request):
+        file_path = file.name
+        readable_hash = hashes.calculate_sha256(file_path)
+        if hash_str == readable_hash:
+            new_path = shutil.move(file_path, destination_dir)
+            user = modules.user.User.current_user(request)
+            with open(model_list_csv_path, 'a') as csvfile:
+                modelwriter = csv.writer(csvfile, delimiter=',')
+                modelwriter.writerow([hash_str, new_path, user.uid, time.time()])
+            return new_path
+        return None
+    hash_str_id = elem_id+'-hash-str'
+    hash_str = gr.Textbox(label='hash str', elem_id=hash_str_id, visible=False)
+    existing_filepath = gr.Textbox(label='existing filepath', visible=False)
+    uploaded_filepath = gr.Textbox(label='uploaded filepath', visible=False)
+    button_id = elem_id
+    hidden_button_id = "hidden-button-" + elem_id
+    upload_button_id = "hidden-upload-button-" + elem_id
+    button = gr.Button(label, elem_id=button_id, variant="primary", visible=visible)
+    if button_style:
+        button_css = gr.HTML("""
+        <style>
+        #{button_id} {{
+            {button_style};
+        }}
+        <\\style>
+        """.format(button_id=button_id, button_style=button_style))
+    button.style(full_width=False)
+
+    compute_hash_js = """
+        () => {{
+            const upload_button = document.querySelector(
+                "#{upload_button_id}");
+            var input_box = upload_button.previousElementSibling;
+            var extra_input = input_box.cloneNode();
+            extra_input.id = "input-for-hash-{elem_id}";
+
+            extra_input.onchange = async (e) => {{
+                const target = e.target;
+                if (!target.files || target.files.length == 0) return;
+
+                // Launch modal for notification
+                var modal = document.querySelector("#notification-modal");
+                var modal_content = modal.getElementsByTagName("p")[0];
+                modal_content.innerText = "Start to upload model."
+                modal.style.display = "block";
+                setTimeout(function(){{
+                    modal.style.display = "none";
+                }}, 3000);
+                var button = document.querySelector("#{button_id}");
+                button.disabled = true;
+                {start_uploading_call_back}
+
+                input_box.files = target.files;
+                const hash_str = await hashFile(input_box.files[0]);
+                const checkpoint_hash_str = document.querySelector("#{hash_str_id} > label > textarea");
+                checkpoint_hash_str.value = hash_str;
+                const event = new Event("input");
+                checkpoint_hash_str.dispatchEvent(event);
+                const hidden_button = document.querySelector(
+                    "#{hidden_button_id}");
+                hidden_button.click();
+            }}
+        extra_input.click();
+        }}
+    """.format(
+        upload_button_id=upload_button_id,
+        elem_id=elem_id,
+        button_id=button_id,
+        start_uploading_call_back=start_uploading_call_back,
+        hash_str_id=hash_str_id,
+        hidden_button_id=hidden_button_id)
+    button.click(None, None, None, _js=compute_hash_js)
+    hidden_button = gr.Button("Verify hash", elem_id=hidden_button_id, visible=False)
+    hidden_button.click(verify_model_existence, hash_str, existing_filepath, api_name="check_hash")
+    upload_finish_js = """
+        // Launch modal for notification
+        var modal = document.querySelector("#notification-modal");
+        var modal_content = modal.getElementsByTagName("p")[0];
+        modal_content.innerText = "Model uploaded. Use the refresh button to load it."
+        modal.style.display = "block";
+        setTimeout(function(){{
+            modal.style.display = "none";
+        }}, 3000);
+        var button = document.querySelector("#{button_id}");
+        button.disabled = false;
+        {finish_uploading_call_back}
+    """.format(
+        button_id=button_id,
+        finish_uploading_call_back=finish_uploading_call_back)
+    existing_filepath.change(None, [hash_str, existing_filepath], None, _js="""
+        (hash_str, filepath) => {{
+            if (hash_str == filepath) {{
+                const upload_button = document.querySelector(
+                    "#{upload_button_id}");
+                var input_box = upload_button.previousElementSibling;
+                const event = new Event("change");
+                input_box.dispatchEvent(event);
+            }} else {{
+                {upload_finish_js}
+            }}
+        }}
+    """.format(upload_button_id=upload_button_id, upload_finish_js=upload_finish_js))
+    upload_button = gr.UploadButton(
+        label="Upload a file",
+        elem_id=upload_button_id,
+        file_types=[".ckpt", ".safetensors", ".bin", ".pt"],
+        visible=False
+    )
+    upload_button.upload(
+        fn=upload_file,
+        inputs=[upload_button, hash_str],
+        outputs=uploaded_filepath
+    )
+    notify_upload_finished_js = """
+        () => {{
+            {upload_finish_js}
+        }}""".format(
+            upload_finish_js=upload_finish_js)
+    uploaded_filepath.change(None, None, None, _js=notify_upload_finished_js)
+    return button

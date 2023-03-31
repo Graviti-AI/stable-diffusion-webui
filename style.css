@@ -214,6 +214,8 @@ button.custom-button{
     text-align: center;
 }
 
+a.billing:link {color:#FF0000; text-decoration:underline;}
+a.support:link {color:#4A4AFF; text-decoration:underline;}
 
 /* txt2img/img2img specific */
 

@@ -569,8 +569,8 @@ class Api:
             "skipped": convert_embeddings(db.skipped_embeddings),
         }
 
-    def refresh_checkpoints(self):
-        shared.refresh_checkpoints()
+    def refresh_checkpoints(self, request: starlette.requests.Request):
+        shared.refresh_checkpoints(request)
 
     def create_embedding(self, args: dict):
         try:

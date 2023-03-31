@@ -6,6 +6,7 @@ import time
 
 import gradio.routes
 
+import modules.system_monitor
 from modules import shared, progress
 
 queue_lock = threading.Lock()
@@ -31,17 +32,20 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
         else:
             id_task = None
 
-        if shared.cmd_opts.monitor_system_calls:
-            from modules.system_monitor import SystemMonitor, MonitorException
-            try:
-                monitor = SystemMonitor()
-                monitor.on_task(request, func, *args, **kwargs)
-            except MonitorException as e:
-                extra_outputs_array = extra_outputs
-                if extra_outputs_array is None:
-                    extra_outputs_array = [None, '', '']
-                return extra_outputs_array + [str(e)]
+        # log all gpu calls with monitor
+        from modules.system_monitor import MonitorException
+        try:
+            modules.system_monitor.on_task(request, func, *args, **kwargs)
+        except MonitorException as e:
+            progress.finish_task(id_task)
+            shared.state.job = ""
+            shared.state.job_count = 0
+            extra_outputs_array = extra_outputs
+            if extra_outputs_array is None:
+                extra_outputs_array = [None, '', '']
+            return extra_outputs_array + [str(e)]
 
+        # send gpu call to queue
         with queue_lock:
             shared.state.begin()
             progress.start_task(id_task)

@@ -379,9 +379,18 @@ window.onload = function () {
             if (name) {
                 name.innerHTML = result.name;
             }
+            const userInfo = document.querySelector("#user-setting_content");
+
+            if (userInfo) {
+                userInfo.style.display = 'block';
+            }
+
             const logOutLink = document.querySelector("#user-setting_content > div > div > a");
             if (logOutLink) {
-                logOut.target="_self";
+                logOutLink.target="_self";
+                logOutLink.onclick =  function () {
+                    document.cookie = '';
+                }
             }
         }
     })

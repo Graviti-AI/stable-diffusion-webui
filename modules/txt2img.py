@@ -44,9 +44,9 @@ def txt2img(request: gr.Request, id_task: str, prompt: str, negative_prompt: str
         hr_second_pass_steps=hr_second_pass_steps,
         hr_resize_x=hr_resize_x,
         hr_resize_y=hr_resize_y,
-        override_settings=override_settings,
-        global_prompt_styles=shared.prompt_styles(request.request)
+        override_settings=override_settings
     )
+    p.set_global_prompt_styles(shared.prompt_styles(request.request))
 
     p.scripts = modules.scripts.scripts_txt2img
     p.script_args = args

@@ -366,7 +366,7 @@ class FilenameGenerator:
             return None
 
         prompt_no_style = self.prompt
-        for style in self.p.global_prompt_styles.get_style_prompts(self.p.styles):
+        for style in self.p.global_prompt_styles().get_style_prompts(self.p.styles):
             if len(style) > 0:
                 for part in style.split("{prompt}"):
                     prompt_no_style = prompt_no_style.replace(part, "").replace(", ,", ",").strip().strip(',')

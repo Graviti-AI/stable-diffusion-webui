@@ -173,7 +173,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
         'api': api_name,
         'user': modules.user.User.current_user(request).uid,
         'args': func_args,
-        'extra_args': args[named_args_count + 1:] if named_args_count + 1 < len(args) else [],
+        'extra_args': _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else [],
         'consume': _calculate_consume_unit(api_name, func_args, *args, **kwargs)
     }
     resp = requests.post(monitor_addr,

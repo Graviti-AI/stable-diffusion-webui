@@ -303,10 +303,11 @@ class Api:
 
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
-        args['global_prompt_styles'] = shared.prompt_styles(request)
         with self.queue_lock:
             from modules.paths import Paths
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
+            p.set_global_prompt_styles(shared.prompt_styles(request))
+
             p.scripts = script_runner
 
             paths = Paths(request)
@@ -362,11 +363,11 @@ class Api:
 
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
-        args['global_prompt_styles'] = shared.prompt_styles(request)
 
         with self.queue_lock:
             from modules.paths import Paths
             p = StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)
+            p.set_global_prompt_styles(shared.prompt_styles(request))
             p.init_images = [decode_base64_to_image(x) for x in init_images]
             p.scripts = script_runner
 

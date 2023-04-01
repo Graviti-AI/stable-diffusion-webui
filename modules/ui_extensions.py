@@ -176,8 +176,8 @@ def install_extension_from_url(request: gradio.routes.Request, dirname, url):
         shutil.rmtree(tmpdir, True)
 
 
-def install_extension_from_index(request: gradio.routes.Request, url, hide_tags, sort_column, filter_text):
-    ext_table, message = install_extension_from_url(None, url)
+def install_extension_from_index(request: gr.Request, url, hide_tags, sort_column, filter_text):
+    ext_table, message = install_extension_from_url(request, url)
 
     code, _ = refresh_available_extensions_from_data(hide_tags, sort_column, filter_text)
 

@@ -379,17 +379,18 @@ window.onload = function () {
             if (name) {
                 name.innerHTML = result.name;
             }
-            const userInfo = document.querySelector("#user-setting_content");
+            const userInfo = document.querySelector(".user_info");
 
             if (userInfo) {
-                userInfo.style.display = 'block';
+                userInfo.style.display = 'flex';
             }
 
-            const logOutLink = document.querySelector("#user-setting_content > div > div > a");
+            const logOutLink = document.querySelector(".user_info > .user_info-name > a");
             if (logOutLink) {
                 logOutLink.target="_self";
+                // remove cookie
                 logOutLink.onclick =  function () {
-                    document.cookie = '';
+                    document.cookie = 'auth-session=;';
                 }
             }
         }

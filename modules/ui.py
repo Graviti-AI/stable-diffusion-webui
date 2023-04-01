@@ -1733,10 +1733,10 @@ def create_ui():
                         component_dict[k] = component
             with gr.Column(elem_id="user-setting", scale=1):
                 gr.HTML(
-                    value="<div style='display: none' class='user_info'><a href='https://webui.graviti.com/user' target='_self'><img "
+                    value="<div style='display: none' class='user_info'><a href='/user'><img "
                           "src=''"
                           "=s96-c' /></a><div class='user_info-name'><span></span><a "
-                          "href='https://webui.graviti.com/api/logout' target='_self'>logout</a></div></div>",
+                          "href='/api/logout' target='_self'>logout</a></div></div>",
                     show_label=False, elem_id="user-setting_content")
 
         parameters_copypaste.connect_paste_params_buttons()

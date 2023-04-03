@@ -231,7 +231,7 @@ def create_upload_button(
                 modelreader = csv.reader(csvfile, delimiter=',')
                 for file_hash_str, file_name, user_id, timestamp_s in modelreader:
                     if hash_str == file_hash_str:
-                        return file_name
+                        return os.path.basename(file_name)
         return hash_str
 
     def upload_file(file, hash_str, request: gr.Request):
@@ -243,8 +243,8 @@ def create_upload_button(
             with open(model_list_csv_path, 'a') as csvfile:
                 modelwriter = csv.writer(csvfile, delimiter=',')
                 modelwriter.writerow([hash_str, new_path, user.uid, time.time()])
-            return new_path
-        return None
+            return os.path.basename(new_path)
+        return readable_hash
     hash_str_id = elem_id+'-hash-str'
     hash_str = gr.Textbox(label='hash str', elem_id=hash_str_id, visible=False)
     existing_filepath = gr.Textbox(label='existing filepath', visible=False)

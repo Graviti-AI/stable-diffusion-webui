@@ -371,28 +371,27 @@ window.onload = function () {
         }
     }).then(result => {
         if (result) {
-            const img = document.querySelector("#user-setting_content > div > a > img");
-            if (img) {
-                img.src = result.picture;
-            }
-            const name = document.querySelector("#user-setting_content > div > div > span");
-            if (name) {
-                name.innerHTML = result.name;
-            }
-            const userInfo = document.querySelector(".user_info");
+            const userInfo = gradioApp().querySelector(".user_info");
 
             if (userInfo) {
                 userInfo.style.display = 'flex';
-            }
-
-            const logOutLink = document.querySelector(".user_info > .user_info-name > a");
-            if (logOutLink) {
-                logOutLink.target="_self";
-                // remove cookie
-                logOutLink.onclick =  function () {
-                    document.cookie = 'auth-session=;';
+                const img = userInfo.querySelector("a > img");
+                if (img) {
+                    img.src = result.picture;
                 }
-            }
+                const name = userInfo.querySelector(".user_info-name > span");
+                if (name) {
+                    name.innerHTML = result.name;
+                }
+                const logOutLink = userInfo.querySelector(".user_info-name > a");
+                if (logOutLink) {
+                    logOutLink.target="_self";
+                    // remove cookie
+                    logOutLink.onclick = () => {
+                        document.cookie = 'auth-session=;';
+                    }
+                }
+            } 
         }
     })
 }

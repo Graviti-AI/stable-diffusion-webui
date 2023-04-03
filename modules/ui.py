@@ -381,25 +381,18 @@ def apply_setting(key, value):
 
 def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id):
     def refresh(request: gr.Request):
-        refresh_method(request.request)
+        import modules.call_utils
+
+        inputs = modules.call_utils.special_args(refresh_method, [], request)
+        if inputs:
+            # the refresh_method either needs a gr.Request object
+            refresh_method(*inputs)
+        else:
+            # or needs nothing
+            refresh_method()
 
         if callable(refreshed_args):
-            inputs = list()
-            # check if refresh function has special arguments gradio.routes.Request
-            # If yes, this value will be loaded into the inputs array and give to refresh function.
-            import inspect
-            signature = inspect.signature(refreshed_args)
-            positional_args = []
-            for i, param in enumerate(signature.parameters.values()):
-                if param.kind not in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
-                    break
-                positional_args.append(param)
-            for i, param in enumerate(positional_args):
-                import starlette.requests
-                if param.annotation == starlette.requests.Request:
-                    if inputs is not None:
-                        inputs.insert(i, request.request)
-            # call refresh func
+            inputs = modules.call_utils.special_args(refreshed_args, [], request)
             if inputs:
                 args = refreshed_args(*inputs)
             else:

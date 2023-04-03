@@ -145,21 +145,21 @@ addContextMenuEventListener = initResponse[2];
     500)
   }
 
-  appendContextMenuOption('#txt2img_generate','Generate forever',function(){
-    generateOnRepeat('#txt2img_generate','#txt2img_interrupt');
-  })
-  appendContextMenuOption('#img2img_generate','Generate forever',function(){
-    generateOnRepeat('#img2img_generate','#img2img_interrupt');
-  })
+  // appendContextMenuOption('#txt2img_generate','Generate forever',function(){
+  //   generateOnRepeat('#txt2img_generate','#txt2img_interrupt');
+  // })
+  // appendContextMenuOption('#img2img_generate','Generate forever',function(){
+  //   generateOnRepeat('#img2img_generate','#img2img_interrupt');
+  // })
 
   let cancelGenerateForever = function(){
     clearInterval(window.generateOnRepeatInterval)
   }
 
-  appendContextMenuOption('#txt2img_interrupt','Cancel generate forever',cancelGenerateForever)
-  appendContextMenuOption('#txt2img_generate', 'Cancel generate forever',cancelGenerateForever)
-  appendContextMenuOption('#img2img_interrupt','Cancel generate forever',cancelGenerateForever)
-  appendContextMenuOption('#img2img_generate', 'Cancel generate forever',cancelGenerateForever)
+  // appendContextMenuOption('#txt2img_interrupt','Cancel generate forever',cancelGenerateForever)
+  // appendContextMenuOption('#txt2img_generate', 'Cancel generate forever',cancelGenerateForever)
+  // appendContextMenuOption('#img2img_interrupt','Cancel generate forever',cancelGenerateForever)
+  // appendContextMenuOption('#img2img_generate', 'Cancel generate forever',cancelGenerateForever)
 
   appendContextMenuOption('#roll','Roll three',
     function(){

@@ -10,9 +10,13 @@ import time
 import gradio as gr
 import subprocess as sp
 
+from fastapi import FastAPI, HTTPException
+from starlette.responses import FileResponse
+
 from modules import call_queue, shared, hashes
 from modules.generation_parameters_copypaste import image_from_url_text
 from modules.paths import Paths
+from modules.paths_internal import script_path
 import modules.images
 import modules.user
 
@@ -355,3 +359,17 @@ def create_upload_button(
             upload_finish_js=upload_finish_js)
     uploaded_filepath.change(None, None, None, _js=notify_upload_finished_js)
     return button
+
+
+def get_static_files(filepath: str):
+    full_path = os.path.join(script_path, "static", filepath)
+    # Make sure the path is in static folder
+    full_path = os.path.abspath(full_path)
+    if not os.path.exists(full_path) or os.path.abspath(os.path.join(script_path, "static")) not in full_path:
+        raise HTTPException(status_code=404, detail=f"{filepath} not found")
+
+    return FileResponse(full_path)
+
+
+def add_static_filedir_to_demo(app: FastAPI):
+    app.add_api_route("/public/{filepath:path}", get_static_files, methods=["GET"])

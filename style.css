@@ -750,7 +750,7 @@ footer {
     height: 6em;
     width: 6em;
     cursor: pointer;
-    background-image: url('./file=html/card-no-preview.png');
+    background-image: url('/public/icons/card-no-preview.png');
     background-size: cover;
     background-position: center center;
     position: relative;
@@ -761,7 +761,7 @@ footer {
 }
 
 .extra-network-thumbs .actions .additional a {
-    background-image: url('./file=html/image-update.svg');
+    background-image: url('/public/icons/image-update.svg');
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center center;
@@ -807,7 +807,7 @@ footer {
     overflow: hidden;
     cursor: pointer;
 
-    background-image: url('./file=html/card-no-preview.png')
+    background-image: url('/public/icons/card-no-preview.png')
 }
 
 .extra-network-cards .card:hover{

@@ -50,17 +50,22 @@ class Paths:
     def __init__(self, request: gr.Request | None):
         user = modules.user.User.current_user(request)
 
-        work_dir = pathlib.Path(data_path).joinpath('workdir', user.uid)
+        base_dir = pathlib.Path(data_path)
+
+        work_dir = base_dir.joinpath('workdir', user.uid)
         if not work_dir.exists():
             work_dir.mkdir(parents=True)
 
-        model_dir = pathlib.Path(data_path).joinpath('models', user.uid)
+        model_dir = base_dir.joinpath('models', user.uid)
         if not model_dir.exists():
             model_dir.mkdir(parents=True)
 
         self._work_dir = work_dir
         self._model_dir = model_dir
-        self._output_dir = self._work_dir.joinpath("outputs")
+        if not user.tire or user.tire.lower() == 'free':
+            self._output_dir = base_dir.joinpath('workdir', 'public', 'outputs')
+        else:
+            self._output_dir = base_dir.joinpath('workdir', user.uid, 'outputs')
 
     @staticmethod
     def _check_dir(path):

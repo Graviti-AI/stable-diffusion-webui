@@ -1816,6 +1816,7 @@ def javascript_html():
     head = f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
 
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
+    head += '<script type="text/javascript" src="/public/js/posthog.js"></script>\n'
 
     inline = f"{localization.localization_js(shared.opts.localization)};"
     if cmd_opts.theme is not None:

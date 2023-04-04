@@ -285,7 +285,7 @@ def webui():
         if launch_api:
             create_api(app)
 
-        add_static_filedir_to_demo(app)
+        add_static_filedir_to_demo(app, route="components")
         ui_extra_networks.add_pages_to_demo(app)
 
         modules.script_callbacks.app_started_callback(shared.demo, app)

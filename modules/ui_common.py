@@ -371,5 +371,5 @@ def get_static_files(filepath: str):
     return FileResponse(full_path)
 
 
-def add_static_filedir_to_demo(app: FastAPI):
-    app.add_api_route("/public/{filepath:path}", get_static_files, methods=["GET"])
+def add_static_filedir_to_demo(app: FastAPI, route="public"):
+    app.add_api_route(f"/" + route + "/{filepath:path}", get_static_files, methods=["GET"])

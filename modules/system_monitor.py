@@ -206,7 +206,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
         )
 
 
-def on_task_finished(request: gr.Request, monitor_log_id: str, status: str):
+def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
@@ -217,6 +217,7 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str):
                              'Api-Secret': system_monitor_api_secret,
                          },
                          json={
-                             'state': status
+                             'status': status,
+                             'message': message
                          })
     print(resp.content)

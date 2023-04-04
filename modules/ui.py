@@ -1600,7 +1600,7 @@ def create_ui():
     for _interface, label, _ifid in interfaces:
         shared.tab_names.append(label)
 
-    with gr.Blocks(analytics_enabled=False, title="Stable Diffusion") as demo:
+    with gr.Blocks(analytics_enabled=False, title="GRAVITI Diffus") as demo:
         with gr.Row():
             with gr.Column(scale=3):
                 with gr.Row(elem_id="quicksettings"):
@@ -1612,7 +1612,7 @@ def create_ui():
                     value="<div style='display: none' class='user_info'><a href='/user'><img "
                           "src=''"
                           "=s96-c' /></a><div class='user_info-name'><span></span><a "
-                          "href='/api/logout' target='_self'>logout</a></div></div>",
+                          "href='/api/logout' target='_self'>Log out</a></div></div>",
                     show_label=False)
 
         parameters_copypaste.connect_paste_params_buttons()

@@ -1,5 +1,6 @@
 import uuid
-
+import logging
+import json
 import requests
 
 import gradio as gr
@@ -192,11 +193,16 @@ def on_task(request: gr.Request, func, *args, **kwargs):
                              'Api-Secret': system_monitor_api_secret,
                          },
                          json=request_data)
+    logging.info(json.dumps(request_data, ensure_ascii=False, sort_keys=True))
 
     # check response, raise exception if status code is not 2xx
     if 199 < resp.status_code < 300:
         return monitor_log_id
-    elif resp.status_code == 402:
+
+    # log the response if request failed
+    logging.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
+
+    if resp.status_code == 402:
         raise MonitorException(
             f"<div class='error'>billing error: check <a href='/user' class='billing'>here</a> for more information.</div>"
         )
@@ -220,4 +226,7 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
                              'status': status,
                              'message': message
                          })
-    print(resp.content)
+
+    # log the response if request failed
+    if resp.status_code < 200 or resp.status_code > 299:
+        logging.error(f'update monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')

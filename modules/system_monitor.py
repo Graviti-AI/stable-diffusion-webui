@@ -1,3 +1,5 @@
+import uuid
+
 import requests
 
 import gradio as gr
@@ -84,7 +86,7 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
                 image_unit = _calculate_image_unit(width, height)
                 result = image_count * image_unit
         else:
-            result = 1
+            result = 0
         return int(result)
 
     return 1
@@ -136,12 +138,20 @@ def _serialize_object(obj):
         return str(obj)
 
 
+def _extract_task_id(*args):
+    if len(args) > 0 and type(args[0]) == str and args[0][0:5] == "task(" and args[0][-1] == ")":
+        return args[0][6:-1]
+    else:
+        return uuid.uuid4().hex
+
+
 def on_task(request: gr.Request, func, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
         return
 
+    monitor_log_id = _extract_task_id(*args)
     # inspect func args
     import inspect
     signature = inspect.signature(func)
@@ -171,6 +181,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
     api_name = f'{fund_module_name}.{func_name}'
     request_data = {
         'api': api_name,
+        'task_id': monitor_log_id,
         'user': modules.user.User.current_user(request).uid,
         'args': func_args,
         'extra_args': _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else [],
@@ -184,7 +195,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
 
     # check response, raise exception if status code is not 2xx
     if 199 < resp.status_code < 300:
-        return
+        return monitor_log_id
     elif resp.status_code == 402:
         raise MonitorException(
             f"<div class='error'>billing error: check <a href='/user' class='billing'>here</a> for more information.</div>"
@@ -193,3 +204,19 @@ def on_task(request: gr.Request, func, *args, **kwargs):
         raise MonitorException(
             f"<div class='error'>system error, please join our Discord <a href='https://discord.gg/darTYpt2Yh' class='support'>#support</a> channel to get more help.</div>"
         )
+
+
+def on_task_finished(request: gr.Request, monitor_log_id: str, status: str):
+    monitor_addr = modules.shared.cmd_opts.system_monitor_addr
+    system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
+    if not monitor_addr or not system_monitor_api_secret:
+        return
+    request_url = f'{monitor_addr}/{monitor_log_id}'
+    resp = requests.post(request_url,
+                         headers={
+                             'Api-Secret': system_monitor_api_secret,
+                         },
+                         json={
+                             'state': status
+                         })
+    print(resp.content)

@@ -35,7 +35,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
         # log all gpu calls with monitor
         from modules.system_monitor import MonitorException
         try:
-            modules.system_monitor.on_task(request, func, *args, **kwargs)
+            monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
         except MonitorException as e:
             progress.finish_task(id_task)
             shared.state.job = ""
@@ -54,8 +54,13 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
                 if func_name in ('txt2img', 'img2img'):
                     _check_sd_model(model_title=args[-1])
                 res = func(request, *args, **kwargs)
+                status = 'finished'
+            except Exception as e:
+                status = 'failed'
+                raise e
             finally:
                 progress.finish_task(id_task)
+                modules.system_monitor.on_task_finished(request, monitor_log_id, status)
 
             shared.state.end()
 

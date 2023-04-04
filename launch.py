@@ -6,6 +6,7 @@ import importlib.util
 import shlex
 import platform
 import json
+import logging
 
 from modules import cmd_args
 from modules.paths_internal import script_path, extensions_dir
@@ -352,5 +353,6 @@ def start():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
     prepare_environment()
     start()

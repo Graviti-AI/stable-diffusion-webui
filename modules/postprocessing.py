@@ -7,7 +7,7 @@ from modules import shared, images, devices, scripts, scripts_postprocessing, ui
 from modules.shared import opts
 
 
-def run_postprocessing(request: gradio.routes.Request, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
+def run_postprocessing(request: gradio.routes.Request, extras_mode, image, image_folder, *args, save_output: bool = True):
     devices.torch_gc()
 
     shared.state.begin()
@@ -23,17 +23,20 @@ def run_postprocessing(request: gradio.routes.Request, extras_mode, image, image
             image_data.append(image)
             image_names.append(os.path.splitext(img.orig_name)[0])
     elif extras_mode == 2:
+        import modules.call_utils
+        modules.call_utils.check_insecure_calls()
         assert not shared.cmd_opts.hide_ui_dir_config, '--hide-ui-dir-config option must be disabled'
-        assert input_dir, 'input directory not selected'
 
-        image_list = shared.listfiles(input_dir)
-        for filename in image_list:
-            try:
-                image = Image.open(filename)
-            except Exception:
-                continue
-            image_data.append(image)
-            image_names.append(filename)
+        # assert input_dir, 'input directory not selected'
+        #
+        # image_list = shared.listfiles(input_dir)
+        # for filename in image_list:
+        #     try:
+        #         image = Image.open(filename)
+        #     except Exception:
+        #         continue
+        #     image_data.append(image)
+        #     image_names.append(filename)
     else:
         assert image, 'image not selected'
 

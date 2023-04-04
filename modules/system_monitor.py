@@ -50,20 +50,20 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
         result = image_unit * batch_size * batch_count * step_count
         return int(result)
     elif func_name in ('modules.postprocessing.run_postprocessing',):
-        scale_type = args[6]  # 0: scale by, 1: scale to
+        scale_type = args[3]  # 0: scale by, 1: scale to
         extras_mode = named_args.get('extras_mode', 0)
 
         if extras_mode == 0:  # single image
             image_count = 1
             if scale_type == 0:  # scale by, resultSize is srcSize * scaleBy
-                scale = args[7]
+                scale = args[4]
                 source_img_size = named_args.get('image', {}).get('size', (512, 512))
 
                 width = source_img_size[0] * scale
                 height = source_img_size[1] * scale
             else:  # scale to, resultSize is provided in request
-                width = args[8]
-                height = args[9]
+                width = args[5]
+                height = args[6]
             image_unit = _calculate_image_unit(width, height)
             result = image_unit * image_count
         elif extras_mode == 1:  # batch process
@@ -73,7 +73,7 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
             if scale_type == 0:  # scale by, need calculate resultSize for every image particularly
                 result = 0
                 for img in image_folder:
-                    scale = args[7]
+                    scale = args[4]
                     source_img = Image.open(img)
                     width = source_img.width * scale
                     height = source_img.width * scale
@@ -81,15 +81,15 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
                     image_unit = _calculate_image_unit(width, height)
                     result += image_unit
             else:  # scale to, every image will be scaled to same size
-                width = args[8]
-                height = args[9]
+                width = args[5]
+                height = args[6]
                 image_unit = _calculate_image_unit(width, height)
                 result = image_count * image_unit
         else:
             result = 0
         return int(result)
 
-    return 1
+    return 0
 
 
 def _serialize_object(obj):

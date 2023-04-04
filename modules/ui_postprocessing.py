@@ -7,6 +7,8 @@ def create_ui():
     tab_index = gr.State(value=0)
 
     with gr.Row().style(equal_height=False, variant='compact'):
+        need_upgrade = gr.Checkbox(
+            value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
         with gr.Column(variant='compact'):
             with gr.Tabs(elem_id="mode_extras"):
                 with gr.TabItem('Single Image', elem_id="extras_single_tab") as tab_single:
@@ -33,7 +35,7 @@ def create_ui():
     # tab_batch_dir.select(fn=lambda: 2, inputs=[], outputs=[tab_index])
 
     submit.click(
-        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing, extra_outputs=[None, '']),
+        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing, extra_outputs=[None, ''], add_monitor_state=True),
         inputs=[
             tab_index,
             extras_image,
@@ -47,9 +49,11 @@ def create_ui():
             result_images,
             html_info_x,
             html_info,
+            need_upgrade
         ]
     )
 
+    need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment")
     parameters_copypaste.add_paste_fields("extras", extras_image, None)
 
     extras_image.change(

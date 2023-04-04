@@ -347,6 +347,12 @@ function restart_reload(){
     return []
 }
 
+function redirect_to_payment(need_upgrade){
+    if (need_upgrade) {
+        window.location.href = "/user";
+    }
+}
+
 // Simulate an `input` DOM event for Gradio Textbox component. Needed after you edit its contents in javascript, otherwise your edits
 // will only visible on web page and not sent to python.
 function updateInput(target){

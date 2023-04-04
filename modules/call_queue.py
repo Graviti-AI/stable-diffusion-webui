@@ -22,7 +22,7 @@ def wrap_queued_call(func):
     return f
 
 
-def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
+def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
     def f(request: gradio.routes.Request, *args, **kwargs):
 
         # if the first argument is a string that says "task(...)", it is treated as a job id
@@ -43,6 +43,8 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
             extra_outputs_array = extra_outputs
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
+            if add_monitor_state:
+                return extra_outputs_array + [str(e)], True
             return extra_outputs_array + [str(e)]
 
         # send gpu call to queue
@@ -66,20 +68,27 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None):
 
             shared.state.end()
 
+        if add_monitor_state:
+            return res, False
         return res
 
-    return wrap_gradio_call(f, extra_outputs=extra_outputs, add_stats=True)
+    return wrap_gradio_call(f, extra_outputs=extra_outputs, add_stats=True, add_monitor_state=add_monitor_state)
 
 
-def wrap_gradio_call(func, extra_outputs=None, add_stats=False):
+def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
     def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
+        monitor_state = False
         run_memmon = shared.opts.memmon_poll_rate > 0 and not shared.mem_mon.disabled and add_stats
         if run_memmon:
             shared.mem_mon.monitor()
         t = time.perf_counter()
 
         try:
-            res = list(func(request, *args, **kwargs))
+            if add_monitor_state:
+                res, monitor_state = func(request, *args, **kwargs)
+                res = list(res)
+            else:
+                res = list(func(request, *args, **kwargs))
         except Exception as e:
             # When printing out our debug argument list, do not print out more than a MB of text
             max_debug_str_len = 131072 # (1024*1024)/8
@@ -105,6 +114,8 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False):
         shared.state.job_count = 0
 
         if not add_stats:
+            if add_monitor_state:
+                return tuple(res + [monitor_state])
             return tuple(res)
 
         elapsed = time.perf_counter() - t
@@ -129,6 +140,8 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False):
         # last item is always HTML
         res[-1] += f"<div class='performance'><p class='time'>Time taken: <wbr>{elapsed_text}</p>{vram_html}</div>"
 
+        if add_monitor_state:
+            return tuple(res + [monitor_state])
         return tuple(res)
 
     return f

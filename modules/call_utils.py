@@ -40,3 +40,8 @@ def special_args(
             else:
                 inputs.append(param.default)
     return inputs or []
+
+
+def check_insecure_calls():
+    import modules.shared
+    assert modules.shared.cmd_opts.enable_insecure_calls, "forbidden"

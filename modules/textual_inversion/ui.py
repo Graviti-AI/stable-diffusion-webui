@@ -6,9 +6,11 @@ import gradio as gr
 import modules.textual_inversion.textual_inversion
 import modules.textual_inversion.preprocess
 from modules import sd_hijack, shared
+import modules.call_utils
 
 
 def create_embedding(name, initialization_text, nvpt, overwrite_old):
+    modules.call_utils.check_insecure_calls()
     filename = modules.textual_inversion.textual_inversion.create_embedding(name, nvpt, overwrite_old, init_text=initialization_text)
 
     sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings()
@@ -17,12 +19,15 @@ def create_embedding(name, initialization_text, nvpt, overwrite_old):
 
 
 def preprocess(request: gradio.routes.Request, *args):
+    modules.call_utils.check_insecure_calls()
+
     modules.textual_inversion.preprocess.preprocess(*args)
 
     return f"Preprocessing {'interrupted' if shared.state.interrupted else 'finished'}.", ""
 
 
 def train_embedding(request: gradio.routes.Request, *args):
+    modules.call_utils.check_insecure_calls()
 
     assert not shared.cmd_opts.lowvram, 'Training models with lowvram not possible'
 

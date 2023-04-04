@@ -1428,6 +1428,9 @@ def create_ui():
     opts.reorder()
 
     def run_settings(request: gradio.routes.Request, *args):
+        import modules.call_utils
+        modules.call_utils.check_insecure_calls()
+
         changed = []
 
         for key, value, comp in zip(opts.data_labels.keys(), args, components):
@@ -1566,6 +1569,8 @@ def create_ui():
         )
 
         def request_restart():
+            import modules.call_utils
+            modules.call_utils.check_insecure_calls()
             shared.state.interrupt()
             shared.state.need_restart = True
 
@@ -1675,6 +1680,8 @@ def create_ui():
         )
 
         def modelmerger(request: gradio.routes.Request, *args):
+            import modules.call_utils
+            modules.call_utils.check_insecure_calls()
             try:
                 results = modules.extras.run_modelmerger(*args)
             except Exception as e:

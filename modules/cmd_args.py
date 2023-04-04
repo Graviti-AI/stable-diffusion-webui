@@ -103,3 +103,4 @@ parser.add_argument("--no-hashing", action='store_true', help="disable sha256 ha
 parser.add_argument("--no-download-sd-model", action='store_true', help="don't download SD1.5 model even if no model is found in --ckpt-dir", default=False)
 parser.add_argument("--system-monitor-addr", type=str,  help="a remote server who can monitor gpu calls", default='')
 parser.add_argument("--system-monitor-api-secret", type=str,  help="api secret fo calling monitor api", default='')
+parser.add_argument("--enable-insecure-calls", action='store_true',  help="enable insecure calls after related UI component is hidden", default=False)

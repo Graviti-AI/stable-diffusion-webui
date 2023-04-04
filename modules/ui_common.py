@@ -136,7 +136,7 @@ Requested path was: {f}
         generation_info = None
         with gr.Column():
             with gr.Row(elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"):
-                open_folder_button = gr.Button(folder_symbol, visible=not shared.cmd_opts.hide_ui_dir_config)
+                # open_folder_button = gr.Button(folder_symbol, visible=not shared.cmd_opts.hide_ui_dir_config)
 
                 if tabname != "extras":
                     save = gr.Button('Save', elem_id=f'save_{tabname}')
@@ -147,11 +147,11 @@ Requested path was: {f}
             def on_open_folder(request: gr.Request):
                 open_folder(Paths(request).outdir() or outdir)
 
-            open_folder_button.click(
-                fn=on_open_folder,
-                inputs=[],
-                outputs=[],
-            )
+            # open_folder_button.click(
+            #     fn=on_open_folder,
+            #     inputs=[],
+            #     outputs=[],
+            # )
 
             if tabname != "extras":
                 download_files = gr.File(None, file_count="multiple", interactive=False, show_label=False, visible=False, elem_id=f'download_files_{tabname}')

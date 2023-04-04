@@ -3,10 +3,14 @@ import os.path
 import urllib.parse
 from pathlib import Path
 from PIL import PngImagePlugin
+import time
 
 from modules import shared
 from modules.images import read_info_from_image
+from modules.paths import Paths
+from modules.paths_internal import script_path
 import gradio as gr
+from fastapi import Request
 import json
 import html
 
@@ -15,6 +19,7 @@ from modules.ui_common import create_upload_button
 
 extra_pages = []
 allowed_dirs = set()
+preview_search_dir = dict()
 
 
 def register_page(page):
@@ -25,18 +30,29 @@ def register_page(page):
     allowed_dirs.update(set(sum([x.allowed_directories_for_previews() for x in extra_pages], [])))
 
 
-def fetch_file(filename: str = ""):
+def fetch_file(request: Request, filename: str = "", model_type: str = ""):
     from starlette.responses import FileResponse
 
-    if not any([Path(x).absolute() in Path(filename).absolute().parents for x in allowed_dirs]):
-        raise ValueError(f"File cannot be fetched: {filename}. Must be in one of directories registered by extra pages.")
+    no_preview_background_path = os.path.join(script_path, "static/icons/card-no-preview.png")
 
     ext = os.path.splitext(filename)[1].lower()
     if ext not in (".png", ".jpg", ".webp"):
-        raise ValueError(f"File cannot be fetched: {filename}. Only png and jpg and webp.")
+        return FileResponse(no_preview_background_path, headers={"Accept-Ranges": "bytes"})
 
-    # would profit from returning 304
-    return FileResponse(filename, headers={"Accept-Ranges": "bytes"})
+    paths = Paths(request)
+    private_preview_path = os.path.join(paths.model_previews_dir(), model_type, filename)
+    if os.path.exists(private_preview_path):
+        return FileResponse(private_preview_path, headers={"Accept-Ranges": "bytes"})
+
+    if model_type not in preview_search_dir:
+        return FileResponse(no_preview_background_path, headers={"Accept-Ranges": "bytes"})
+
+    for dirpath in preview_search_dir[model_type]:
+        filepath = os.path.join(dirpath, filename)
+        if os.path.exists(filepath):
+            # would profit from returning 304
+            return FileResponse(filepath, headers={"Accept-Ranges": "bytes"})
+    return FileResponse(no_preview_background_path, headers={"Accept-Ranges": "bytes"})
 
 
 def get_metadata(page: str = "", item: str = ""):
@@ -70,7 +86,16 @@ class ExtraNetworksPage:
         pass
 
     def link_preview(self, filename):
-        return "./sd_extra_networks/thumb?filename=" + urllib.parse.quote(filename.replace('\\', '/')) + "&mtime=" + str(os.path.getmtime(filename))
+        model_type = self.name.replace(" ", "_")
+        filename_unix = os.path.abspath(filename.replace('\\', '/'))
+        if model_type not in preview_search_dir:
+            preview_search_dir[model_type] = list()
+        dirpath = os.path.dirname(filename_unix)
+        if  dirpath and (dirpath not in preview_search_dir[model_type]):
+            preview_search_dir[model_type].append(dirpath)
+        return "/sd_extra_networks/thumb?filename=" + \
+            urllib.parse.quote(os.path.basename(filename_unix)) + \
+            "&model_type=" + model_type + "&timestamp=" + str(time.time())
 
     def search_terms_from_path(self, filename, possible_directories=None):
         abspath = os.path.abspath(filename)
@@ -180,15 +205,18 @@ class ExtraNetworksPage:
         if metadata:
             metadata_button = f"<div class='metadata-button' title='Show metadata' onclick='extraNetworksRequestMetadata(event, {json.dumps(self.name)}, {json.dumps(item['name'])})'></div>"
 
+        model_type = self.name.replace(" ", "_")
+        preview_filename = os.path.join(model_type, os.path.basename(item["local_preview"]))
+
         args = {
             "style": f"'{height}{width}{background_image}'",
             "prompt": item.get("prompt", None),
             "tabname": json.dumps(tabname),
-            "local_preview": json.dumps(item["local_preview"]),
+            "local_preview": json.dumps(preview_filename),
             "name": item["name"],
             "description": (item.get("description") or ""),
             "card_clicked": onclick,
-            "save_card_preview": '"' + html.escape(f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(item["local_preview"])})""") + '"',
+            "save_card_preview": '"' + html.escape(f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(preview_filename)})""") + '"',
             "search_term": item.get("search_term", ""),
             "metadata_button": metadata_button,
         }
@@ -210,7 +238,8 @@ class ExtraNetworksPage:
             if os.path.isfile(file):
                 return self.link_preview(file)
 
-        return None
+        # TODO: If generated image is not png, this will likely fail
+        return self.link_preview(os.path.basename(path) + ".png")
 
     def find_description(self, path):
         """
@@ -322,7 +351,8 @@ def path_is_parent(parent_path, child_path):
 
 
 def setup_ui(ui, gallery):
-    def save_preview(index, images, filename):
+    def save_preview(index, images, filename, request: gr.Request):
+        paths = Paths(request)
         if len(images) == 0:
             print("There is no image in gallery to save as a preview.")
             return [page.create_html(
@@ -337,20 +367,17 @@ def setup_ui(ui, gallery):
         image = image_from_url_text(img_info)
         geninfo, items = read_info_from_image(image)
 
-        is_allowed = False
-        for extra_page in ui.stored_extra_pages:
-            if any([path_is_parent(x, filename) for x in extra_page.allowed_directories_for_previews()]):
-                is_allowed = True
-                break
-
-        assert is_allowed, f'writing to {filename} is not allowed'
+        preview_path = os.path.join(paths.model_previews_dir(), filename)
+        preview_path_dir = os.path.dirname(preview_path)
+        if not os.path.exists(preview_path_dir):
+            os.makedirs(preview_path_dir, exist_ok=True)
 
         if geninfo:
             pnginfo_data = PngImagePlugin.PngInfo()
             pnginfo_data.add_text('parameters', geninfo)
-            image.save(filename, pnginfo=pnginfo_data)
+            image.save(preview_path, pnginfo=pnginfo_data)
         else:
-            image.save(filename)
+            image.save(preview_path)
 
         return [page.create_html(
             ui.tabname,

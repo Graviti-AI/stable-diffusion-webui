@@ -54,11 +54,11 @@ class Paths:
 
         work_dir = base_dir.joinpath('workdir', user.uid)
         if not work_dir.exists():
-            work_dir.mkdir(parents=True)
+            work_dir.mkdir(parents=True, exist_ok=True)
 
         model_dir = base_dir.joinpath('models', user.uid)
         if not model_dir.exists():
-            model_dir.mkdir(parents=True)
+            model_dir.mkdir(parents=True, exist_ok=True)
 
         self._work_dir = work_dir
         self._model_dir = model_dir
@@ -70,7 +70,7 @@ class Paths:
     @staticmethod
     def _check_dir(path):
         if not path.exists():
-            path.mkdir(parents=True)
+            path.mkdir(parents=True, exist_ok=True)
         return path
 
     def outdir(self):
@@ -112,6 +112,10 @@ class Paths:
     # dir to store user models
     def models_dir(self):
         return self._check_dir(self._model_dir)
+
+    # dir to store user model previews
+    def model_previews_dir(self):
+        return self._check_dir(self._work_dir.joinpath("model_previews"))
 
 
 class Prioritize:

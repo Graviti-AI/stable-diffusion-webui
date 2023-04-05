@@ -1625,12 +1625,12 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False, title="GRAVITI Diffus") as demo:
         with gr.Row():
-            with gr.Column(scale=3):
+            with gr.Column(scale=7):
                 with gr.Row(elem_id="quicksettings"):
                     for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
                         component = create_setting_component(k, is_quicksettings=True)
                         component_dict[k] = component
-            with gr.Column(elem_id="user-setting", scale=1):
+            with gr.Column(elem_id="user-setting", scale=1, min_width=120):
                 gr.HTML(
                     value="<div style='display: none' class='user_info'><a href='/user'><img "
                           "src=''"

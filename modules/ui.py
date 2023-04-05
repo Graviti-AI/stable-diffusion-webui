@@ -1624,19 +1624,17 @@ def create_ui():
         shared.tab_names.append(label)
 
     with gr.Blocks(analytics_enabled=False, title="GRAVITI Diffus") as demo:
-        with gr.Row():
-            with gr.Column(scale=7):
-                with gr.Row(elem_id="quicksettings"):
-                    for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
-                        component = create_setting_component(k, is_quicksettings=True)
-                        component_dict[k] = component
-            with gr.Column(elem_id="user-setting", scale=1, min_width=120):
-                gr.HTML(
-                    value="<div style='display: none' class='user_info'><a href='/user'><img "
-                          "src=''"
-                          "=s96-c' /></a><div class='user_info-name'><span></span><a "
-                          "href='/api/logout' target='_self'>Log out</a></div></div>",
-                    show_label=False)
+        with gr.Row(elem_id="user-setting", min_width=120):
+            gr.HTML(
+                value="<div style='display: none; float: right; padding-right: 20px;' class='user_info'><a href='/user'><img "
+                        "src=''"
+                        "=s96-c' /></a><div class='user_info-name'><span></span><a "
+                        "href='/api/logout' target='_self'>Log out</a></div></div>",
+                show_label=False)
+        with gr.Row(elem_id="quicksettings"):
+            for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
+                component = create_setting_component(k, is_quicksettings=True)
+                component_dict[k] = component
 
         parameters_copypaste.connect_paste_params_buttons()
 

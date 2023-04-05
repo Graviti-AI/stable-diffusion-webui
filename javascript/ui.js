@@ -349,7 +349,7 @@ function restart_reload(){
 
 function redirect_to_payment(need_upgrade){
     if (need_upgrade) {
-        window.location.href = "/user";
+        window.location.href = "/user?upgradeFlag=true";
     }
 }
 

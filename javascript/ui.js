@@ -368,6 +368,30 @@ function selectCheckpoint(name){
     gradioApp().getElementById('change_checkpoint').click()
 }
 
+async function browseModels(){
+    var txt2img_tab = gradioApp().querySelector("#tab_txt2img");
+    var img2img_tab = gradioApp().querySelector("#tab_img2img");
+
+    if (txt2img_tab.style.display == "none" && img2img_tab.style.display == "none")
+    {
+        var txt2img_tab_button = document.querySelector("#tabs > div.tab-nav > button:nth-child(1)");
+        txt2img_tab_button.click();
+        await new Promise(r => setTimeout(r, 100));
+    }
+
+    var txt2img_button = gradioApp().querySelector("#txt2img_extra_networks");
+    if (txt2img_tab.style.display == "block")
+    {
+        txt2img_button.click();
+    }
+
+    var img2img_button = gradioApp().querySelector("#img2img_extra_networks");
+    if (img2img_tab.style.display == "block")
+    {
+        img2img_button.click();
+    }
+}
+
 // get user info
 window.onload = function () {
     const hostOrigin = location.origin;

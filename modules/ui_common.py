@@ -258,13 +258,13 @@ def create_upload_button(
     upload_button_id = "hidden-upload-button-" + elem_id
     button = gr.Button(label, elem_id=button_id, variant="primary", visible=visible)
     if button_style:
-        button_css = gr.HTML("""
+        gr.HTML("""
         <style>
         #{button_id} {{
             {button_style};
         }}
         <\\style>
-        """.format(button_id=button_id, button_style=button_style))
+        """.format(button_id=button_id, button_style=button_style), visible=False)
     button.style(full_width=False)
 
     compute_hash_js = """
@@ -359,6 +359,20 @@ def create_upload_button(
             upload_finish_js=upload_finish_js)
     uploaded_filepath.change(None, None, None, _js=notify_upload_finished_js)
     return button
+
+
+def create_browse_model_button(label, elem_id, button_style="", visible=True):
+    button = gr.Button(label, elem_id=elem_id, variant="secondary", visible=visible)
+    button.click(None, None, None, _js="browseModels")
+    if button_style:
+        gr.HTML("""
+        <style>
+        #{button_id} {{
+            {button_style};
+        }}
+        <\\style>
+        """.format(button_id=elem_id, button_style=button_style), visible=False)
+    button.style(full_width=False)
 
 
 def get_static_files(filepath: str):

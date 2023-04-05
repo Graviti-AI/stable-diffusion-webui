@@ -37,7 +37,7 @@ from modules.images import save_image
 from modules.sd_hijack import model_hijack
 from modules.sd_samplers import samplers, samplers_for_img2img
 from modules.textual_inversion import textual_inversion
-from modules.ui_common import create_upload_button
+from modules.ui_common import create_upload_button, create_browse_model_button
 import modules.hypernetworks.ui
 from modules.generation_parameters_copypaste import image_from_url_text
 import modules.extras
@@ -1426,7 +1426,14 @@ def create_ui():
                 res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
                 create_refresh_button(res, info.refresh, info.component_args, "refresh_" + key)
                 create_upload_button(
-                    'Upload a Model', 'upload_' + key, sd_models.model_path, button_style="width: 200px !important;")
+                    'Upload a Checkpoint',
+                    'upload_' + key,
+                    sd_models.model_path,
+                    button_style="flex-grow: 1 !important; align-self: flex-end;")
+                create_browse_model_button(
+                    'Browse Models',
+                    'browse_' + key,
+                    button_style="width: 200px !important; align-self: flex-end;")
             else:
                 with FormRow():
                     res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))

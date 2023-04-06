@@ -150,15 +150,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 def _check_sd_model(model_title):
     if not shared.sd_model or shared.sd_model.sd_checkpoint_info.title != model_title:
         import modules.sd_models
-
-        # del the loaded sd_model
-        #
-        # remarks: del the loaded sd_model is not necessary,  sd_models.reload_model_weights()
-        # can refresh weights for loaded model, but seems there is a memory leak issue
-        # in sd_models.reload_model_weights(), so we simply delete it here.
-        del shared.sd_model
-        shared.sd_model = None
-
-        # refresh model
+        # refresh model, unload it from memory to prevent OOM
+        modules.sd_models.unload_model_weights()
         checkpoint = modules.sd_models.get_closet_checkpoint_match(model_title)
         modules.sd_models.reload_model_weights(info=checkpoint)

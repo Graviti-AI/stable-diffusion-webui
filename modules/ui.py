@@ -1627,7 +1627,7 @@ def create_ui():
         with gr.Row(elem_id="topbar"):
             with gr.Column(elem_id="user-setting", min_width=120, scale=1):
                 gr.HTML(
-                    value="<div style='display: flex;justify-content: flex-end;' class='user_info'><a href='/user'><img "
+                    value="<div style='display: none;justify-content: flex-end;' class='user_info'><a href='/user'><img "
                             "src=''"
                             "/></a><div class='user_info-name'><span></span><a "
                             "href='/api/logout' target='_self'>Log out</a></div></div>",

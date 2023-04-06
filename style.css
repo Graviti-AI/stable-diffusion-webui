@@ -868,3 +868,35 @@ footer {
 .extra-network-cards .card ul a:hover{
     color: red;
 }
+
+.dark {
+  /* Diffus Colors */
+  --primary-50: #f2f1ff;
+  --primary-100: #e6e4ff;
+  --primary-200: #ccc9ff;
+  --primary-300: #b3afff;
+  --primary-400: #998eff;
+  --primary-500: #7360ff;
+  --primary-600: #5a3cff;
+  --primary-700: #4b2cad;
+  --primary-800: #3d2294;
+  --primary-900: #2e1a7a;
+  --primary-950: #1200ff;
+  --secondary-50: #f2f1ff;
+  --secondary-100: #e6e4ff;
+  --secondary-200: #bfdbfe;
+  --secondary-300: #ccc9ff;
+  --secondary-400: #998eff;
+  --secondary-500: #7f6aff;
+  --secondary-600: #5a3cff;
+  --secondary-700: #4b2cad;
+  --secondary-800: #3d2294;
+  --secondary-900: #2e1a7a;
+  --secondary-950: #1200ff;
+}
+
+#topbar { 
+	display: flex;
+	flex-direction: row-reverse;
+	align-items: flex-end;
+}

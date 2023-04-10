@@ -394,7 +394,7 @@ def start_daemon_process():
                 process = None
 
         except Exception as e:
-            logging.error(f'heart beat failed with exception:\n {e}')
+            logging.error(f'heart beat failed with exception: {e}')
             if redis_client:
                 redis_client.close()
                 redis_client = None

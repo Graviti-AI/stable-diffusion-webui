@@ -7,9 +7,17 @@ import shlex
 import platform
 import json
 import logging
+import time
+import psutil
 
+import redis.client
+import requests
+from fastapi import HTTPException
+from modules.shared import cmd_opts
 from modules import cmd_args
+from modules.api.daemon_api import SECRET_HEADER_KEY, DAEMON_STATUS_PENDING, DAEMON_STATUS_UP
 from modules.paths_internal import script_path, extensions_dir
+import modules.shared
 
 commandline_args = os.environ.get('COMMANDLINE_ARGS', "")
 sys.argv += shlex.split(commandline_args)
@@ -352,7 +360,125 @@ def start():
         webui.webui()
 
 
+def start_web_process():
+    from multiprocessing import Process
+    process = Process(target=start)
+    process.start()
+
+
+def start_daemon_process():
+    host_ip = os.getenv('HOST_IP', default='')
+    redis_address = os.getenv('REDIS_ADDRESS', default='')
+    redis_client: redis.Redis | None = None
+    starting_flag = True
+    port = cmd_opts.port if cmd_opts.port else 7860
+    while True:
+        if not host_ip or not redis_address:
+            time.sleep(3600)
+            continue
+
+        try:
+            if redis_client is None:
+                redis_client = redis.Redis.from_url(url=redis_address)
+
+            starting_flag = _daemon(redis_client, host_ip, port, starting_flag)
+        except Exception as e:
+            logging.error(f'heart beat failed with exception:\n {e}')
+            if redis_client:
+                redis_client.close()
+                redis_client = None
+
+        time.sleep(1)
+
+
+def _daemon(redis_client: redis.Redis, host_ip: str, port: int, starting_flag: bool):
+    session = requests.Session()
+    try:
+        status = _get_status(session, port)
+    except Exception as e:
+        logging.error(f'get web service status failed:\n{e}')
+        if starting_flag:
+            # the web ui service was starting
+            return starting_flag
+
+        raise
+
+    starting_flag = False
+
+    memory_usage = psutil.virtual_memory()
+    memory_used_percent = memory_usage.percent
+    task_count = _get_task_count(session, port)
+
+    if status == DAEMON_STATUS_UP and memory_usage.available < 5 * 1024 * 1024 * 1024:  # 5GB
+        status = DAEMON_STATUS_PENDING
+
+    data = {
+        'mem_usage_percentage': memory_used_percent,
+        'status': status,
+        'pending_task_count': task_count['pending_task_count'],
+    }
+    redis_client.set(name=host_ip, value=json.dumps(data, ensure_ascii=False, sort_keys=True), ex=3)
+
+    if status == DAEMON_STATUS_PENDING:
+        _set_status(session, port, status)
+
+        if not task_count['current_task'] and task_count['pending_task_count'] == 0:
+            exit(1)
+
+    return starting_flag
+
+
+def _get_status(session: requests.sessions.Session, port: int) -> str:
+    headers = {
+        SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
+    }
+    resp = session.get(f'http://localhost:{port}/daemon/v1/status', headers=headers)
+    code = resp.status_code
+    if 200 > code or code >= 400:
+        raise HTTPException(status_code=code, detail='failed to get service status')
+    data = resp.json()
+    return data.get('status', '')
+
+
+def _set_status(session: requests.sessions.Session, port: int, status: str):
+    headers = {
+        SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
+    }
+    resp = session.post(f'http://localhost:{port}/daemon/v1/status', headers=headers, json={
+        'status': status,
+    })
+    code = resp.status_code
+    if 200 > code or code >= 400:
+        raise HTTPException(status_code=code, detail='failed to get service status')
+
+
+def _get_task_count(session: requests.sessions.Session, port: int) -> dict:
+    headers = {
+        SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
+    }
+    resp = session.get(f'http://localhost:{port}/daemon/v1/task-count', headers=headers)
+    code = resp.status_code
+    if 200 > code or code >= 400:
+        raise HTTPException(status_code=code, detail='failed to get service task count')
+
+    return resp.json()
+
+
+def _get_int_value_from_environment(key: str, default_value: int, min_value: int | None) -> int:
+    value = os.getenv(key, default=default_value)
+    result = int(value)
+    if min_value is not None and result < min_value:
+        result = min_value
+
+    return result
+
+
+def launch():
+    start_web_process()
+    start_daemon_process()
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
     prepare_environment()
-    start()
+    launch()

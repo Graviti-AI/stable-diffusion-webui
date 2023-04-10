@@ -11,6 +11,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from packaging import version
 
 import logging
+
+from modules.api.daemon_api import DaemonApi
+
 logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not available' not in record.getMessage())
 
 from modules import paths, timer, import_hook, errors
@@ -224,6 +227,7 @@ def api_only():
     app = FastAPI()
     setup_middleware(app)
     api = create_api(app)
+    DaemonApi(app)
 
     modules.script_callbacks.app_started_callback(None, app)
 
@@ -285,6 +289,7 @@ def webui():
 
         if launch_api:
             create_api(app)
+        DaemonApi(app)
 
         add_static_filedir_to_demo(app, route="components")
         ui_extra_networks.add_pages_to_demo(app)

@@ -289,3 +289,16 @@ class MemoryResponse(BaseModel):
 class ScriptsList(BaseModel):
     txt2img: list = Field(default=None,title="Txt2img", description="Titles of scripts (txt2img)")
     img2img: list = Field(default=None,title="Img2img", description="Titles of scripts (img2img)")
+
+
+class GetDaemonStatusResponse(BaseModel):
+    status: str = Field(title="status")
+
+
+class UpdateStatusRequest(BaseModel):
+    status: str = Field(title="status")
+
+
+class GetTaskCountResponse(BaseModel):
+    current_task: bool = Field(title="CurrentTask")
+    pending_task_count: int = Field(title="PendingTaskCount")

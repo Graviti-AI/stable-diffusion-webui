@@ -1,11 +1,15 @@
 from fastapi import FastAPI, Depends, Request, HTTPException
 
 from modules.api.models import GetTaskCountResponse, GetDaemonStatusResponse, UpdateStatusRequest
-from modules.progress import current_task, pending_tasks
+import modules.progress
 import modules.shared
 
+# service is able to serve any requests
 DAEMON_STATUS_UP = 'up'
+# service is able to server pending requests only
 DAEMON_STATUS_PENDING = 'pending'
+# but not able to serve new request, and going to be died
+DAEMON_STATUS_DOWN = 'down'
 
 SECRET_HEADER_KEY = 'Api-Secret'
 
@@ -26,14 +30,15 @@ class DaemonApi:
 
     def set_status(self, request: UpdateStatusRequest):
         status = request.status
-        if status != DAEMON_STATUS_PENDING and status != DAEMON_STATUS_UP:
+        if status not in (DAEMON_STATUS_PENDING, DAEMON_STATUS_UP, DAEMON_STATUS_DOWN):
             raise HTTPException(status_code=400, detail="invalid status")
 
         self._status = request.status
         return GetDaemonStatusResponse(status=self._status)
 
     def get_task_count(self):
-        return GetTaskCountResponse(current_task=current_task is not None, pending_task_count=len(pending_tasks))
+        current_task, pending_tasks, _ = modules.progress.get_task_queue_info()
+        return GetTaskCountResponse(current_task=current_task if current_task else '', pending_task_count=len(pending_tasks))
 
     def _add_api_route(self, path: str, endpoint, **kwargs):
         return self._app.add_api_route(path, endpoint, dependencies=[Depends(self._auth)], **kwargs)

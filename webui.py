@@ -136,16 +136,17 @@ def initialize():
     modules.textual_inversion.textual_inversion.list_textual_inversion_templates()
     startup_timer.record("refresh textual inversion templates")
 
-    try:
-        modules.sd_models.load_model()
-    except Exception as e:
-        errors.display(e, "loading stable diffusion model")
-        print("", file=sys.stderr)
-        print("Stable diffusion model failed to load, exiting", file=sys.stderr)
-        exit(1)
-    startup_timer.record("load SD checkpoint")
+    if not cmd_opts.skip_load_default_model:
+        try:
+            modules.sd_models.load_model()
+        except Exception as e:
+            errors.display(e, "loading stable diffusion model")
+            print("", file=sys.stderr)
+            print("Stable diffusion model failed to load, exiting", file=sys.stderr)
+            exit(1)
+        startup_timer.record("load SD checkpoint")
 
-    shared.opts.data["sd_model_checkpoint"] = shared.sd_model.sd_checkpoint_info.title
+        shared.opts.data["sd_model_checkpoint"] = shared.sd_model.sd_checkpoint_info.title
 
     # do not reload checkpoint after setting updated, but load it before generating images
     # shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights()))

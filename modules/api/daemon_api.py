@@ -18,8 +18,8 @@ class DaemonApi:
         self._status = DAEMON_STATUS_UP
 
         self._add_api_route("/daemon/v1/status", self.get_status, methods=["GET"], response_model=GetDaemonStatusResponse)
-        self._add_api_route("/daemon/v1/status", self.set_status, methods=["POST"])
-        self._add_api_route("/daemon/v1/task-count", self.get_task_count, methods=["GET"], response_model=GetTaskCountResponse)
+        self._add_api_route("/daemon/v1/status", self.set_status, methods=["PUT"])
+        self._add_api_route("/daemon/v1/pending-task-count", self.get_task_count, methods=["GET"], response_model=GetTaskCountResponse)
 
     def get_status(self):
         return GetDaemonStatusResponse(status=self._status)

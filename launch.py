@@ -455,7 +455,7 @@ def _set_status(session: requests.sessions.Session, port: int, status: str):
     headers = {
         SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
     }
-    resp = session.post(f'http://localhost:{port}/daemon/v1/status', headers=headers, json={
+    resp = session.put(f'http://localhost:{port}/daemon/v1/status', headers=headers, json={
         'status': status,
     })
     code = resp.status_code
@@ -467,7 +467,7 @@ def _get_task_count(session: requests.sessions.Session, port: int) -> dict:
     headers = {
         SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
     }
-    resp = session.get(f'http://localhost:{port}/daemon/v1/task-count', headers=headers)
+    resp = session.get(f'http://localhost:{port}/daemon/v1/pending-task-count', headers=headers)
     code = resp.status_code
     if 200 > code or code >= 400:
         raise HTTPException(status_code=code, detail='failed to get service task count')

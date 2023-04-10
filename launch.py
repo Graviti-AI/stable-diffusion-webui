@@ -9,6 +9,7 @@ import json
 import logging
 import time
 import psutil
+from multiprocessing import Process
 
 import redis.client
 import requests
@@ -360,10 +361,10 @@ def start():
         webui.webui()
 
 
-def start_web_process():
-    from multiprocessing import Process
+def start_web_process() -> Process:
     process = Process(target=start)
     process.start()
+    return process
 
 
 def start_daemon_process():
@@ -372,7 +373,12 @@ def start_daemon_process():
     redis_client: redis.Redis | None = None
     starting_flag = True
     port = cmd_opts.port if cmd_opts.port else 7860
+    process: Process | None = None
     while True:
+        if process is None:
+            process = start_web_process()
+            starting_flag = True
+
         if not host_ip or not redis_address:
             time.sleep(3600)
             continue
@@ -381,7 +387,12 @@ def start_daemon_process():
             if redis_client is None:
                 redis_client = redis.Redis.from_url(url=redis_address)
 
-            starting_flag = _daemon(redis_client, host_ip, port, starting_flag)
+            starting_flag, restart_flag = _daemon(redis_client, host_ip, port, starting_flag)
+            if restart_flag:
+                logging.error('restart webui service')
+                process.terminate()
+                process = None
+
         except Exception as e:
             logging.error(f'heart beat failed with exception:\n {e}')
             if redis_client:
@@ -391,7 +402,7 @@ def start_daemon_process():
         time.sleep(1)
 
 
-def _daemon(redis_client: redis.Redis, host_ip: str, port: int, starting_flag: bool):
+def _daemon(redis_client: redis.Redis, host_ip: str, port: int, starting_flag: bool) -> (bool, bool):
     session = requests.Session()
     try:
         status = _get_status(session, port)
@@ -399,7 +410,7 @@ def _daemon(redis_client: redis.Redis, host_ip: str, port: int, starting_flag: b
         logging.error(f'get web service status failed:\n{e}')
         if starting_flag:
             # the web ui service was starting
-            return starting_flag
+            return starting_flag, False
 
         raise
 
@@ -423,9 +434,9 @@ def _daemon(redis_client: redis.Redis, host_ip: str, port: int, starting_flag: b
         _set_status(session, port, status)
 
         if not task_count['current_task'] and task_count['pending_task_count'] == 0:
-            exit(1)
+            return starting_flag, True
 
-    return starting_flag
+    return starting_flag, False
 
 
 def _get_status(session: requests.sessions.Session, port: int) -> str:
@@ -474,7 +485,6 @@ def _get_int_value_from_environment(key: str, default_value: int, min_value: int
 
 
 def launch():
-    start_web_process()
     start_daemon_process()
 
 

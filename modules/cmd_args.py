@@ -105,3 +105,5 @@ parser.add_argument("--system-monitor-addr", type=str,  help="a remote server wh
 parser.add_argument("--system-monitor-api-secret", type=str,  help="api secret fo calling monitor api", default='')
 parser.add_argument("--enable-insecure-calls", action='store_true',  help="enable insecure calls after related UI component is hidden", default=False)
 parser.add_argument("--skip-load-default-model", action='store_true',  help="skip to load model at startup to reduce launch time", default=False)
+parser.add_argument("--run-service-with-daemon", action='store_true',  help="run webui service with a daemon, this daemon can restart service if necessary", default=False)
+parser.add_argument("--minimum-ram-size", type=int,  help="the minimum available ram in GB to run webui service", default=5)

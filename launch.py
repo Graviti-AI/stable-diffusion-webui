@@ -306,7 +306,7 @@ def prepare_environment():
 
     if args.update_all_extensions:
         git_pull_recursive(extensions_dir)
-    
+
     if "--exit" in sys.argv:
         print("Exiting because of --exit argument")
         exit(0)
@@ -343,13 +343,13 @@ def tests(test_dir):
     return exitcode
 
 
-def start():
+def start(server_port: int = 0):
     print(f"Launching {'API server' if '--nowebui' in sys.argv else 'Web UI'} with arguments: {' '.join(sys.argv[1:])}")
     import webui
     if '--nowebui' in sys.argv:
-        webui.api_only()
+        webui.api_only(server_port)
     else:
-        webui.webui()
+        webui.webui(server_port)
 
 
 if __name__ == "__main__":

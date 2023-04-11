@@ -221,7 +221,7 @@ def wait_on_server(demo=None):
             break
 
 
-def api_only():
+def api_only(server_port: int = 0):
     initialize()
 
     app = FastAPI()
@@ -232,12 +232,16 @@ def api_only():
     modules.script_callbacks.app_started_callback(None, app)
 
     print(f"Startup time: {startup_timer.summary()}.")
-    api.launch(server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1", port=cmd_opts.port if cmd_opts.port else 7861)
+    if not server_port:
+        server_port = cmd_opts.port if cmd_opts.port else 7861
+    api.launch(server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1", port=server_port)
 
 
-def webui():
+def webui(server_port: int = 0):
     launch_api = cmd_opts.api
     initialize()
+    if not server_port:
+        server_port = cmd_opts.port if cmd_opts.port else 7861
 
     while 1:
         if shared.opts.clean_temp_dir_at_start:
@@ -264,7 +268,7 @@ def webui():
         app, local_url, share_url = shared.demo.launch(
             share=cmd_opts.share,
             server_name=server_name,
-            server_port=cmd_opts.port,
+            server_port=server_port,
             ssl_keyfile=cmd_opts.tls_keyfile,
             ssl_certfile=cmd_opts.tls_certfile,
             debug=cmd_opts.gradio_debug,

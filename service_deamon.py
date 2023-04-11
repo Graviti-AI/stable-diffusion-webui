@@ -12,7 +12,7 @@ import requests
 from fastapi import HTTPException
 
 import modules.shared
-from modules.api.daemon_api import DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING, SECRET_HEADER_KEY
+from modules.api.daemon_api import DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING, SECRET_HEADER_KEY, DAEMON_STATUS_UP
 from modules.shared import cmd_opts
 
 
@@ -33,29 +33,26 @@ def start_with_daemon(service_func):
 
     # server info
     host_ip = os.getenv('HOST_IP', default='')
-    port = cmd_opts.port if cmd_opts.port else 7860
+    server_port = cmd_opts.port if cmd_opts.port else 7860
 
     # redis for heart beat
     redis_client = _get_redis_client()
 
     # use a sub-process to run service
     service: Process | None = None
-    starting_flag = True
 
     session = requests.Session()
+
+    # create service process at startup
+    service, server_port, starting_flag = _renew_service(service, service_func, server_port)
     while True:
         try:
-            if service is None:
-                service = Process(target=service_func)
-                service.start()
-                # at startup time, get service status may fail, need retry
-                starting_flag = True
-
             # get service status
-            status = _get_service_status(session, port, 5 if starting_flag else 1)
+            status = _get_service_status(session, server_port, 6 if starting_flag else 1)
+            starting_flag = False
             memory_usage = psutil.virtual_memory()
             memory_used_percent = memory_usage.percent
-            pending_task_info = _get_service_pending_task_info(session, port)
+            pending_task_info = _get_service_pending_task_info(session, server_port)
 
             # not enough memory, BE should turn to out-of-service
             available_memory = memory_usage.available / (1024 * 1024 * 1024)
@@ -64,43 +61,56 @@ def start_with_daemon(service_func):
                     f'insufficient vram: {available_memory:0.2f}/{cmd_opts.minimum_ram_size:.2f}GB, pending_task: {pending_task_info}'
                 )
                 status = DAEMON_STATUS_PENDING
-                _set_service_status(session, port, status)
+                _set_service_status(session, server_port, status)
 
             # heartbeat
             if host_ip and redis_client is not None:
                 # no need to send heart beat event if host_ip or redis_address missed
-                _heartbeat(redis_client, host_ip, port, status, memory_used_percent, pending_task_info)
+                _heartbeat(redis_client, host_ip, server_port, status, memory_used_percent, pending_task_info)
 
             # handle idle
             if not pending_task_info.get('current_task', '') and pending_task_info.get('pending_task_count', 0) == 0:
                 if status == DAEMON_STATUS_PENDING:
                     # try to restart BE if out-of-service no pending tasks
                     logging.warning(f'insufficient vram, restart service now')
-                    service.terminate()
-                    service = None
+                    service, server_port, starting_flag = _renew_service(service, service_func, server_port)
                 elif status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
                     logging.warning(f'service is down, exit process now')
                     service.terminate()
-                    service = None
+                    service.join()
                     break
                 else:
                     pass
         except ServiceNotAvailableException as e:
             # service process is not responding, kill it and relaunch
             logging.warning(f'service is not responding, kill it and relaunch')
-            service.terminate()
-            service = None
+            service, server_port, starting_flag = _renew_service(service, service_func, server_port)
             session = requests.Session()
         except Exception as e:
             logging.error(f'error in heartbeat: {e.__str__()}')
             time.sleep(3)
             session = requests.Session()
             redis_client = _get_redis_client()
-        starting_flag = False
         time.sleep(1)
 
     logging.info(f'exit')
+
+
+def _renew_service(service: Process | None, service_func, server_port):
+    if service:
+        logging.info('release current service process')
+        service.terminate()
+        service.join()
+        service.close()
+        # use a new port to launch service, since gradio may not able to release current port correctly
+        server_port += 1
+
+    logging.info(f'create new service process on port {server_port}')
+    service = Process(target=service_func, args=(server_port,))
+    service.start()
+    time.sleep(3)
+    return service, server_port, True
 
 
 def _get_redis_client():
@@ -119,66 +129,83 @@ def _heartbeat(redis_client: redis.Redis,
                memory_used_percent: float,
                pending_task_info: dict):
     data = {
-        'status': status,
+        'status': DAEMON_STATUS_UP if status == DAEMON_STATUS_UP else DAEMON_STATUS_PENDING,
         'mem_usage_percentage': memory_used_percent,
         'pending_task_count': pending_task_info.get('pending_task_count', 0),
+        'ip': host_ip,
+        'port': port,
+        'schema': 'http'
     }
 
-    service_addr = f'http://{host_ip}:{port}'
-    redis_client.set(name=service_addr, value=json.dumps(data, ensure_ascii=False, sort_keys=True), ex=3)
+    instance_id = f'webui_be_{host_ip}:{port}'
+    redis_client.set(name=instance_id, value=json.dumps(data, ensure_ascii=False, sort_keys=True), ex=3)
 
 
-def _get_service_status(session: requests.sessions.Session, port: int, try_count: int = 1) -> str:
+def _get_service_status(session: requests.sessions.Session, port: int, try_count: int = 3) -> str:
+    remaining_try_count = try_count
     code = 200
-    while try_count > 0:
+    while remaining_try_count > 0:
         try:
             headers = {
                 SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
             }
-            resp = session.get(f'http://localhost:{port}/daemon/v1/status', headers=headers)
+            resp = session.get(f'http://localhost:{port}/daemon/v1/status',
+                               headers=headers,
+                               timeout=1)
             code = resp.status_code
             if 199 < code < 400:
                 data = resp.json()
                 return data.get('status', '')
+        except Exception as e:
+            logging.warning(f"get_service_status from 'http://localhost:{port}' failed, try again: {e.__str__()}")
         finally:
-            try_count -= 1
-        time.sleep(1)
+            remaining_try_count -= 1
+        time.sleep(try_count - remaining_try_count)
 
-    raise ServiceNotAvailableException(status_code=code, detail='failed to get service status')
+    raise ServiceNotAvailableException(status_code=code, detail=f'set_service_status: failed')
 
 
 def _set_service_status(session: requests.sessions.Session, port: int, status: str, try_count: int = 3):
+    remaining_try_count = try_count
     code = 200
-    while try_count > 0:
+    while remaining_try_count > 0:
         try:
             headers = {
                 SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
             }
-            resp = session.put(f'http://localhost:{port}/daemon/v1/status', headers=headers, json={
-                'status': status,
-            })
+            resp = session.put(f'http://localhost:{port}/daemon/v1/status',
+                               headers=headers,
+                               json={
+                                   'status': status,
+                               },
+                               timeout=1)
             code = resp.status_code
+            if 199 < code < 400:
+                return
         finally:
-            try_count -= 1
-        time.sleep(1)
-    raise ServiceNotAvailableException(status_code=code, detail='failed to get service status')
+            remaining_try_count -= 1
+        time.sleep(try_count - remaining_try_count)
+    raise ServiceNotAvailableException(status_code=code, detail=f'set_service_status: failed')
 
 
 def _get_service_pending_task_info(session: requests.sessions.Session, port: int, try_count: int = 3) -> dict:
+    remaining_try_count = try_count
     code = 200
-    while try_count > 0:
+    while remaining_try_count > 0:
         try:
             headers = {
                 SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
             }
-            resp = session.get(f'http://localhost:{port}/daemon/v1/pending-task-count', headers=headers)
+            resp = session.get(f'http://localhost:{port}/daemon/v1/pending-task-count',
+                               headers=headers,
+                               timeout=1)
             code = resp.status_code
             if 199 < code < 400:
                 return resp.json()
         finally:
-            try_count -= 1
-        time.sleep(1)
-    raise ServiceNotAvailableException(status_code=code, detail='failed to get service task count')
+            remaining_try_count -= 1
+        time.sleep(try_count - remaining_try_count)
+    raise ServiceNotAvailableException(status_code=code, detail='get_service_pending_task_info: failed')
 
 
 def _get_int_value_from_environment(key: str, default_value: int, min_value: int | None) -> int:

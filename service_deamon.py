@@ -1,18 +1,29 @@
 import json
 import logging
+import multiprocessing
 import os
 import time
-import multiprocessing
 from multiprocessing import Process
+from typing import Any, Dict, Optional
 
 import psutil
-import requests
 import redis.client
+import requests
 from fastapi import HTTPException
 
 import modules.shared
 from modules.api.daemon_api import DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING, SECRET_HEADER_KEY
 from modules.shared import cmd_opts
+
+
+class ServiceNotAvailableException(HTTPException):
+    def __init__(
+            self,
+            status_code: int,
+            detail: Any = None,
+            headers: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(status_code=status_code, detail=detail, headers=headers)
 
 
 def start_with_daemon(service_func):
@@ -64,17 +75,23 @@ def start_with_daemon(service_func):
             if not pending_task_info.get('current_task', '') and pending_task_info.get('pending_task_count', 0) == 0:
                 if status == DAEMON_STATUS_PENDING:
                     # try to restart BE if out-of-service no pending tasks
-                    logging.warning(f'restart service now')
+                    logging.warning(f'insufficient vram, restart service now')
                     service.terminate()
                     service = None
                 elif status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
-                    logging.warning(f'exit service now')
+                    logging.warning(f'service is down, exit process now')
                     service.terminate()
                     service = None
                     break
                 else:
                     pass
+        except ServiceNotAvailableException as e:
+            # service process is not responding, kill it and relaunch
+            logging.warning(f'service is not responding, kill it and relaunch')
+            service.terminate()
+            service = None
+            session = requests.Session()
         except Exception as e:
             logging.error(f'error in heartbeat: {e.__str__()}')
             time.sleep(3)
@@ -127,31 +144,41 @@ def _get_service_status(session: requests.sessions.Session, port: int, try_count
             try_count -= 1
         time.sleep(1)
 
-    raise HTTPException(status_code=code, detail='failed to get service status')
+    raise ServiceNotAvailableException(status_code=code, detail='failed to get service status')
 
 
-def _set_service_status(session: requests.sessions.Session, port: int, status: str):
-    headers = {
-        SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
-    }
-    resp = session.put(f'http://localhost:{port}/daemon/v1/status', headers=headers, json={
-        'status': status,
-    })
-    code = resp.status_code
-    if 200 > code or code >= 400:
-        raise HTTPException(status_code=code, detail='failed to get service status')
+def _set_service_status(session: requests.sessions.Session, port: int, status: str, try_count: int = 3):
+    code = 200
+    while try_count > 0:
+        try:
+            headers = {
+                SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
+            }
+            resp = session.put(f'http://localhost:{port}/daemon/v1/status', headers=headers, json={
+                'status': status,
+            })
+            code = resp.status_code
+        finally:
+            try_count -= 1
+        time.sleep(1)
+    raise ServiceNotAvailableException(status_code=code, detail='failed to get service status')
 
 
-def _get_service_pending_task_info(session: requests.sessions.Session, port: int) -> dict:
-    headers = {
-        SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
-    }
-    resp = session.get(f'http://localhost:{port}/daemon/v1/pending-task-count', headers=headers)
-    code = resp.status_code
-    if 200 > code or code >= 400:
-        raise HTTPException(status_code=code, detail='failed to get service task count')
-
-    return resp.json()
+def _get_service_pending_task_info(session: requests.sessions.Session, port: int, try_count: int = 3) -> dict:
+    code = 200
+    while try_count > 0:
+        try:
+            headers = {
+                SECRET_HEADER_KEY: modules.shared.cmd_opts.system_monitor_api_secret
+            }
+            resp = session.get(f'http://localhost:{port}/daemon/v1/pending-task-count', headers=headers)
+            code = resp.status_code
+            if 199 < code < 400:
+                return resp.json()
+        finally:
+            try_count -= 1
+        time.sleep(1)
+    raise ServiceNotAvailableException(status_code=code, detail='failed to get service task count')
 
 
 def _get_int_value_from_environment(key: str, default_value: int, min_value: int | None) -> int:

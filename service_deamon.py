@@ -73,6 +73,9 @@ def start_with_daemon(service_func):
                 if status == DAEMON_STATUS_PENDING:
                     # try to restart BE if out-of-service no pending tasks
                     logging.warning(f'insufficient vram, restart service now')
+                    # service is going to restart, no requests will be accepted anymore
+                    _heartbeat(redis_client, host_ip, server_port, DAEMON_STATUS_DOWN, memory_used_percent, pending_task_info)
+                    # renew service
                     service, server_port, starting_flag = _renew_service(service, service_func, server_port)
                 elif status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
@@ -129,7 +132,7 @@ def _heartbeat(redis_client: redis.Redis,
                memory_used_percent: float,
                pending_task_info: dict):
     data = {
-        'status': DAEMON_STATUS_UP if status == DAEMON_STATUS_UP else DAEMON_STATUS_PENDING,
+        'status': status,
         'mem_usage_percentage': memory_used_percent,
         'pending_task_count': pending_task_info.get('pending_task_count', 0),
         'ip': host_ip,

@@ -5,6 +5,7 @@ import importlib
 import signal
 import re
 import warnings
+from anyio._backends._asyncio import WorkerThread
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -104,6 +105,13 @@ Use --skip-version-check commandline argument to disable this check.
 
 def initialize():
     check_versions()
+
+    # Set worker idle time to a big number
+    # to avoid the thread being discrad
+    # since we doubt that creating new thread
+    # will cause memory leak, because the older threads
+    # are not gced correctly
+    WorkerThread.MAX_IDLE_TIME = 60 * 60 * 24
 
     extensions.list_extensions()
     localization.list_localizations(cmd_opts.localizations_dir)
@@ -251,7 +259,7 @@ def webui():
         startup_timer.record("create ui")
 
         if not cmd_opts.no_gradio_queue:
-            shared.demo.queue(64)
+            shared.demo.queue(5)
 
         gradio_auth_creds = []
         if cmd_opts.gradio_auth:

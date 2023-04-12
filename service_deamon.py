@@ -65,12 +65,12 @@ def start_with_daemon(service_func):
                 for task_id, task_info in queued_tasks.items():
                     added_at = task_info.get('added_at', 0)
                     last_accessed_at = task_info.get('last_accessed_at', 0)
-                    inactivated = datetime.datetime.utcfromtimestamp(time.time()) - datetime.datetime.utcfromtimestamp(last_accessed_at)
+                    inactivated = time.time() - last_accessed_at
                     fixed_task_info = {
                         'task_id': task_id,
                         'added_at': _make_time_str(added_at),
                         'last_accessed_at': _make_time_str(last_accessed_at),
-                        'inactivated': f'{inactivated.total_seconds():0.2}s'
+                        'inactivated': f'{int(inactivated)}s'
                     }
                     task_info.update(fixed_task_info)
                     queued_tasks_list.append(task_info)
@@ -86,7 +86,6 @@ def start_with_daemon(service_func):
                 # service is OOM, force to restart it
                 logging.warning(
                     f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it'
-
                 )
                 _heartbeat(redis_client,
                            host_ip,

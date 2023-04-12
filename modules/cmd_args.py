@@ -108,4 +108,4 @@ parser.add_argument("--skip-load-default-model", action='store_true',  help="ski
 parser.add_argument("--run-service-with-daemon", action='store_true',  help="run webui service with a daemon, this daemon can restart service if necessary", default=False)
 parser.add_argument("--ram-size-to-pending", type=int, help="the minimum available ram in GB to run webui service", default=8)
 parser.add_argument("--ram-size-to-restart", type=int, help="the minimum available ram in GB to run webui service", default=3)
-parser.add_argument("--disable-auto-restart", help="the minimum available ram in GB to run webui service", default=False)
+parser.add_argument("--disable-auto-restart", action='store_true',  help="the minimum available ram in GB to run webui service", default=False)

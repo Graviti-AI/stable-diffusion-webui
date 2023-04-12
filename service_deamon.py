@@ -147,7 +147,7 @@ def _heartbeat(redis_client: redis.Redis,
         'schema': 'http'
     }
 
-    instance_id = f'{{webui_be}}_{host_ip}:{port}'
+    instance_id = f'webui_be_{host_ip}:{port}'
     redis_client.set(name=instance_id, value=json.dumps(data, ensure_ascii=False, sort_keys=True), ex=3)
 
 

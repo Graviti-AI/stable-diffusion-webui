@@ -56,27 +56,38 @@ def start_with_daemon(service_func):
             pending_task_info = _get_service_pending_task_info(session, server_port)
             current_task = pending_task_info.get('current_task', '')
             queued_tasks = pending_task_info.get('queued_tasks', {})
-            # not enough memory, BE should turn to out-of-service
+
+            # not enough memory, BE should turn to pending (out-of-service)
             available_memory = memory_usage.available / (1024 * 1024 * 1024)
             if status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:  # 5GB
+                # convert timestamp to time str
                 queued_tasks_list = []
                 for task_id, task_info in queued_tasks.items():
-                    queued_tasks_list.append({
+                    added_at = task_info.get('added_at', 0)
+                    last_accessed_at = task_info.get('last_accessed_at', 0)
+                    inactivated = datetime.datetime.utcfromtimestamp(time.time()) - datetime.datetime.utcfromtimestamp(last_accessed_at)
+                    fixed_task_info = {
                         'task_id': task_id,
-                        'added_at': _make_time_str(task_info.get('added_at', 0)),
-                        'last_accessed_at': _make_time_str(task_info.get('last_accessed_at', 0))
-                    })
+                        'added_at': _make_time_str(added_at),
+                        'last_accessed_at': _make_time_str(last_accessed_at),
+                        'inactivated': f'{inactivated.total_seconds():0.2}s'
+                    }
+                    task_info.update(fixed_task_info)
+                    queued_tasks_list.append(task_info)
 
                 logging.warning(
-                    f"insufficient vram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.2f}GB, current_task: '{current_task}', queued_tasks: {queued_tasks_list}"
+                    f"insufficient ram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.2f}GB, current_task: '{current_task}', queued_tasks: {queued_tasks_list}"
                 )
                 status = DAEMON_STATUS_PENDING
                 _set_service_status(session, server_port, status)
 
+            # check if service should restart at once.
             if available_memory < cmd_opts.ram_size_to_restart:
                 # service is OOM, force to restart it
                 logging.warning(
-                    f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it')
+                    f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it'
+
+                )
                 _heartbeat(redis_client,
                            host_ip,
                            server_port,
@@ -86,18 +97,17 @@ def start_with_daemon(service_func):
                 # renew service
                 service, server_port, starting_flag = _renew_service(service, service_func, server_port)
                 continue
-            # heartbeat
-            if host_ip and redis_client is not None:
-                # no need to send heart beat event if host_ip or redis_address missed
-                _heartbeat(redis_client,
-                           host_ip,
-                           server_port,
-                           status,
-                           memory_used_percent,
-                           queued_tasks)
+
+            # send heartbeat event
+            _heartbeat(redis_client,
+                       host_ip,
+                       server_port,
+                       status,
+                       memory_used_percent,
+                       queued_tasks)
 
             # handle idle
-            if not pending_task_info.get('current_task', '') and len(queued_tasks) == 0:
+            if not current_task and len(queued_tasks) == 0:
                 if status == DAEMON_STATUS_PENDING:
                     # try to restart BE if out-of-service no pending tasks
                     logging.warning(f'insufficient vram, restart service now')
@@ -169,6 +179,9 @@ def _heartbeat(redis_client,
                status: str,
                memory_used_percent: float,
                queued_tasks: dict):
+    # no need to send heart beat event if host_ip or redis_address missed
+    if not redis_client or not host_ip:
+        return
     data = {
         'status': status,
         'mem_usage_percentage': memory_used_percent,

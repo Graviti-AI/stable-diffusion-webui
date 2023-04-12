@@ -109,3 +109,4 @@ parser.add_argument("--run-service-with-daemon", action='store_true',  help="run
 parser.add_argument("--ram-size-to-pending", type=int, help="the minimum available ram in GB to run webui service", default=8)
 parser.add_argument("--ram-size-to-restart", type=int, help="the minimum available ram in GB to run webui service", default=3)
 parser.add_argument("--disable-auto-restart", action='store_true',  help="the minimum available ram in GB to run webui service", default=False)
+parser.add_argument("--maximum-system-pending-time", type=int,  help="the maximum duration in seconds to allow service stay in pending", default=60)

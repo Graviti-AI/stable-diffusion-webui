@@ -25,12 +25,14 @@ class ServiceNotAvailableException(HTTPException):
         super().__init__(status_code=status_code, detail=detail, headers=headers)
 
 
-_restarted = 0
-_started_at = datetime.datetime.now()
+_system_started_at = datetime.datetime.now()
+_service_restart_count = 0
+_service_pending_from = None
 
 
 def start_with_daemon(service_func):
     import psutil
+    global _service_pending_from
 
     # set multiprocessing to start service process in spawn mode, to fix CUDA complain 'To use CUDA
     # with multiprocessing, you must use the ‘spawn‘ start method'
@@ -46,14 +48,18 @@ def start_with_daemon(service_func):
     # use a sub-process to run service
     service: Process | None = None
 
+    # request session for getting service status
     session = requests.Session()
+
+    # service status since last check
+    previous_service_status = ''
 
     # create service process at startup
     service, server_port, starting_flag = _renew_service(service, service_func, server_port)
     while True:
         try:
             # get service status
-            status = _get_service_status(session, server_port, 6 if starting_flag else 1)
+            current_service_status = _get_service_status(session, server_port, 6 if starting_flag else 1)
             starting_flag = False
             memory_usage = psutil.virtual_memory()
             pending_task_info = _get_service_pending_task_info(session, server_port)
@@ -62,27 +68,14 @@ def start_with_daemon(service_func):
 
             # not enough memory, BE should turn to pending (out-of-service)
             available_memory = memory_usage.available / (1024 * 1024 * 1024)
-            if status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:  # 5GB
+            if current_service_status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:  # 5GB
                 # convert timestamp to time str
-                queued_tasks_list = []
-                for task_id, task_info in queued_tasks.items():
-                    added_at = task_info.get('added_at', 0)
-                    last_accessed_at = task_info.get('last_accessed_at', 0)
-                    inactivated = time.time() - last_accessed_at
-                    fixed_task_info = {
-                        'task_id': task_id,
-                        'added_at': _make_time_str(added_at),
-                        'last_accessed_at': _make_time_str(last_accessed_at),
-                        'inactivated': f'{int(inactivated)}s'
-                    }
-                    task_info.update(fixed_task_info)
-                    queued_tasks_list.append(task_info)
-
+                queued_tasks_list = _fix_time_str_for_queued_tasks(queued_tasks)
                 logging.warning(
-                    f"insufficient ram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.2f}GB, current_task: '{current_task}', queued_tasks: {queued_tasks_list}"
+                    f"insufficient ram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.02f}GB, current_task: '{current_task}', queued_tasks: {queued_tasks_list}"
                 )
-                status = DAEMON_STATUS_PENDING
-                _set_service_status(session, server_port, status)
+                current_service_status = DAEMON_STATUS_PENDING
+                _set_service_status(session, server_port, current_service_status)
 
             # check if service should restart at once.
             if available_memory < cmd_opts.ram_size_to_restart:
@@ -90,13 +83,6 @@ def start_with_daemon(service_func):
                 logging.warning(
                     f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it'
                 )
-                _heartbeat(redis_client,
-                           host_ip,
-                           server_port,
-                           DAEMON_STATUS_DOWN,
-                           memory_usage,
-                           current_task,
-                           queued_tasks)
                 # renew service
                 service, server_port, starting_flag = _renew_service(service, service_func, server_port)
                 continue
@@ -105,27 +91,31 @@ def start_with_daemon(service_func):
             _heartbeat(redis_client,
                        host_ip,
                        server_port,
-                       status,
+                       current_service_status,
                        memory_usage,
                        current_task,
                        queued_tasks)
 
-            # handle idle
-            if not current_task and len(queued_tasks) == 0:
-                if status == DAEMON_STATUS_PENDING:
-                    # try to restart BE if out-of-service no pending tasks
-                    logging.warning(f'insufficient vram, restart service now')
-                    # service is going to restart, no requests will be accepted anymore
-                    _heartbeat(redis_client,
-                               host_ip,
-                               server_port,
-                               DAEMON_STATUS_DOWN,
-                               memory_usage,
-                               current_task,
-                               queued_tasks)
+            # calculate service pending duration
+            if previous_service_status != current_service_status:
+                previous_service_status = current_service_status
+                if current_service_status in (DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING) and _service_pending_from is None:
+                    _service_pending_from = datetime.datetime.now()
+            if _service_pending_from:
+                pending_duration = (datetime.datetime.now() - _service_pending_from).total_seconds()
+            else:
+                pending_duration = 0
+
+            # service should restart or shutdown if idle or pending for more than 60 seconds
+            if not current_task and (len(queued_tasks) == 0 or pending_duration > cmd_opts.maximum_system_pending_time):
+                if current_service_status == DAEMON_STATUS_PENDING:
+                    # restart BE if out-of-service
+                    logging.warning(
+                        f'insufficient vram, restart service now, pending_duration: {pending_duration:0.2f}s, queued_tasks_len: {len(queued_tasks)}'
+                    )
                     # renew service
                     service, server_port, starting_flag = _renew_service(service, service_func, server_port)
-                elif status == DAEMON_STATUS_DOWN:
+                elif current_service_status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
                     logging.warning(f'service is down, exit process now')
                     service.terminate()
@@ -152,7 +142,26 @@ def _make_time_str(t):
     return datetime.datetime.utcfromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _fix_time_str_for_queued_tasks(queued_tasks):
+    queued_tasks_list = []
+    for task_id, task_info in queued_tasks.items():
+        added_at = task_info.get('added_at', 0)
+        last_accessed_at = task_info.get('last_accessed_at', 0)
+        inactivated = time.time() - last_accessed_at
+        fixed_task_info = {
+            'task_id': task_id,
+            'added_at': _make_time_str(added_at),
+            'last_accessed_at': _make_time_str(last_accessed_at),
+            'inactivated': f'{int(inactivated)}s'
+        }
+        task_info.update(fixed_task_info)
+        queued_tasks_list.append(task_info)
+
+    return queued_tasks_list
+
+
 def _renew_service(service: Process | None, service_func, server_port):
+    global _service_pending_from
     if service:
         logging.info('release current service process')
         service.terminate()
@@ -161,13 +170,14 @@ def _renew_service(service: Process | None, service_func, server_port):
         # use a new port to launch service, since gradio may not able to release current port correctly
         server_port += 1
 
-        global _restarted
-        _restarted += 1
+        global _service_restart_count
+        _service_restart_count += 1
 
     logging.info(f'create new service process on port {server_port}')
     service = Process(target=service_func, args=(server_port,))
     service.start()
     time.sleep(3)
+    _service_pending_from = None
     return service, server_port, True
 
 
@@ -206,8 +216,9 @@ def _heartbeat(redis_client,
         'ip': host_ip,
         'port': port,
         'schema': 'http',
-        'restarted': _restarted,
-        'started_at': _started_at.strftime('%Y-%m-%d %H:%M:%S')
+        'restarted': _service_restart_count,
+        'service_pending_from': _service_pending_from.strftime('%Y-%m-%d %H:%M:%S') if _service_pending_from else '',
+        'started_at': _system_started_at.strftime('%Y-%m-%d %H:%M:%S')
     }
 
     instance_id = f'webui_be_{host_ip}:{port}'

@@ -5,7 +5,6 @@ import importlib
 import signal
 import re
 import warnings
-from anyio._backends._asyncio import WorkerThread
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -65,6 +64,8 @@ import modules.hypernetworks.hypernetwork
 
 startup_timer.record("other imports")
 
+MAX_ANYIO_WORKER_THREAD = 5
+
 
 if cmd_opts.server_name:
     server_name = cmd_opts.server_name
@@ -104,14 +105,22 @@ Use --skip-version-check commandline argument to disable this check.
 
 
 def initialize():
-    check_versions()
+    from anyio._backends._asyncio import _default_thread_limiter, CapacityLimiter
 
+    def my_current_default_thread_limiter() -> CapacityLimiter:
+        limiter = CapacityLimiter(int(MAX_ANYIO_WORKER_THREAD))
+        _default_thread_limiter.set(limiter)
+        return limiter
+    import anyio
     # Set worker idle time to a big number
     # to avoid the thread being discrad
     # since we doubt that creating new thread
     # will cause memory leak, because the older threads
     # are not gced correctly
-    WorkerThread.MAX_IDLE_TIME = 60 * 60 * 24
+    anyio._backends._asyncio.WorkerThread.MAX_IDLE_TIME = 60 * 60 * 24 * 7
+    anyio._backends._asyncio.current_default_thread_limiter = my_current_default_thread_limiter
+
+    check_versions()
 
     extensions.list_extensions()
     localization.list_localizations(cmd_opts.localizations_dir)
@@ -242,7 +251,10 @@ def api_only(server_port: int = 0):
     print(f"Startup time: {startup_timer.summary()}.")
     if not server_port:
         server_port = cmd_opts.port if cmd_opts.port else 7861
-    api.launch(server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1", port=server_port)
+    api.launch(
+        server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1",
+        port=server_port,
+        max_threads=MAX_ANYIO_WORKER_THREAD)
 
 
 def webui(server_port: int = 0):
@@ -263,7 +275,7 @@ def webui(server_port: int = 0):
         startup_timer.record("create ui")
 
         if not cmd_opts.no_gradio_queue:
-            shared.demo.queue(5)
+            shared.demo.queue(MAX_ANYIO_WORKER_THREAD)
 
         gradio_auth_creds = []
         if cmd_opts.gradio_auth:
@@ -282,7 +294,8 @@ def webui(server_port: int = 0):
             debug=cmd_opts.gradio_debug,
             auth=[tuple(cred.split(':')) for cred in gradio_auth_creds] if gradio_auth_creds else None,
             inbrowser=cmd_opts.autolaunch,
-            prevent_thread_lock=True
+            prevent_thread_lock=True,
+            max_threads=MAX_ANYIO_WORKER_THREAD
         )
         # after initial launch, disable --autolaunch for subsequent restarts
         cmd_opts.autolaunch = False

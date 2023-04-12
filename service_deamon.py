@@ -25,6 +25,10 @@ class ServiceNotAvailableException(HTTPException):
         super().__init__(status_code=status_code, detail=detail, headers=headers)
 
 
+_restarted = 0
+_started_at = datetime.datetime.now()
+
+
 def start_with_daemon(service_func):
     import psutil
 
@@ -52,7 +56,6 @@ def start_with_daemon(service_func):
             status = _get_service_status(session, server_port, 6 if starting_flag else 1)
             starting_flag = False
             memory_usage = psutil.virtual_memory()
-            memory_used_percent = memory_usage.percent
             pending_task_info = _get_service_pending_task_info(session, server_port)
             current_task = pending_task_info.get('current_task', '')
             queued_tasks = pending_task_info.get('queued_tasks', {})
@@ -91,7 +94,8 @@ def start_with_daemon(service_func):
                            host_ip,
                            server_port,
                            DAEMON_STATUS_DOWN,
-                           memory_used_percent,
+                           memory_usage,
+                           current_task,
                            queued_tasks)
                 # renew service
                 service, server_port, starting_flag = _renew_service(service, service_func, server_port)
@@ -102,7 +106,8 @@ def start_with_daemon(service_func):
                        host_ip,
                        server_port,
                        status,
-                       memory_used_percent,
+                       memory_usage,
+                       current_task,
                        queued_tasks)
 
             # handle idle
@@ -115,7 +120,8 @@ def start_with_daemon(service_func):
                                host_ip,
                                server_port,
                                DAEMON_STATUS_DOWN,
-                               memory_used_percent,
+                               memory_usage,
+                               current_task,
                                queued_tasks)
                     # renew service
                     service, server_port, starting_flag = _renew_service(service, service_func, server_port)
@@ -155,6 +161,9 @@ def _renew_service(service: Process | None, service_func, server_port):
         # use a new port to launch service, since gradio may not able to release current port correctly
         server_port += 1
 
+        global _restarted
+        _restarted += 1
+
     logging.info(f'create new service process on port {server_port}')
     service = Process(target=service_func, args=(server_port,))
     service.start()
@@ -176,18 +185,29 @@ def _heartbeat(redis_client,
                host_ip: str,
                port: int,
                status: str,
-               memory_used_percent: float,
-               queued_tasks: dict):
+               memory_usage,
+               current_task: str,
+               queued_tasks: dict,
+               ):
     # no need to send heart beat event if host_ip or redis_address missed
     if not redis_client or not host_ip:
         return
     data = {
         'status': status,
-        'mem_usage_percentage': memory_used_percent,
-        'queued_task_count': len(queued_tasks),
+        'mem_usage': {
+            'total': memory_usage.total,
+            'available': memory_usage.available,
+            'percent': memory_usage.percent,
+            'used': memory_usage.used,
+            'free': memory_usage.free,
+        },
+        'current_task': current_task,
+        'queued_tasks': queued_tasks,
         'ip': host_ip,
         'port': port,
-        'schema': 'http'
+        'schema': 'http',
+        'restarted': _restarted,
+        'started_at': _started_at.strftime('%Y-%m-%d %H:%M:%S')
     }
 
     instance_id = f'webui_be_{host_ip}:{port}'

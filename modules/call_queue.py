@@ -37,23 +37,23 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
         else:
             id_task = None
 
-        # log all gpu calls with monitor
-        from modules.system_monitor import MonitorException
-        try:
-            monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
-        except MonitorException as e:
-            progress.finish_task(id_task)
-            shared.state.job = ""
-            shared.state.job_count = 0
-            extra_outputs_array = extra_outputs
-            if extra_outputs_array is None:
-                extra_outputs_array = [None, '', '']
-            if add_monitor_state:
-                return extra_outputs_array + [str(e)], True
-            return extra_outputs_array + [str(e)]
-
         # send gpu call to queue
         with queue_lock:
+            # log all gpu calls with monitor
+            from modules.system_monitor import MonitorException
+            try:
+                monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
+            except MonitorException as e:
+                progress.finish_task(id_task)
+                shared.state.job = ""
+                shared.state.job_count = 0
+                extra_outputs_array = extra_outputs
+                if extra_outputs_array is None:
+                    extra_outputs_array = [None, '', '']
+                if add_monitor_state:
+                    return extra_outputs_array + [str(e)], True
+                return extra_outputs_array + [str(e)]
+
             shared.state.begin()
             progress.start_task(id_task)
 

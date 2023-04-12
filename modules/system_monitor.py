@@ -150,7 +150,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
-        return
+        return None
 
     monitor_log_id = _extract_task_id(*args)
     # inspect func args

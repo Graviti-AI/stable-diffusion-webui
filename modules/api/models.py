@@ -301,4 +301,4 @@ class UpdateStatusRequest(BaseModel):
 
 class GetTaskCountResponse(BaseModel):
     current_task: str = Field(title="CurrentTask")
-    pending_task_count: int = Field(title="PendingTaskCount")
+    queued_tasks: dict = Field(title="QueuedTasks")

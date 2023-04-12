@@ -38,7 +38,7 @@ class DaemonApi:
 
     def get_task_count(self):
         current_task, pending_tasks, _ = modules.progress.get_task_queue_info()
-        return GetTaskCountResponse(current_task=current_task if current_task else '', pending_task_count=len(pending_tasks))
+        return GetTaskCountResponse(current_task=current_task if current_task else '', queued_tasks=pending_tasks)
 
     def _add_api_route(self, path: str, endpoint, **kwargs):
         return self._app.add_api_route(path, endpoint, dependencies=[Depends(self._auth)], **kwargs)

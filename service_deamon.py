@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import multiprocessing
@@ -6,8 +7,6 @@ import time
 from multiprocessing import Process
 from typing import Any, Dict, Optional
 
-import psutil
-import redis.client
 import requests
 from fastapi import HTTPException
 
@@ -27,6 +26,8 @@ class ServiceNotAvailableException(HTTPException):
 
 
 def start_with_daemon(service_func):
+    import psutil
+
     # set multiprocessing to start service process in spawn mode, to fix CUDA complain 'To use CUDA
     # with multiprocessing, you must use the ‘spawn‘ start method'
     multiprocessing.set_start_method('spawn')
@@ -53,35 +54,60 @@ def start_with_daemon(service_func):
             memory_usage = psutil.virtual_memory()
             memory_used_percent = memory_usage.percent
             pending_task_info = _get_service_pending_task_info(session, server_port)
-
+            current_task = pending_task_info.get('current_task', '')
+            queued_tasks = pending_task_info.get('queued_tasks', {})
             # not enough memory, BE should turn to out-of-service
             available_memory = memory_usage.available / (1024 * 1024 * 1024)
             if status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:  # 5GB
+                queued_tasks_list = []
+                for task_id, task_info in queued_tasks.items():
+                    queued_tasks_list.append({
+                        'task_id': task_id,
+                        'added_at': _make_time_str(task_info.get('added_at', 0)),
+                        'last_accessed_at': _make_time_str(task_info.get('last_accessed_at', 0))
+                    })
+
                 logging.warning(
-                    f'insufficient vram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.2f}GB, pending_task: {pending_task_info}'
+                    f"insufficient vram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.2f}GB, current_task: '{current_task}', queued_tasks: {queued_tasks_list}"
                 )
                 status = DAEMON_STATUS_PENDING
                 _set_service_status(session, server_port, status)
 
             if available_memory < cmd_opts.ram_size_to_restart:
                 # service is OOM, force to restart it
-                logging.warning(f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it')
-                _heartbeat(redis_client, host_ip, server_port, DAEMON_STATUS_DOWN, memory_used_percent, pending_task_info)
+                logging.warning(
+                    f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it')
+                _heartbeat(redis_client,
+                           host_ip,
+                           server_port,
+                           DAEMON_STATUS_DOWN,
+                           memory_used_percent,
+                           queued_tasks)
                 # renew service
                 service, server_port, starting_flag = _renew_service(service, service_func, server_port)
                 continue
             # heartbeat
             if host_ip and redis_client is not None:
                 # no need to send heart beat event if host_ip or redis_address missed
-                _heartbeat(redis_client, host_ip, server_port, status, memory_used_percent, pending_task_info)
+                _heartbeat(redis_client,
+                           host_ip,
+                           server_port,
+                           status,
+                           memory_used_percent,
+                           queued_tasks)
 
             # handle idle
-            if not pending_task_info.get('current_task', '') and pending_task_info.get('pending_task_count', 0) == 0:
+            if not pending_task_info.get('current_task', '') and len(queued_tasks) == 0:
                 if status == DAEMON_STATUS_PENDING:
                     # try to restart BE if out-of-service no pending tasks
                     logging.warning(f'insufficient vram, restart service now')
                     # service is going to restart, no requests will be accepted anymore
-                    _heartbeat(redis_client, host_ip, server_port, DAEMON_STATUS_DOWN, memory_used_percent, pending_task_info)
+                    _heartbeat(redis_client,
+                               host_ip,
+                               server_port,
+                               DAEMON_STATUS_DOWN,
+                               memory_used_percent,
+                               queued_tasks)
                     # renew service
                     service, server_port, starting_flag = _renew_service(service, service_func, server_port)
                 elif status == DAEMON_STATUS_DOWN:
@@ -107,6 +133,10 @@ def start_with_daemon(service_func):
     logging.info(f'exit')
 
 
+def _make_time_str(t):
+    return datetime.datetime.utcfromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
+
+
 def _renew_service(service: Process | None, service_func, server_port):
     if service:
         logging.info('release current service process')
@@ -124,6 +154,7 @@ def _renew_service(service: Process | None, service_func, server_port):
 
 
 def _get_redis_client():
+    import redis.client
     redis_address = os.getenv('REDIS_ADDRESS', default='')
     if redis_address:
         redis_client = redis.Redis.from_url(url=redis_address)
@@ -132,16 +163,16 @@ def _get_redis_client():
     return redis_client
 
 
-def _heartbeat(redis_client: redis.Redis,
+def _heartbeat(redis_client,
                host_ip: str,
                port: int,
                status: str,
                memory_used_percent: float,
-               pending_task_info: dict):
+               queued_tasks: dict):
     data = {
         'status': status,
         'mem_usage_percentage': memory_used_percent,
-        'pending_task_count': pending_task_info.get('pending_task_count', 0),
+        'queued_task_count': len(queued_tasks),
         'ip': host_ip,
         'port': port,
         'schema': 'http'

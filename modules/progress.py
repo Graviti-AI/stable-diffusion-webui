@@ -49,7 +49,10 @@ def finish_task(id_task):
 
 
 def add_task_to_queue(id_job):
-    pending_tasks[id_job] = time.time()
+    pending_tasks[id_job] = {
+        'added_at': time.time(),
+        'last_accessed_at': time.time(),
+    }
 
 
 class ProgressRequest(BaseModel):
@@ -76,6 +79,12 @@ def progressapi(req: ProgressRequest):
     active = req.id_task == current_task
     queued = req.id_task in pending_tasks
     completed = req.id_task in finished_tasks
+
+    # log last access time for this task.
+    # if there is no active task, and a queued task is not accessed for a long time, we should
+    # consider to remove it from queue.
+    if req.id_task in pending_tasks:
+        pending_tasks[req.id_task]['last_accessed_at'] = time.time()
 
     if not active:
         return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo="In queue..." if queued else "Waiting...")

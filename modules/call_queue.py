@@ -1,25 +1,55 @@
 import html
 import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
 import traceback
 import time
+import functools
 
 import gradio.routes
 
 import modules.system_monitor
+from modules.system_monitor import MonitorException
 from modules import shared, progress
 
 queue_lock = threading.Lock()
 
+gpu_worker_pool: ThreadPoolExecutor | None = None
 
-def wrap_queued_call(func):
-    def f(*args, **kwargs):
-        with queue_lock:
-            res = func(*args, **kwargs)
 
+def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
+    def call_function_in_gpu_wroker(*args, **kwargs):
+        if gpu_worker_pool is None:
+            raise RuntimeError("GPU worker thread has not been initialized.")
+        future_res = gpu_worker_pool.submit(
+            func, *args, **kwargs)
+        res = future_res.result(timeout=timeout)
         return res
+    return call_function_in_gpu_wroker
 
-    return f
+
+def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *args, **kwargs):
+    progress.start_task(id_task)
+    shared.state.begin()
+    # log all gpu calls with monitor
+    monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
+
+    try:
+        if func_name in ('txt2img', 'img2img'):
+            progress.set_current_task_step('reload_model_weights')
+            _check_sd_model(model_title=args[-1])
+        progress.set_current_task_step('inference')
+        res = func(request, *args, **kwargs)
+        status = 'finished'
+        log_message = 'done'
+    except Exception as e:
+        status = 'failed'
+        log_message = e.__str__()
+        raise e
+    finally:
+        shared.state.end()
+        modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
+    return res
 
 
 def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
@@ -37,43 +67,21 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
         else:
             id_task = None
 
-        # send gpu call to queue
-        with queue_lock:
-            # log all gpu calls with monitor
-            from modules.system_monitor import MonitorException
-            try:
-                monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
-            except MonitorException as e:
-                progress.finish_task(id_task)
-                shared.state.job = ""
-                shared.state.job_count = 0
-                extra_outputs_array = extra_outputs
-                if extra_outputs_array is None:
-                    extra_outputs_array = [None, '', '']
-                if add_monitor_state:
-                    return extra_outputs_array + [str(e)], True
-                return extra_outputs_array + [str(e)]
-
-            shared.state.begin()
-            progress.start_task(id_task)
-
-            try:
-                if func_name in ('txt2img', 'img2img'):
-                    progress.set_current_task_step('reload_model_weights')
-                    _check_sd_model(model_title=args[-1])
-                progress.set_current_task_step('inference')
-                res = func(request, *args, **kwargs)
-                status = 'finished'
-                log_message = 'done'
-            except Exception as e:
-                status = 'failed'
-                log_message = e.__str__()
-                raise e
-            finally:
-                progress.finish_task(id_task)
-                modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
-
+        try:
+            res = submit_to_gpu_worker(
+                functools.partial(wrap_gpu_call, request, func, func_name, id_task), timeout=60 * 10)(*args, **kwargs)
+        except MonitorException as e:
             shared.state.end()
+            extra_outputs_array = extra_outputs
+            if extra_outputs_array is None:
+                extra_outputs_array = [None, '', '']
+            if add_monitor_state:
+                return extra_outputs_array + [str(e)], True
+            return extra_outputs_array + [str(e)]
+        except Exception as e:
+            raise e
+        finally:
+            progress.finish_task(id_task)
 
         if add_monitor_state:
             return res, False

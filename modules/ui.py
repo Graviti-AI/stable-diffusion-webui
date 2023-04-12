@@ -16,7 +16,7 @@ import gradio.routes
 import gradio.utils
 import numpy as np
 from PIL import Image, PngImagePlugin
-from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call
+from modules.call_queue import wrap_gradio_gpu_call, submit_to_gpu_worker, wrap_gradio_call
 
 from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing
 from modules.ui_components import FormRow, FormColumn, FormGroup, ToolButton, FormHTML
@@ -669,8 +669,14 @@ def create_ui():
                 height,
             ]
 
-            token_button.click(fn=wrap_queued_call(update_token_counter), inputs=[txt2img_prompt, steps], outputs=[token_counter])
-            negative_token_button.click(fn=wrap_queued_call(update_token_counter), inputs=[txt2img_negative_prompt, steps], outputs=[negative_token_counter])
+            token_button.click(
+                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 10),
+                inputs=[txt2img_prompt, steps],
+                outputs=[token_counter])
+            negative_token_button.click(
+                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 10),
+                inputs=[txt2img_negative_prompt, steps],
+                outputs=[negative_token_counter])
 
             ui_extra_networks.setup_ui(extra_networks_ui, txt2img_gallery)
 
@@ -967,7 +973,10 @@ def create_ui():
                 )
 
             token_button.click(fn=update_token_counter, inputs=[img2img_prompt, steps], outputs=[token_counter])
-            negative_token_button.click(fn=wrap_queued_call(update_token_counter), inputs=[img2img_negative_prompt, steps], outputs=[negative_token_counter])
+            negative_token_button.click(
+                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 10),
+                inputs=[img2img_negative_prompt, steps],
+                outputs=[negative_token_counter])
 
             ui_extra_networks.setup_ui(extra_networks_ui_img2img, img2img_gallery)
 

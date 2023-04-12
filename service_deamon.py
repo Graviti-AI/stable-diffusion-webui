@@ -56,13 +56,20 @@ def start_with_daemon(service_func):
 
             # not enough memory, BE should turn to out-of-service
             available_memory = memory_usage.available / (1024 * 1024 * 1024)
-            if status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.minimum_ram_size:  # 5GB
+            if status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:  # 5GB
                 logging.warning(
-                    f'insufficient vram: {available_memory:0.2f}/{cmd_opts.minimum_ram_size:.2f}GB, pending_task: {pending_task_info}'
+                    f'insufficient vram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.2f}GB, pending_task: {pending_task_info}'
                 )
                 status = DAEMON_STATUS_PENDING
                 _set_service_status(session, server_port, status)
 
+            if available_memory < cmd_opts.ram_size_to_restart:
+                # service is OOM, force to restart it
+                logging.warning(f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it')
+                _heartbeat(redis_client, host_ip, server_port, DAEMON_STATUS_DOWN, memory_used_percent, pending_task_info)
+                # renew service
+                service, server_port, starting_flag = _renew_service(service, service_func, server_port)
+                continue
             # heartbeat
             if host_ip and redis_client is not None:
                 # no need to send heart beat event if host_ip or redis_address missed
@@ -140,7 +147,7 @@ def _heartbeat(redis_client: redis.Redis,
         'schema': 'http'
     }
 
-    instance_id = f'webui_be_{host_ip}:{port}'
+    instance_id = f'{{webui_be}}_{host_ip}:{port}'
     redis_client.set(name=instance_id, value=json.dumps(data, ensure_ascii=False, sort_keys=True), ex=3)
 
 

@@ -6,7 +6,6 @@ import datetime
 import starlette.requests
 import uvicorn
 import gradio as gr
-from threading import Lock
 from io import BytesIO
 from gradio.processing_utils import decode_base64_to_file
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
@@ -158,7 +157,7 @@ def api_middleware(app: FastAPI):
 
 
 class Api:
-    def __init__(self, app: FastAPI, queue_lock: Lock):
+    def __init__(self, app: FastAPI, submit_to_gpu_worker: callable):
         if shared.cmd_opts.api_auth:
             self.credentials = dict()
             for auth in shared.cmd_opts.api_auth.split(","):
@@ -167,7 +166,7 @@ class Api:
 
         self.router = APIRouter()
         self.app = app
-        self.queue_lock = queue_lock
+        self.submit_to_gpu_worker = submit_to_gpu_worker
         api_middleware(self.app)
         self.add_api_route("/sdapi/v1/txt2img", self.text2imgapi, methods=["POST"], response_model=TextToImageResponse)
         self.add_api_route("/sdapi/v1/img2img", self.img2imgapi, methods=["POST"], response_model=ImageToImageResponse)
@@ -222,17 +221,17 @@ class Api:
         script_idx = script_name_to_index(script_name, script_runner.selectable_scripts)
         script = script_runner.selectable_scripts[script_idx]
         return script, script_idx
-    
+
     def get_scripts_list(self):
         t2ilist = [str(title.lower()) for title in scripts.scripts_txt2img.titles]
         i2ilist = [str(title.lower()) for title in scripts.scripts_img2img.titles]
 
-        return ScriptsList(txt2img = t2ilist, img2img = i2ilist)  
+        return ScriptsList(txt2img = t2ilist, img2img = i2ilist)
 
     def get_script(self, script_name, script_runner):
         if script_name is None or script_name == "":
             return None, None
-        
+
         script_idx = script_name_to_index(script_name, script_runner.scripts)
         return script_runner.scripts[script_idx]
 
@@ -303,7 +302,7 @@ class Api:
 
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
-        with self.queue_lock:
+        def txt2img_inference():
             from modules.paths import Paths
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
             p.set_request(request)
@@ -322,6 +321,8 @@ class Api:
                 p.script_args = tuple(script_args) # Need to pass args as tuple here
                 processed = process_images(p)
             shared.state.end()
+            return processed
+        processed = self.submit_to_gpu_worker(txt2img_inference, timeout=60 * 10)()
 
         b64images = list(map(encode_pil_to_base64, processed.images)) if send_images else []
 
@@ -364,7 +365,7 @@ class Api:
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
 
-        with self.queue_lock:
+        def img2img_inference():
             from modules.paths import Paths
             p = StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)
             p.set_request(request)
@@ -383,6 +384,8 @@ class Api:
                 p.script_args = tuple(script_args) # Need to pass args as tuple here
                 processed = process_images(p)
             shared.state.end()
+            return processed
+        processed = self.submit_to_gpu_worker(img2img_inference, timeout=60 * 10)()
 
         b64images = list(map(encode_pil_to_base64, processed.images)) if send_images else []
 
@@ -397,8 +400,11 @@ class Api:
 
         reqDict['image'] = decode_base64_to_image(reqDict['image'])
 
-        with self.queue_lock:
-            result = postprocessing.run_extras(request, extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
+        def extra_single_image_inference():
+            result = postprocessing.run_extras(
+                request, extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
+            return result
+        result = self.submit_to_gpu_worker(extra_single_image_inference, timeout=60 * 10)()
 
         return ExtrasSingleImageResponse(image=encode_pil_to_base64(result[0][0]), html_info=result[1])
 
@@ -413,8 +419,11 @@ class Api:
         reqDict['image_folder'] = list(map(prepareFiles, reqDict['imageList']))
         reqDict.pop('imageList')
 
-        with self.queue_lock:
-            result = postprocessing.run_extras(request, extras_mode=1, image="", input_dir="", output_dir="", save_output=False, **reqDict)
+        def extra_batch_images_inference():
+            result = postprocessing.run_extras(
+                request, extras_mode=1, image="", input_dir="", output_dir="", save_output=False, **reqDict)
+            return result
+        result = self.submit_to_gpu_worker(extra_batch_images_inference, timeout=60 * 10)()
 
         return ExtrasBatchImagesResponse(images=list(map(encode_pil_to_base64, result[0])), html_info=result[1])
 
@@ -471,13 +480,15 @@ class Api:
         img = img.convert('RGB')
 
         # Override object param
-        with self.queue_lock:
+        def interrogate():
             if interrogatereq.model == "clip":
                 processed = shared.interrogator.interrogate(img)
             elif interrogatereq.model == "deepdanbooru":
                 processed = deepbooru.model.tag(img)
             else:
                 raise HTTPException(status_code=404, detail="Model not found")
+            return processed
+        processed = self.submit_to_gpu_worker(interrogate, timeout=60 * 10)()
 
         return InterrogateResponse(caption=processed)
 

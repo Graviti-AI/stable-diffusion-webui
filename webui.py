@@ -39,7 +39,7 @@ startup_timer.record("import ldm")
 from modules import extra_networks, ui_extra_networks_checkpoints
 from modules import extra_networks_hypernet, ui_extra_networks_hypernets, ui_extra_networks_textual_inversion
 from modules import call_queue
-from modules.call_queue import submit_to_gpu_worker, queue_lock, wrap_gradio_gpu_call
+from modules.call_queue import submit_to_gpu_worker, wrap_gradio_gpu_call
 from modules.ui_common import add_static_filedir_to_demo
 
 # Truncate version number of nightly/local build of PyTorch to not cause exceptions with CodeFormer or Safetensors
@@ -229,7 +229,7 @@ def setup_middleware(app):
 
 def create_api(app):
     from modules.api.api import Api
-    api = Api(app, queue_lock)
+    api = Api(app, submit_to_gpu_worker)
     return api
 
 

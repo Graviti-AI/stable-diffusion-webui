@@ -1,3 +1,6 @@
+import logging
+import traceback
+
 import torch
 from torch.nn.functional import silu
 from types import MethodType
@@ -172,6 +175,9 @@ class StableDiffusionModelHijack:
         self.optimization_method = apply_optimizations()
 
         self.clip = m.cond_stage_model
+        if not self.clip:
+            logging.error("hijack: cond_stage_model is None")
+            traceback.print_exc()
 
         def flatten(el):
             flattened = [flatten(children) for children in el.children()]
@@ -216,7 +222,10 @@ class StableDiffusionModelHijack:
         self.comments = []
 
     def get_prompt_lengths(self, text):
-        _, token_count = self.clip.process_texts([text])
+        if self.clip:
+            _, token_count = self.clip.process_texts([text])
+        else:
+            token_count = len(text)
 
         return token_count, self.clip.get_target_prompt_token_count(token_count)
 

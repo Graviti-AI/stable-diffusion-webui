@@ -55,11 +55,15 @@ def start_with_daemon(service_func):
     previous_service_status = ''
 
     # create service process at startup
-    service, server_port, starting_flag = _renew_service(service, service_func, server_port)
+    starting_flag = True
+    service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
+
+    prob_failed_count = 0
     while True:
         try:
             # get service status
-            current_service_status = _get_service_status(session, server_port, 6 if starting_flag else 1)
+            current_service_status = _get_service_status(session, server_port, 6 if starting_flag else 2)
+            prob_failed_count = 0
             starting_flag = False
             memory_usage = psutil.virtual_memory()
             pending_task_info = _get_service_pending_task_info(session, server_port)
@@ -84,7 +88,7 @@ def start_with_daemon(service_func):
                     f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it'
                 )
                 # renew service
-                service, server_port, starting_flag = _renew_service(service, service_func, server_port)
+                service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
                 continue
 
             # send heartbeat event
@@ -114,7 +118,7 @@ def start_with_daemon(service_func):
                         f'insufficient vram, restart service now, pending_duration: {pending_duration:0.2f}s, queued_tasks_len: {len(queued_tasks)}'
                     )
                     # renew service
-                    service, server_port, starting_flag = _renew_service(service, service_func, server_port)
+                    service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
                 elif current_service_status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
                     logging.warning(f'service is down, exit process now')
@@ -124,10 +128,13 @@ def start_with_daemon(service_func):
                 else:
                     pass
         except ServiceNotAvailableException as e:
-            # service process is not responding, kill it and relaunch
-            logging.warning(f'service is not responding, kill it and relaunch')
-            service, server_port, starting_flag = _renew_service(service, service_func, server_port)
-            session = requests.Session()
+            prob_failed_count += 1
+            if prob_failed_count > 3:
+                # service process is not responding, kill it and relaunch
+                logging.warning(f'service is not responding, kill it and relaunch')
+                service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
+                session = requests.Session()
+                prob_failed_count = 0
         except Exception as e:
             logging.error(f'error in heartbeat: {e.__str__()}')
             time.sleep(3)
@@ -160,7 +167,7 @@ def _fix_time_str_for_queued_tasks(queued_tasks):
     return queued_tasks_list
 
 
-def _renew_service(service: Process | None, service_func, server_port):
+def _renew_service(service: Process | None, service_func, server_port, starting_flag):
     global _service_pending_from
     if service:
         logging.info('release current service process')
@@ -170,8 +177,9 @@ def _renew_service(service: Process | None, service_func, server_port):
         # use a new port to launch service, since gradio may not able to release current port correctly
         server_port += 1
 
-        global _service_restart_count
-        _service_restart_count += 1
+        if not starting_flag:
+            global _service_restart_count
+            _service_restart_count += 1
 
     logging.info(f'create new service process on port {server_port}')
     service = Process(target=service_func, args=(server_port,))

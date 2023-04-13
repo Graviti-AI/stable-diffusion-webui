@@ -6,6 +6,59 @@
     --section-header-text-size: 12pt;
     --block-background-fill: transparent;
 }
+
+.user-content {
+    justify-content: flex-end;
+}
+
+.right-content, .user-content  {
+    display: flex;
+}
+
+.right-content {
+    margin-right: 20px;
+}
+
+.discord-icon&:hover::after {
+    position: absolute;
+    left: 15px;
+    top: 5px;
+    padding: 5px;
+    color: #fff;
+    content: attr(title);
+    z-index: 2;
+    width: 120px;
+}
+
+.discord-icon img {
+    width: 40px;
+    filter: invert(100%);
+}
+
+.upgrade-content img {
+    width: 20px;
+    filter: invert(100%);
+    margin-right: 5px;
+}
+
+.upgrade-content span {
+    font-size: 18px;
+}
+
+.upgrade-content a {
+    border-left: 1px solid #d1d5db;
+    margin-left: 20px;
+    padding-left: 20px;
+}
+
+.upgrade-content a, .upgrade-content, .discord-icon{
+    display: flex;
+    align-items: center;
+}
+
+
+
+
 #user-setting {
     margin: 0 0 0 auto;
     width: 200px;

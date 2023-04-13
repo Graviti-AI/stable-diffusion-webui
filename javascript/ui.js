@@ -395,14 +395,14 @@ async function browseModels(){
 // get user info
 window.onload = function () {
     const hostOrigin = location.origin;
-    fetch(`${hostOrigin}/api/user_info`, {method: "GET", credentials: "include"}).then(res => {
+    fetch(`${hostOrigin}/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
         if (res && res.ok && !res.redirected) {
             return res.json();
         }
     }).then(result => {
         if (result) {
-            const userInfo = gradioApp().querySelector(".user_info");
-
+            const userContent = gradioApp().querySelector(".user-content");
+            const userInfo = userContent.querySelector(".user_info");
             if (userInfo) {
                 userInfo.style.display = 'flex';
                 const img = userInfo.querySelector("a > img");
@@ -419,6 +419,13 @@ window.onload = function () {
                     // remove cookie
                     logOutLink.onclick = () => {
                         document.cookie = 'auth-session=;';
+                    }
+                }
+
+                if (result.inference_usage && result.inference_usage.Basic) {
+                    const upgradeContent = userContent.querySelector(".upgrade-content");
+                    if (upgradeContent) {
+                        upgradeContent.style.display = 'none';
                     }
                 }
             } 

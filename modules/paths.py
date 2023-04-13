@@ -1,3 +1,4 @@
+import base64
 import os
 import pathlib
 import sys
@@ -48,24 +49,68 @@ for d, must_exist, what, options in path_dirs:
 
 class Paths:
     def __init__(self, request: gr.Request | None):
+        import hashlib
         user = modules.user.User.current_user(request)
 
         base_dir = pathlib.Path(data_path)
 
-        work_dir = base_dir.joinpath('workdir', user.uid)
-        if not work_dir.exists():
-            work_dir.mkdir(parents=True, exist_ok=True)
+        # encode uid to avoid uid has path invalid character
+        h = hashlib.sha256()
+        h.update(user.uid.encode('utf-8'))
+        encoded_user_path = h.hexdigest()
+        # same user data in 4 level folders, to prevent a folder has too many subdir
+        parents_path = (encoded_user_path[:2],
+                        encoded_user_path[2:4],
+                        encoded_user_path[4:6],
+                        encoded_user_path)
 
-        model_dir = base_dir.joinpath('models', user.uid)
-        if not model_dir.exists():
-            model_dir.mkdir(parents=True, exist_ok=True)
+        # work dir save user output files
+        self._work_dir = base_dir.joinpath('workdir', *parents_path)
+        if not self._work_dir.exists():
+            self._work_dir.mkdir(parents=True, exist_ok=True)
 
-        self._work_dir = work_dir
-        self._model_dir = model_dir
+        # model dir save user uploaded models
+        self._model_dir = base_dir.joinpath('models', *parents_path)
+        if not self._model_dir.exists():
+            self._model_dir.mkdir(parents=True, exist_ok=True)
+
+        # output dir save user generated files
         if not user.tire or user.tire.lower() == 'free':
+            # free users use same output dir
             self._output_dir = base_dir.joinpath('workdir', 'public', 'outputs')
         else:
-            self._output_dir = base_dir.joinpath('workdir', user.uid, 'outputs')
+            # other users use their own dir
+            self._output_dir = base_dir.joinpath('workdir', *parents_path, 'outputs')
+        self._fix_legacy_workdir(base_dir, user.uid)
+
+    def _fix_legacy_workdir(self, base_dir: pathlib.Path, uid: str):
+        splits = uid.split('|')
+        if len(splits) > 1:
+            legacy_uid = splits[1]
+        else:
+            legacy_uid = uid
+        legacy_workdir = base_dir.joinpath('workdir', legacy_uid)
+        if legacy_workdir.exists():
+            self._move_files(legacy_workdir, self._work_dir)
+
+        legacy_model_dir = base_dir.joinpath('models', legacy_uid)
+        if legacy_model_dir.exists():
+            self._move_files(legacy_model_dir, self._model_dir)
+
+        legacy_output_dir = base_dir.joinpath('workdir', legacy_uid, 'outputs')
+        if legacy_output_dir.exists():
+            self._move_files(legacy_output_dir, self._output_dir)
+
+    @staticmethod
+    def _move_files(from_dir: pathlib.Path, to_dir: pathlib.Path):
+        import shutil
+        if not from_dir.exists() or not to_dir.exists():
+            return
+
+        for item in from_dir.iterdir():
+            shutil.move(item, to_dir)
+
+        from_dir.rmdir()
 
     @staticmethod
     def _check_dir(path):

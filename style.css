@@ -19,17 +19,6 @@
     margin-right: 20px;
 }
 
-.discord-icon&:hover::after {
-    position: absolute;
-    left: 15px;
-    top: 5px;
-    padding: 5px;
-    color: #fff;
-    content: attr(title);
-    z-index: 2;
-    width: 120px;
-}
-
 .discord-icon img {
     width: 40px;
     filter: invert(100%);

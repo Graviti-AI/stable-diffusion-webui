@@ -86,12 +86,18 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
     is_batch = mode == 5
 
     if mode == 0:  # img2img
+        if not init_img:
+            raise Exception("initialize image is not present")
         image = init_img.convert("RGB")
         mask = None
     elif mode == 1:  # img2img sketch
+        if not sketch:
+            raise Exception("sketch image is not present")
         image = sketch.convert("RGB")
         mask = None
     elif mode == 2:  # inpaint
+        if not init_img_with_mask or "image" not in init_img_with_mask or "mask" not in init_img_with_mask:
+            raise Exception("initialize image or mask image is not present")
         image, mask = init_img_with_mask["image"], init_img_with_mask["mask"]
         alpha_mask = ImageOps.invert(image.split()[-1]).convert('L').point(lambda x: 255 if x > 0 else 0, mode='1')
         mask = ImageChops.lighter(alpha_mask, mask.convert('L')).convert('L')
@@ -99,6 +105,8 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
     elif mode == 3:  # inpaint sketch
         image = inpaint_color_sketch
         orig = inpaint_color_sketch_orig or inpaint_color_sketch
+        if not image or not orig:
+            raise Exception("inpaint sketch image or original image is not present")
         pred = np.any(np.array(image) != np.array(orig), axis=-1)
         mask = Image.fromarray(pred.astype(np.uint8) * 255, "L")
         mask = ImageEnhance.Brightness(mask).enhance(1 - mask_alpha / 100)
@@ -106,6 +114,8 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
         image = Image.composite(image.filter(blur), orig, mask.filter(blur))
         image = image.convert("RGB")
     elif mode == 4:  # inpaint upload mask
+        if not init_img_inpaint or not init_mask_inpaint:
+            raise Exception("inpaint initialize image or inpaint initialize mask image is not present")
         image = init_img_inpaint
         mask = init_mask_inpaint
     else:

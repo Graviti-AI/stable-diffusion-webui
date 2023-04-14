@@ -111,5 +111,6 @@ parser.add_argument("--ram-size-to-restart", type=int, help="the minimum availab
 parser.add_argument("--disable-auto-restart", action='store_true',  help="the minimum available ram in GB to run webui service", default=False)
 parser.add_argument("--maximum-system-pending-time", type=int,  help="the maximum duration in seconds to allow service stay in pending", default=60)
 parser.add_argument("--heartbeat-expiration", type=int,  help="time in seconds that service will not accept request from latst haertbeat", default=3)
+parser.add_argument("--logging-file-dir", type=str,  help="specify place to save logging file", default='')
 parser.add_argument("--model-cache-dir", type=str,  help="User can use a ssd to cache the models to speed up loading speed", default="")
 parser.add_argument("--model-cache-max-size", type=int,  help="The maximum disk space (GB) to use to cache the model. Need to set --model-cache-dir first.", default=0)

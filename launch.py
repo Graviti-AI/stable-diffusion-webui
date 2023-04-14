@@ -345,6 +345,7 @@ def tests(test_dir):
 
 def start(server_port: int = 0):
     print(f"Launching {'API server' if '--nowebui' in sys.argv else 'Web UI'} with arguments: {' '.join(sys.argv[1:])}")
+    _config_logging('webui')
     import webui
     if '--nowebui' in sys.argv:
         webui.api_only(server_port)
@@ -352,11 +353,23 @@ def start(server_port: int = 0):
         webui.webui(server_port)
 
 
+def _config_logging(component):
+    if args.logging_file_dir:
+        import pathlib
+        log_filename = pathlib.Path(args.logging_file_dir).joinpath(f'{component}.log')
+        logging.basicConfig(level=logging.INFO,
+                            filename=log_filename,
+                            format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
+
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
     prepare_environment()
     if args.run_service_with_daemon:
         from service_deamon import start_with_daemon
+        _config_logging('daemon')
         start_with_daemon(start)
     else:
         start()

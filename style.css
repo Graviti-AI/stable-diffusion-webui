@@ -29,7 +29,7 @@
 }
 
 .upgrade-content span {
-    font-size: 18px;
+    font-size: 17px;
 }
 
 .discord-icon a {
@@ -48,7 +48,6 @@
 
 #user-setting {
     margin: 0 0 0 auto;
-    width: 200px;
 }
 
 .user_info img{

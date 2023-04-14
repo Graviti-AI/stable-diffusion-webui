@@ -1454,7 +1454,7 @@ def create_ui():
                 res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
                 create_refresh_button(res, info.refresh, info.component_args, "refresh_" + key)
                 create_upload_button(
-                    'Upload a Checkpoint',
+                    'Upload Checkpoint',
                     'upload_' + key,
                     sd_models.model_path,
                     button_style="flex-grow: 1 !important; align-self: flex-end;")
@@ -1653,7 +1653,7 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False, title="GRAVITI Diffus") as demo:
         with gr.Row(elem_id="topbar"):
-            with gr.Column(elem_id="user-setting", min_width=120, scale=2):
+            with gr.Column(elem_id="user-setting", min_width=500, scale=2):
                 gr.HTML(
                     value="<div class='user-content'><div class='right-content'><div class='discord-icon'><a title='Join Discord' href='https://discord.gg/QfBbBYqQ7z'><img src='/public/image/discord.png' /></a></div><div title='Unlock more credits' class='upgrade-content' style='display: none'><a href='/user#/billing?upgradeFlag=true'><img src='/public/image/lightning.png'/><span>Upgrade</span></a></div></div>"
                             "<div style='display: none;justify-content: flex-end;' class='user_info'><a href='/user'><img "
@@ -1661,7 +1661,7 @@ def create_ui():
                             "/></a><div class='user_info-name'><span></span><a "
                             "href='/api/logout' target='_self'>Log out</a></div></div></div>",
                     show_label=False)
-            with gr.Column(scale=6):
+            with gr.Column(scale=6, min_width=640):
                 with gr.Row(elem_id="quicksettings"):
                     for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
                         component = create_setting_component(k, is_quicksettings=True)

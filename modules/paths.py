@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 import pathlib
 import sys
@@ -103,14 +104,18 @@ class Paths:
 
     @staticmethod
     def _move_files(from_dir: pathlib.Path, to_dir: pathlib.Path):
-        import shutil
-        if not from_dir.exists() or not to_dir.exists():
-            return
+        try:
+            import shutil
+            if not from_dir.exists() or not to_dir.exists():
+                return
 
-        for item in from_dir.iterdir():
-            shutil.move(item, to_dir)
+            for item in from_dir.iterdir():
+                shutil.move(item, to_dir)
 
-        from_dir.rmdir()
+            from_dir.rmdir()
+        except Exception as e:
+            logging.error(f'paths: move_files failed: {e.__str__()}')
+            pass
 
     @staticmethod
     def _check_dir(path):

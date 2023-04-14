@@ -14,10 +14,11 @@ current_task = None
 current_task_step = ''
 pending_tasks = {}
 finished_tasks = []
+finished_task_count = 0
 
 
 def get_task_queue_info():
-    return current_task, pending_tasks, finished_tasks
+    return current_task, pending_tasks, finished_tasks, finished_task_count
 
 
 def start_task(id_task):
@@ -38,6 +39,7 @@ def set_current_task_step(step):
 def finish_task(id_task):
     global current_task
     global current_task_step
+    global finished_task_count
 
     if current_task == id_task:
         current_task = None
@@ -46,6 +48,8 @@ def finish_task(id_task):
     finished_tasks.append(id_task)
     if len(finished_tasks) > 16:
         finished_tasks.pop(0)
+
+    finished_task_count += 1
 
 
 def add_task_to_queue(id_job, job_info=None):

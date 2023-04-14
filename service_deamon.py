@@ -11,7 +11,7 @@ import requests
 from fastapi import HTTPException
 
 import modules.shared
-from modules.api.daemon_api import DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING, SECRET_HEADER_KEY, DAEMON_STATUS_UP
+from modules.api.daemon_api import DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING, SECRET_HEADER_KEY
 from modules.shared import cmd_opts
 
 
@@ -25,14 +25,13 @@ class ServiceNotAvailableException(HTTPException):
         super().__init__(status_code=status_code, detail=detail, headers=headers)
 
 
-_system_started_at = datetime.datetime.now()
 _service_restart_count = 0
-_service_pending_from = None
 
 
 def start_with_daemon(service_func):
     import psutil
-    global _service_pending_from
+    _service_pending_from = None
+    _system_started_at = datetime.datetime.now()
 
     # set multiprocessing to start service process in spawn mode, to fix CUDA complain 'To use CUDA
     # with multiprocessing, you must use the ‘spawn‘ start method'
@@ -58,21 +57,20 @@ def start_with_daemon(service_func):
     starting_flag = True
     service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
 
-    prob_failed_count = 0
     while True:
         try:
             # get service status
-            current_service_status = _get_service_status(session, server_port, 6 if starting_flag else 2)
-            prob_failed_count = 0
+            current_service_status = _get_service_status(session, server_port, 6 if starting_flag else 3)
             starting_flag = False
             memory_usage = psutil.virtual_memory()
             pending_task_info = _get_service_pending_task_info(session, server_port)
             current_task = pending_task_info.get('current_task', '')
             queued_tasks = pending_task_info.get('queued_tasks', {})
+            finished_task_count = pending_task_info.get('finished_task_count', 0)
 
             # not enough memory, BE should turn to pending (out-of-service)
             available_memory = memory_usage.available / (1024 * 1024 * 1024)
-            if current_service_status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:  # 5GB
+            if current_service_status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:
                 # convert timestamp to time str
                 queued_tasks_list = _fix_time_str_for_queued_tasks(queued_tasks)
                 logging.warning(
@@ -98,13 +96,21 @@ def start_with_daemon(service_func):
                        current_service_status,
                        memory_usage,
                        current_task,
-                       queued_tasks)
+                       queued_tasks,
+                       _system_started_at,
+                       finished_task_count)
 
             # calculate service pending duration
             if previous_service_status != current_service_status:
                 previous_service_status = current_service_status
-                if current_service_status in (DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING) and _service_pending_from is None:
+                if current_service_status in (
+                        DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING
+                ) and _service_pending_from is None:
+                    logging.warning(
+                        f"service status turned into {current_service_status}"
+                    )
                     _service_pending_from = datetime.datetime.now()
+
             if _service_pending_from:
                 pending_duration = (datetime.datetime.now() - _service_pending_from).total_seconds()
             else:
@@ -118,7 +124,10 @@ def start_with_daemon(service_func):
                         f'insufficient vram, restart service now, pending_duration: {pending_duration:0.2f}s, queued_tasks_len: {len(queued_tasks)}'
                     )
                     # renew service
-                    service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
+                    service, server_port, starting_flag = _renew_service(service, service_func, server_port,
+                                                                         starting_flag)
+                    _service_pending_from = None
+                    previous_service_status = ''
                 elif current_service_status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
                     logging.warning(f'service is down, exit process now')
@@ -128,13 +137,15 @@ def start_with_daemon(service_func):
                 else:
                     pass
         except ServiceNotAvailableException as e:
-            prob_failed_count += 1
-            if prob_failed_count > 3:
+            logging.warning(f'service is not responding')
+            session = requests.Session()
+            if starting_flag:
                 # service process is not responding, kill it and relaunch
-                logging.warning(f'service is not responding, kill it and relaunch')
+                # it may happened at startup due to port inuse
+                logging.warning(f'service is not responding, kill at restart it')
                 service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
-                session = requests.Session()
-                prob_failed_count = 0
+                _service_pending_from = None
+                previous_service_status = ''
         except Exception as e:
             logging.error(f'error in heartbeat: {e.__str__()}')
             time.sleep(3)
@@ -168,7 +179,6 @@ def _fix_time_str_for_queued_tasks(queued_tasks):
 
 
 def _renew_service(service: Process | None, service_func, server_port, starting_flag):
-    global _service_pending_from
     if service:
         logging.info('release current service process')
         service.terminate()
@@ -185,7 +195,6 @@ def _renew_service(service: Process | None, service_func, server_port, starting_
     service = Process(target=service_func, args=(server_port,))
     service.start()
     time.sleep(3)
-    _service_pending_from = None
     return service, server_port, True
 
 
@@ -206,6 +215,8 @@ def _heartbeat(redis_client,
                memory_usage,
                current_task: str,
                queued_tasks: dict,
+               system_started_at,
+               finished_task_count: int,
                ):
     # no need to send heart beat event if host_ip or redis_address missed
     if not redis_client or not host_ip:
@@ -225,12 +236,16 @@ def _heartbeat(redis_client,
         'port': port,
         'schema': 'http',
         'restarted': _service_restart_count,
-        'service_pending_from': _service_pending_from.strftime('%Y-%m-%d %H:%M:%S') if _service_pending_from else '',
-        'started_at': _system_started_at.strftime('%Y-%m-%d %H:%M:%S')
+        'started_at': system_started_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'finished_task_count': finished_task_count
     }
 
     instance_id = f'webui_be_{host_ip}:{port}'
-    redis_client.set(name=instance_id, value=json.dumps(data, ensure_ascii=False, sort_keys=True), ex=3)
+    redis_client.set(
+        name=instance_id,
+        value=json.dumps(data, ensure_ascii=False, sort_keys=True),
+        ex=cmd_opts.heartbeat_expiration
+    )
 
 
 def _get_service_status(session: requests.sessions.Session, port: int, try_count: int = 3) -> str:

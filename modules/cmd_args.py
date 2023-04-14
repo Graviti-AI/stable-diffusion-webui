@@ -110,3 +110,4 @@ parser.add_argument("--ram-size-to-pending", type=int, help="the minimum availab
 parser.add_argument("--ram-size-to-restart", type=int, help="the minimum available ram in GB to run webui service", default=3)
 parser.add_argument("--disable-auto-restart", action='store_true',  help="the minimum available ram in GB to run webui service", default=False)
 parser.add_argument("--maximum-system-pending-time", type=int,  help="the maximum duration in seconds to allow service stay in pending", default=60)
+parser.add_argument("--heartbeat-expiration", type=int,  help="time in seconds that service will not accept request from latst haertbeat", default=3)

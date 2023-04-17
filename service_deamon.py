@@ -30,7 +30,6 @@ _service_restart_count = 0
 
 def start_with_daemon(service_func):
     import psutil
-    _service_pending_from = None
     _system_started_at = datetime.datetime.now()
 
     # set multiprocessing to start service process in spawn mode, to fix CUDA complain 'To use CUDA
@@ -50,12 +49,13 @@ def start_with_daemon(service_func):
     # request session for getting service status
     session = requests.Session()
 
-    # service status since last check
-    previous_service_status = ''
-
     # create service process at startup
     starting_flag = True
-    service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
+    service, server_port, starting_flag, _service_pending_from, previous_service_status = _renew_service(
+        service,
+        service_func,
+        server_port,
+        starting_flag)
 
     while True:
         try:
@@ -86,7 +86,11 @@ def start_with_daemon(service_func):
                     f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it'
                 )
                 # renew service
-                service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
+                service, server_port, starting_flag, _service_pending_from, previous_service_status = _renew_service(
+                    service,
+                    service_func,
+                    server_port,
+                    starting_flag)
                 continue
 
             # send heartbeat event
@@ -113,21 +117,23 @@ def start_with_daemon(service_func):
 
             if _service_pending_from:
                 pending_duration = (datetime.datetime.now() - _service_pending_from).total_seconds()
+                logging.warning(f"service is {current_service_status} for {pending_duration:0.2f}s")
             else:
                 pending_duration = 0
 
             # service should restart or shutdown if idle or pending for more than 60 seconds
-            if not current_task and (len(queued_tasks) == 0 or pending_duration > cmd_opts.maximum_system_pending_time):
+            if not current_task and pending_duration > cmd_opts.maximum_system_pending_time:
                 if current_service_status == DAEMON_STATUS_PENDING:
                     # restart BE if out-of-service
                     logging.warning(
                         f'insufficient vram, restart service now, pending_duration: {pending_duration:0.2f}s, queued_tasks_len: {len(queued_tasks)}'
                     )
                     # renew service
-                    service, server_port, starting_flag = _renew_service(service, service_func, server_port,
-                                                                         starting_flag)
-                    _service_pending_from = None
-                    previous_service_status = ''
+                    service, server_port, starting_flag, _service_pending_from, previous_service_status = _renew_service(
+                        service,
+                        service_func,
+                        server_port,
+                        starting_flag)
                 elif current_service_status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
                     logging.warning(f'service is down, exit process now')
@@ -143,9 +149,11 @@ def start_with_daemon(service_func):
                 # service process is not responding, kill it and relaunch
                 # it may happened at startup due to port inuse
                 logging.warning(f'service is not responding, kill at restart it')
-                service, server_port, starting_flag = _renew_service(service, service_func, server_port, starting_flag)
-                _service_pending_from = None
-                previous_service_status = ''
+                service, server_port, starting_flag, _service_pending_from, previous_service_status = _renew_service(
+                    service,
+                    service_func,
+                    server_port,
+                    starting_flag)
         except Exception as e:
             logging.error(f'error in heartbeat: {e.__str__()}')
             time.sleep(3)
@@ -194,8 +202,8 @@ def _renew_service(service: Process | None, service_func, server_port, starting_
     logging.info(f'create new service process on port {server_port}')
     service = Process(target=service_func, args=(server_port,))
     service.start()
-    time.sleep(3)
-    return service, server_port, True
+    time.sleep(5)
+    return service, server_port, True, None, ''
 
 
 def _get_redis_client():

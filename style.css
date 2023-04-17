@@ -20,13 +20,11 @@
 }
 
 .discord-icon img {
-    width: 40px;
-    filter: invert(100%);
+    width: 30px;
 }
 
 .upgrade-content img {
     width: 20px;
-    filter: invert(100%);
     margin-right: 5px;
 }
 
@@ -34,10 +32,10 @@
     font-size: 18px;
 }
 
-.upgrade-content a {
-    border-left: 1px solid #d1d5db;
-    margin-left: 20px;
-    padding-left: 20px;
+.discord-icon a {
+    border-right: 1px solid #d1d5db;
+    margin-right: 20px;
+    padding-right: 20px;
 }
 
 .upgrade-content a, .upgrade-content, .discord-icon{

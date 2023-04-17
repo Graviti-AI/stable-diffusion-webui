@@ -409,42 +409,54 @@ async function browseModels(){
 }
 
 // get user info
-window.onload = function () {
-    const hostOrigin = location.origin;
+window.addEventListener("load", (event) => {
+    const {origin: hostOrigin, search} = location;
+    const isDarkTheme = /theme=dark/g.test(search);
+    if (isDarkTheme) {
+        const rightContent = gradioApp().querySelector(".right-content");
+        const discordIcon = rightContent.querySelector("div.discord-icon > a > img");
+        discordIcon.style.filter = 'invert(100%)';
+        const lightningIcon = rightContent.querySelector("div.upgrade-content > a > img");
+        lightningIcon.style.filter = 'invert(100%)';
+    }
+   
+
     fetch(`${hostOrigin}/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
         if (res && res.ok && !res.redirected) {
             return res.json();
         }
     }).then(result => {
         if (result) {
-            const userContent = gradioApp().querySelector(".user-content");
-            const userInfo = userContent.querySelector(".user_info");
-            if (userInfo) {
-                userInfo.style.display = 'flex';
-                const img = userInfo.querySelector("a > img");
-                if (img) {
-                    img.src = result.picture;
-                }
-                const name = userInfo.querySelector(".user_info-name > span");
-                if (name) {
-                    name.innerHTML = result.name;
-                }
-                const logOutLink = userInfo.querySelector(".user_info-name > a");
-                if (logOutLink) {
-                    logOutLink.target="_self";
-                    // remove cookie
-                    logOutLink.onclick = () => {
-                        document.cookie = 'auth-session=;';
+            setTimeout(() => {
+                const userContent = gradioApp().querySelector(".user-content");
+                const userInfo = userContent.querySelector(".user_info");
+                if (userInfo) {
+                    userInfo.style.display = 'flex';
+                    const img = userInfo.querySelector("a > img");
+                    if (img) {
+                        img.src = result.picture;
                     }
-                }
+                    const name = userInfo.querySelector(".user_info-name > span");
+                    if (name) {
+                        name.innerHTML = result.name;
+                    }
+                    const logOutLink = userInfo.querySelector(".user_info-name > a");
+                    if (logOutLink) {
+                        logOutLink.target="_self";
+                        // remove cookie
+                        logOutLink.onclick = () => {
+                            document.cookie = 'auth-session=;';
+                        }
+                    }
 
-                if (result.tier === 'Free') {
-                    const upgradeContent = userContent.querySelector(".upgrade-content");
-                    if (upgradeContent) {
-                        upgradeContent.style.display = 'flex';
+                    if (result.tier === 'Free') {
+                        const upgradeContent = userContent.querySelector(".upgrade-content");
+                        if (upgradeContent) {
+                            upgradeContent.style.display = 'flex';
+                        }
                     }
                 }
-            } 
+            }, 0)
         }
     })
-}
+});

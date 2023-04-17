@@ -98,6 +98,7 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
         request("./internal/progress", {"id_task": id_task, "id_live_preview": id_live_preview}, function(res){
             if(res.completed){
                 removeProgressBar()
+                console.log("remove progress bar: res.completed")
                 return
             }
 
@@ -135,10 +136,12 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
 
             if(! res.active && wasEverActive){
                 removeProgressBar()
+                console.log("remove progress bar: ! res.active && wasEverActive")
                 return
             }
 
             if(elapsedFromStart > 5 && !res.queued && !res.active){
+                console.log("remove progress bar: elapsedFromStart > 5 && !res.queued && !res.active")
                 removeProgressBar()
                 return
             }
@@ -170,6 +173,7 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 fun(id_task, res.id_live_preview);
             }, opts.live_preview_refresh_period || 500)
         }, function(){
+            console.log("remove progress bar: progress request is failed")
             removeProgressBar()
         })
     }

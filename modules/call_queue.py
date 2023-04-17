@@ -1,4 +1,5 @@
 import html
+import logging
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -47,8 +48,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         log_message = e.__str__()
         raise e
     finally:
+        progress.finish_task(id_task)
         shared.state.end()
-        modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
+        try:
+            modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
+        except Exception as e:
+            logging.warning(f'send task finished event to monitor failed: {e.__str__()}')
     return res
 
 
@@ -78,10 +83,6 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             if add_monitor_state:
                 return extra_outputs_array + [str(e)], True
             return extra_outputs_array + [str(e)]
-        except Exception as e:
-            raise e
-        finally:
-            progress.finish_task(id_task)
 
         if add_monitor_state:
             return res, False

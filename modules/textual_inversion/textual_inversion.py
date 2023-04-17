@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import traceback
@@ -21,7 +22,7 @@ import modules.textual_inversion.dataset
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
 
 from modules.textual_inversion.image_embedding import embedding_to_b64, embedding_from_b64, insert_image_data_embed, extract_image_data_embed, caption_image_overlay
-from modules.textual_inversion.logging import save_settings_to_file
+from modules.textual_inversion.logger import save_settings_to_file
 
 
 TextualInversionTemplate = namedtuple("TextualInversionTemplate", ["name", "path"])
@@ -115,6 +116,11 @@ class EmbeddingDatabase:
         self.embedding_dirs = {}
         self.previously_displayed_embeddings = ()
 
+        # a cache to store loaded embeddings
+        # key: embedding filename
+        # value: embedding data
+        self.loaded_embeddings = {}
+
     def add_embedding_dir(self, path):
         self.embedding_dirs[path] = DirWithTextualInversionEmbeddings(path)
 
@@ -124,77 +130,95 @@ class EmbeddingDatabase:
     def register_embedding(self, embedding, model):
         self.word_embeddings[embedding.name] = embedding
 
-        ids = model.cond_stage_model.tokenize([embedding.name])[0]
+        if model and model.cond_stage_model:
+            ids = model.cond_stage_model.tokenize([embedding.name])[0]
+            first_id = ids[0]
+            if first_id not in self.ids_lookup:
+                self.ids_lookup[first_id] = []
 
-        first_id = ids[0]
-        if first_id not in self.ids_lookup:
-            self.ids_lookup[first_id] = []
-
-        self.ids_lookup[first_id] = sorted(self.ids_lookup[first_id] + [(ids, embedding)], key=lambda x: len(x[0]), reverse=True)
+            self.ids_lookup[first_id] = sorted(self.ids_lookup[first_id] + [(ids, embedding)], key=lambda x: len(x[0]), reverse=True)
 
         return embedding
 
     def get_expected_shape(self):
-        vec = shared.sd_model.cond_stage_model.encode_embedding_init_text(",", 1)
-        return vec.shape[1]
+        if shared.sd_model and shared.sd_model.cond_stage_model:
+            vec = shared.sd_model.cond_stage_model.encode_embedding_init_text(",", 1)
+            return vec.shape[1]
+        else:
+            return -1
 
     def load_from_file(self, path, filename):
         name, ext = os.path.splitext(filename)
         ext = ext.upper()
+        if filename not in self.loaded_embeddings:
+            if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
+                _, second_ext = os.path.splitext(name)
+                if second_ext.upper() == '.PREVIEW':
+                    self.loaded_embeddings[filename] = None
+                    return
 
-        if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
-            _, second_ext = os.path.splitext(name)
-            if second_ext.upper() == '.PREVIEW':
-                return
-
-            embed_image = Image.open(path)
-            if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
-                data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
-                name = data.get('name', name)
-            else:
-                data = extract_image_data_embed(embed_image)
-                if data:
+                embed_image = Image.open(path)
+                if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
+                    data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
                     name = data.get('name', name)
                 else:
-                    # if data is None, means this is not an embeding, just a preview image
+                    data = extract_image_data_embed(embed_image)
+                    if data:
+                        name = data.get('name', name)
+                    else:
+                        # if data is None, means this is not an embeding, just a preview image
+                        self.loaded_embeddings[filename] = None
+                        return
+            elif ext in ['.BIN', '.PT']:
+                data = torch.load(path, map_location="cpu")
+            elif ext in ['.SAFETENSORS']:
+                data = safetensors.torch.load_file(path, device="cpu")
+            else:
+                self.loaded_embeddings[filename] = None
+                return
+
+            # textual inversion embeddings
+            if 'string_to_param' in data:
+                param_dict = data['string_to_param']
+                if hasattr(param_dict, '_parameters'):
+                    param_dict = getattr(param_dict, '_parameters')  # fix for torch 1.12.1 loading saved file from torch 1.11
+                if len(param_dict) != 1:
+                    logging.error(f'embedding file {filename} has multiple terms in it')
+                    self.loaded_embeddings[filename] = None
                     return
-        elif ext in ['.BIN', '.PT']:
-            data = torch.load(path, map_location="cpu")
-        elif ext in ['.SAFETENSORS']:
-            data = safetensors.torch.load_file(path, device="cpu")
-        else:
-            return
+                emb = next(iter(param_dict.items()))[1]
+            # diffuser concepts
+            elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor:
+                if len(data.keys()) != 1:
+                    logging.error(f"embedding file '{filename}' has multiple terms in it")
+                    self.loaded_embeddings[filename] = None
+                    return
+                emb = next(iter(data.values()))
+                if len(emb.shape) == 1:
+                    emb = emb.unsqueeze(0)
+            else:
+                logging.error(f"Couldn't identify {filename} as neither textual inversion embedding nor diffuser concept.")
+                self.loaded_embeddings[filename] = None
+                return
 
-        # textual inversion embeddings
-        if 'string_to_param' in data:
-            param_dict = data['string_to_param']
-            if hasattr(param_dict, '_parameters'):
-                param_dict = getattr(param_dict, '_parameters')  # fix for torch 1.12.1 loading saved file from torch 1.11
-            assert len(param_dict) == 1, 'embedding file has multiple terms in it'
-            emb = next(iter(param_dict.items()))[1]
-        # diffuser concepts
-        elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor:
-            assert len(data.keys()) == 1, 'embedding file has multiple terms in it'
+            vec = emb.detach().to(devices.device, dtype=torch.float32)
+            embedding = Embedding(vec, name)
+            embedding.step = data.get('step', None)
+            embedding.sd_checkpoint = data.get('sd_checkpoint', None)
+            embedding.sd_checkpoint_name = data.get('sd_checkpoint_name', None)
+            embedding.vectors = vec.shape[0]
+            embedding.shape = vec.shape[-1]
+            embedding.filename = path
 
-            emb = next(iter(data.values()))
-            if len(emb.shape) == 1:
-                emb = emb.unsqueeze(0)
-        else:
-            raise Exception(f"Couldn't identify {filename} as neither textual inversion embedding nor diffuser concept.")
+            # cache the loaded embedding
+            self.loaded_embeddings[filename] = embedding
 
-        vec = emb.detach().to(devices.device, dtype=torch.float32)
-        embedding = Embedding(vec, name)
-        embedding.step = data.get('step', None)
-        embedding.sd_checkpoint = data.get('sd_checkpoint', None)
-        embedding.sd_checkpoint_name = data.get('sd_checkpoint_name', None)
-        embedding.vectors = vec.shape[0]
-        embedding.shape = vec.shape[-1]
-        embedding.filename = path
-
-        if self.expected_shape == -1 or self.expected_shape == embedding.shape:
-            self.register_embedding(embedding, shared.sd_model)
-        else:
-            self.skipped_embeddings[name] = embedding
+        embedding = self.loaded_embeddings.get(filename)
+        if embedding:
+            if self.expected_shape == -1 or self.expected_shape == embedding.shape:
+                self.register_embedding(embedding, shared.sd_model)
+            else:
+                self.skipped_embeddings[name] = embedding
 
     def load_from_dir(self, embdir):
         if not os.path.isdir(embdir.path):

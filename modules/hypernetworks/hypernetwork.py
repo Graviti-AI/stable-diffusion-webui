@@ -15,7 +15,7 @@ import tqdm
 from einops import rearrange, repeat
 from ldm.util import default
 from modules import devices, processing, sd_models, shared, sd_samplers, hashes, sd_hijack_checkpoint
-from modules.textual_inversion import textual_inversion, logging
+from modules.textual_inversion import textual_inversion, logger
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
 from torch import einsum
 from torch.nn.init import normal_, xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_, zeros_
@@ -563,7 +563,7 @@ def train_hypernetwork(request: starlette.requests.Request, id_task, hypernetwor
             model_name=checkpoint.model_name, model_hash=checkpoint.shorthash, num_of_dataset_images=len(ds),
             **{field: getattr(hypernetwork, field) for field in ['layer_structure', 'activation_func', 'weight_init', 'add_layer_norm', 'use_dropout', ]}
         )
-        logging.save_settings_to_file(log_directory, {**saved_params, **locals()})
+        logger.save_settings_to_file(log_directory, {**saved_params, **locals()})
 
     latent_sampling_method = ds.latent_sampling_method
 

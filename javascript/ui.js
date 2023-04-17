@@ -202,6 +202,22 @@ function modelmerger(){
     return res
 }
 
+function updateGenerateBtn_txt2img(width, height, batch_count, batch_size, steps) {
+    const result = ( Math.floor((steps-1) / 50) + 1) * batch_count * batch_size * (Math.floor((height-1) / 512) + 1) * (Math.floor((width-1) / 512) + 1)
+    const buttonId = "txt2img_generate";
+    const buttonEle = gradioApp().querySelector(`#${buttonId}`);
+    buttonEle.innerHTML = `Generate （Use ${result} ${result === 1 ? 'credit）': 'credits）'}`;
+     
+}
+
+function updateGenerateBtn_img2img(width, height, batch_count, batch_size, steps) {
+    const result = ( Math.floor((steps-1) / 50) + 1) * batch_count * batch_size * (Math.floor((height-1) / 512) + 1) * (Math.floor((width-1) / 512) + 1)
+    const buttonId = "img2img_generate";
+    const buttonEle = gradioApp().querySelector(`#${buttonId}`);
+    buttonEle.innerHTML = `Generate （Use ${result} ${result === 1 ? 'credit）': 'credits）'}`;
+     
+}
+
 
 function ask_for_style_name(_, prompt_text, negative_prompt_text) {
     name_ = prompt('Style name:')

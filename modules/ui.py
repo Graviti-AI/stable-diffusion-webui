@@ -298,7 +298,7 @@ def create_toprow(is_img2img):
             with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box"):
                 interrupt = gr.Button('Interrupt', elem_id=f"{id_part}_interrupt", elem_classes="generate-box-interrupt")
                 skip = gr.Button('Skip', elem_id=f"{id_part}_skip", elem_classes="generate-box-skip")
-                submit = gr.Button('Generate', elem_id=f"{id_part}_generate", variant='primary')
+                submit = gr.Button('Generate（use 1 credit）', elem_id=f"{id_part}_generate", variant='primary')
                 model_title = gr.Textbox(elem_id=f"{id_part}_model_title", value=get_sd_model_title_from_setting(), visible=False)
 
                 skip.click(
@@ -562,6 +562,16 @@ def create_ui():
 
             connect_reuse_seed(seed, reuse_seed, generation_info, dummy_component, is_subseed=False)
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)
+            
+            # generateBtnType = gradio.JSON({type: 'text2Img'})
+            selectors = [batch_count, width, height, batch_size, steps]
+            for selector in selectors:
+                selector.change(
+                    fn=None,
+                    inputs=[width, height, batch_count, batch_size, steps], 
+                    outputs=[],
+                    _js="updateGenerateBtn_txt2img"
+                )
 
             txt2img_args = dict(
                 fn=wrap_gradio_gpu_call(
@@ -857,6 +867,15 @@ def create_ui():
 
             connect_reuse_seed(seed, reuse_seed, generation_info, dummy_component, is_subseed=False)
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)
+
+            selectors = [batch_count, width, height, batch_size, steps]
+            for selector in selectors:
+                selector.change(
+                    fn=None,
+                    inputs=[width, height, batch_count, batch_size, steps], 
+                    outputs=[],
+                    _js="updateGenerateBtn_img2img"
+                )
 
             img2img_prompt_img.change(
                 fn=modules.images.image_data,

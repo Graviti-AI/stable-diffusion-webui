@@ -16,7 +16,7 @@ from modules.shared import cmd_opts
 
 logger = logging.getLogger(__name__)
 
-_node_accepted_tires = os.getenv('ACCEPTED_TIRES', '').split(',')
+_node_accepted_tiers = os.getenv('ACCEPTED_TIERS', '').split(',')
 
 
 class ServiceNotAvailableException(HTTPException):
@@ -233,12 +233,12 @@ def _heartbeat(redis_client,
     # no need to send heart beat event if host_ip or redis_address missed
     if not redis_client or not host_ip:
         return
-    if not _node_accepted_tires:
-        logger.error(f'invalid node accepted tires info: {_node_accepted_tires}')
+    if not _node_accepted_tiers:
+        logger.error(f'invalid node accepted tiers info: {_node_accepted_tiers}')
     else:
-        for accept in _node_accepted_tires:
+        for accept in _node_accepted_tiers:
             if not accept:
-                logger.error(f'invalid node accepted tires info: {_node_accepted_tires}')
+                logger.error(f'invalid node accepted tiers info: {_node_accepted_tiers}')
                 break
 
     data = {
@@ -259,7 +259,7 @@ def _heartbeat(redis_client,
         'started_at': system_started_at.strftime('%Y-%m-%d %H:%M:%S'),
         'finished_task_count': finished_task_count,
         'labels': {
-            'node/accepted-tires': _node_accepted_tires
+            'node/accepted-tiers': _node_accepted_tiers
         }
     }
 

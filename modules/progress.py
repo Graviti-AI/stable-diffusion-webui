@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 import time
 
 import gradio as gr
@@ -16,6 +17,8 @@ pending_tasks = {}
 finished_tasks = []
 finished_task_count = 0
 
+logger = logging.getLogger(__name__)
+
 
 def get_task_queue_info():
     return current_task, pending_tasks, finished_tasks, finished_task_count
@@ -24,6 +27,7 @@ def get_task_queue_info():
 def start_task(id_task):
     global current_task
     global current_task_step
+    logger.info(f'start_task, current_task: {current_task}, new_task: {id_task}')
 
     current_task = id_task
     current_task_step = ''
@@ -34,12 +38,14 @@ def start_task(id_task):
 def set_current_task_step(step):
     global current_task_step
     current_task_step = step
+    logger.info(f'set_current_task_step, current_task: {current_task}, current_task_step: {current_task_step}')
 
 
 def finish_task(id_task):
     global current_task
     global current_task_step
     global finished_task_count
+    logger.info(f'finish_task, id_task: {id_task}, current_task: {current_task}, current_task_step: {current_task_step}')
 
     if current_task == id_task:
         current_task = None
@@ -53,6 +59,7 @@ def finish_task(id_task):
 
 
 def add_task_to_queue(id_job, job_info=None):
+    logger.info(f'add_task_to_queue, id_task: {id_job}')
     task_info = {
         'added_at': time.time(),
         'last_accessed_at': time.time(),
@@ -87,7 +94,7 @@ def progressapi(req: ProgressRequest):
     active = req.id_task == current_task
     queued = req.id_task in pending_tasks
     completed = req.id_task in finished_tasks
-
+    logger.debug(f'progressapi, current_task: {current_task}, id_task: {req.id_task}, queued: {queued}, completed: {completed}')
     # log last access time for this task.
     # if there is no active task, and a queued task is not accessed for a long time, we should
     # consider to remove it from queue.

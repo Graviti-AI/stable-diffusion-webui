@@ -354,14 +354,34 @@ def start(server_port: int = 0):
 
 
 def _config_logging(component):
+    logging_level = args.logging_level.upper()
+    if logging_level == 'CRITICAL':
+        level = logging.CRITICAL
+    elif logging_level == 'FATAL':
+        level = logging.FATAL
+    elif logging_level == 'ERROR':
+        level = logging.ERROR
+    elif logging_level == 'WARN':
+        level = logging.WARNING
+    elif logging_level == 'WARNING':
+        level = logging.WARNING
+    elif logging_level == 'INFO':
+        level = logging.INFO
+    elif logging_level == 'DEBUG':
+        level = logging.DEBUG
+    elif logging_level == 'NOTSET':
+        level = logging.NOTSET
+    else:
+        level = logging.ERROR
+
     if args.logging_file_dir:
         import pathlib
         log_filename = pathlib.Path(args.logging_file_dir).joinpath(f'{component}.log')
-        logging.basicConfig(level=logging.INFO,
-                            filename=log_filename,
+        logging.basicConfig(level=level,
+                            filename=str(log_filename),
                             format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
     else:
-        logging.basicConfig(level=logging.INFO,
+        logging.basicConfig(level=level,
                             format='%(asctime)s [%(levelname)s] (%(name)s:%(lineno)d): %(message)s')
 
 

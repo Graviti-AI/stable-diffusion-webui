@@ -1,3 +1,4 @@
+import os
 import uuid
 import logging
 import json
@@ -7,6 +8,8 @@ import gradio as gr
 
 import modules.user
 import modules.shared
+
+logger = logging.getLogger(__name__)
 
 
 class MonitorException(Exception):
@@ -150,6 +153,7 @@ def on_task(request: gr.Request, func, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
+        logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
         return None
 
     monitor_log_id = _extract_task_id(*args)
@@ -186,21 +190,22 @@ def on_task(request: gr.Request, func, *args, **kwargs):
         'user': modules.user.User.current_user(request).uid,
         'args': func_args,
         'extra_args': _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else [],
-        'consume': _calculate_consume_unit(api_name, func_args, *args, **kwargs)
+        'consume': _calculate_consume_unit(api_name, func_args, *args, **kwargs),
+        'node': os.getenv('HOST_IP', default='')
     }
     resp = requests.post(monitor_addr,
                          headers={
                              'Api-Secret': system_monitor_api_secret,
                          },
                          json=request_data)
-    logging.info(json.dumps(request_data, ensure_ascii=False, sort_keys=True))
+    logger.info(json.dumps(request_data, ensure_ascii=False, sort_keys=True))
 
     # check response, raise exception if status code is not 2xx
     if 199 < resp.status_code < 300:
         return monitor_log_id
 
     # log the response if request failed
-    logging.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
+    logger.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
 
     if resp.status_code == 402:
         raise MonitorException(
@@ -216,6 +221,7 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
+        logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
         return
     request_url = f'{monitor_addr}/{monitor_log_id}'
     resp = requests.post(request_url,
@@ -229,4 +235,4 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
 
     # log the response if request failed
     if resp.status_code < 200 or resp.status_code > 299:
-        logging.error(f'update monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
+        logger.error(f'update monitor log failed, status: monitor_log_id: {monitor_log_id}, {resp.status_code}, message: {resp.text[:1000]}')

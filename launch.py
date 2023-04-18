@@ -388,7 +388,7 @@ def _config_logging(component):
 if __name__ == "__main__":
     prepare_environment()
     if args.run_service_with_daemon:
-        from service_deamon import start_with_daemon
+        from daemon import start_with_daemon
         _config_logging('daemon')
         start_with_daemon(start)
     else:

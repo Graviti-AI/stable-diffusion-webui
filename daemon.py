@@ -14,6 +14,10 @@ import modules.shared
 from modules.api.daemon_api import DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING, SECRET_HEADER_KEY
 from modules.shared import cmd_opts
 
+logger = logging.getLogger(__name__)
+
+_node_accepted_tires = os.getenv('ACCEPTED_TIRES', '').split(',')
+
 
 class ServiceNotAvailableException(HTTPException):
     def __init__(
@@ -73,7 +77,7 @@ def start_with_daemon(service_func):
             if current_service_status != DAEMON_STATUS_DOWN and available_memory < cmd_opts.ram_size_to_pending:
                 # convert timestamp to time str
                 queued_tasks_list = _fix_time_str_for_queued_tasks(queued_tasks)
-                logging.warning(
+                logger.warning(
                     f"insufficient ram: {available_memory:0.2f}/{cmd_opts.ram_size_to_pending:.02f}GB, current_task: '{current_task}', queued_tasks: {queued_tasks_list}"
                 )
                 current_service_status = DAEMON_STATUS_PENDING
@@ -82,7 +86,7 @@ def start_with_daemon(service_func):
             # check if service should restart at once.
             if available_memory < cmd_opts.ram_size_to_restart:
                 # service is OOM, force to restart it
-                logging.warning(
+                logger.warning(
                     f'service is out of memory: {available_memory:0.2f}/{cmd_opts.ram_size_to_restart:.2f}GB, restart it'
                 )
                 # renew service
@@ -110,14 +114,14 @@ def start_with_daemon(service_func):
                 if current_service_status in (
                         DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING
                 ) and _service_pending_from is None:
-                    logging.warning(
+                    logger.warning(
                         f"service status turned into {current_service_status}"
                     )
                     _service_pending_from = datetime.datetime.now()
 
             if _service_pending_from:
                 pending_duration = (datetime.datetime.now() - _service_pending_from).total_seconds()
-                logging.warning(f"service is {current_service_status} for {pending_duration:0.2f}s")
+                logger.warning(f"service is {current_service_status} for {pending_duration:0.2f}s")
             else:
                 pending_duration = 0
 
@@ -125,7 +129,7 @@ def start_with_daemon(service_func):
             if not current_task and pending_duration > cmd_opts.maximum_system_pending_time:
                 if current_service_status == DAEMON_STATUS_PENDING:
                     # restart BE if out-of-service
-                    logging.warning(
+                    logger.warning(
                         f'insufficient vram, restart service now, pending_duration: {pending_duration:0.2f}s, queued_tasks_len: {len(queued_tasks)}'
                     )
                     # renew service
@@ -136,32 +140,32 @@ def start_with_daemon(service_func):
                         starting_flag)
                 elif current_service_status == DAEMON_STATUS_DOWN:
                     # service is going to down, exit main process
-                    logging.warning(f'service is down, exit process now')
+                    logger.warning(f'service is down, exit process now')
                     service.terminate()
                     service.join()
                     break
                 else:
                     pass
         except ServiceNotAvailableException as e:
-            logging.warning(f'service is not responding')
+            logger.warning(f'service is not responding')
             session = requests.Session()
             if starting_flag:
                 # service process is not responding, kill it and relaunch
                 # it may happened at startup due to port inuse
-                logging.warning(f'service is not responding, kill at restart it')
+                logger.warning(f'service is not responding, kill at restart it')
                 service, server_port, starting_flag, _service_pending_from, previous_service_status = _renew_service(
                     service,
                     service_func,
                     server_port,
                     starting_flag)
         except Exception as e:
-            logging.error(f'error in heartbeat: {e.__str__()}')
+            logger.error(f'error in heartbeat: {e.__str__()}')
             time.sleep(3)
             session = requests.Session()
             redis_client = _get_redis_client()
         time.sleep(1)
 
-    logging.info(f'exit')
+    logger.info(f'exit')
 
 
 def _make_time_str(t):
@@ -188,7 +192,7 @@ def _fix_time_str_for_queued_tasks(queued_tasks):
 
 def _renew_service(service: Process | None, service_func, server_port, starting_flag):
     if service:
-        logging.info('release current service process')
+        logger.info('release current service process')
         service.terminate()
         service.join()
         service.close()
@@ -199,7 +203,7 @@ def _renew_service(service: Process | None, service_func, server_port, starting_
             global _service_restart_count
             _service_restart_count += 1
 
-    logging.info(f'create new service process on port {server_port}')
+    logger.info(f'create new service process on port {server_port}')
     service = Process(target=service_func, args=(server_port,))
     service.start()
     time.sleep(5)
@@ -229,6 +233,14 @@ def _heartbeat(redis_client,
     # no need to send heart beat event if host_ip or redis_address missed
     if not redis_client or not host_ip:
         return
+    if not _node_accepted_tires:
+        logger.error(f'invalid node accepted tires info: {_node_accepted_tires}')
+    else:
+        for accept in _node_accepted_tires:
+            if not accept:
+                logger.error(f'invalid node accepted tires info: {_node_accepted_tires}')
+                break
+
     data = {
         'status': status,
         'mem_usage': {
@@ -245,7 +257,10 @@ def _heartbeat(redis_client,
         'schema': 'http',
         'restarted': _service_restart_count,
         'started_at': system_started_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'finished_task_count': finished_task_count
+        'finished_task_count': finished_task_count,
+        'labels': {
+            'node/accepted-tires': _node_accepted_tires
+        }
     }
 
     instance_id = f'webui_be_{host_ip}:{port}'
@@ -272,7 +287,7 @@ def _get_service_status(session: requests.sessions.Session, port: int, try_count
                 data = resp.json()
                 return data.get('status', '')
         except Exception as e:
-            logging.warning(f"get_service_status from 'http://localhost:{port}' failed, try again: {e.__str__()}")
+            logger.warning(f"get_service_status from 'http://localhost:{port}' failed, try again: {e.__str__()}")
         finally:
             remaining_try_count -= 1
         time.sleep(try_count - remaining_try_count)

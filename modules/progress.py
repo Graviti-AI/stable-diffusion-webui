@@ -3,7 +3,7 @@ import io
 import logging
 import time
 
-import gradio as gr
+from queue import Queue
 from pydantic import BaseModel, Field
 
 from modules.shared import opts
@@ -16,6 +16,10 @@ current_task_step = ''
 pending_tasks = {}
 finished_tasks = []
 finished_task_count = 0
+
+# this queue is just used for telling user where he/she is in the queue
+# do not use it for any other purposes
+_queued_tasks = Queue()
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,9 @@ def start_task(id_task):
     current_task_step = ''
 
     pending_tasks.pop(id_task, None)
+    queued_task = _queued_tasks.get(block=True)
+    if queued_task != id_task:
+        logging.error(f'un-excepted task in start, want {id_task}, got {queued_task}')
 
 
 def set_current_task_step(step):
@@ -68,6 +75,7 @@ def add_task_to_queue(id_job, job_info=None):
         task_info.update(job_info)
 
     pending_tasks[id_job] = task_info
+    _queued_tasks.put(id_job, block=True)
 
 
 class ProgressRequest(BaseModel):
@@ -102,10 +110,18 @@ def progressapi(req: ProgressRequest):
         pending_tasks[req.id_task]['last_accessed_at'] = time.time()
 
     if not active:
-        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo="In queue..." if queued else "Waiting...")
+        count_ahead = 1
+        if queued:
+            for task in _queued_tasks.queue:
+                if task == req.id_task:
+                    break
+                count_ahead += 1
+        # 8s is a estimate of inference time consumption
+        eta = count_ahead * 8
+        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo=f"In queue({count_ahead} ahead)... ETA: {eta}s" if queued else f"Waiting...")
 
     if current_task_step == 'reload_model_weights':
-        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo='Reloading model weights...')
+        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo='Loading model weights... ETA: 3s')
 
     progress = 0
 

@@ -17,6 +17,7 @@ from modules.shared import cmd_opts
 logger = logging.getLogger(__name__)
 
 _node_accepted_tiers = os.getenv('ACCEPTED_TIERS', '').split(',')
+_node_name = os.getenv('NODE_NAME', '').split(',')
 
 
 class ServiceNotAvailableException(HTTPException):
@@ -43,6 +44,8 @@ def start_with_daemon(service_func):
     # server info
     host_ip = os.getenv('HOST_IP', default='')
     server_port = cmd_opts.port if cmd_opts.port else 7860
+    logger.info(
+        f'service started at 0.0.0.0:{server_port}, node_name: {_node_name},  node_accepted_tiers: {_node_accepted_tiers}')
 
     # redis for heart beat
     redis_client = _get_redis_client()

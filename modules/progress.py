@@ -37,9 +37,21 @@ def start_task(id_task):
     current_task_step = ''
 
     pending_tasks.pop(id_task, None)
-    queued_task = _queued_tasks.get(block=True)
-    if queued_task != id_task:
-        logging.error(f'un-excepted task in start, want {id_task}, got {queued_task}')
+
+    # some times, start_task may get a id_task with None or not in _queued_tasks
+    # in this case, do not pop task from _queued_tasks
+    id_task_in_queue = False
+    for task_id_in_queue in _queued_tasks.queue:
+        if task_id_in_queue == id_task:
+            id_task_in_queue = True
+            break
+    if id_task_in_queue:
+        try:
+            queued_task = _queued_tasks.get(block=True, timeout=1)
+            if queued_task != id_task:
+                logging.error(f'un-excepted task in start, want {id_task}, got {queued_task}')
+        except Exception as e:
+            logger.error(f'pop current task from queue failed, id_task: {id_task}, error: {e.__init__()}')
 
 
 def set_current_task_step(step):
@@ -75,7 +87,11 @@ def add_task_to_queue(id_job, job_info=None):
         task_info.update(job_info)
 
     pending_tasks[id_job] = task_info
-    _queued_tasks.put(id_job, block=True)
+    if id_job:
+        try:
+            _queued_tasks.put(id_job, block=True, timeout=1)
+        except Exception as e:
+            logger.error(f'put task to task_queue failed, task_id: {id_job}, error: {e.__str__()}')
 
 
 class ProgressRequest(BaseModel):

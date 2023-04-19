@@ -562,13 +562,13 @@ def create_ui():
 
             connect_reuse_seed(seed, reuse_seed, generation_info, dummy_component, is_subseed=False)
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)
-            
+
             # generateBtnType = gradio.JSON({type: 'text2Img'})
             selectors = [batch_count, width, height, batch_size, steps]
             for selector in selectors:
                 selector.change(
                     fn=None,
-                    inputs=[width, height, batch_count, batch_size, steps], 
+                    inputs=[width, height, batch_count, batch_size, steps],
                     outputs=[],
                     _js="updateGenerateBtn_txt2img"
                 )
@@ -872,7 +872,7 @@ def create_ui():
             for selector in selectors:
                 selector.change(
                     fn=None,
-                    inputs=[width, height, batch_count, batch_size, steps], 
+                    inputs=[width, height, batch_count, batch_size, steps],
                     outputs=[],
                     _js="updateGenerateBtn_img2img"
                 )
@@ -1451,17 +1451,9 @@ def create_ui():
 
         if info.refresh is not None:
             if is_quicksettings:
-                res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
+                res = comp(
+                    label=info.label, value=fun(), elem_id=elem_id, elem_classes="quicksettings", **(args or {}))
                 create_refresh_button(res, info.refresh, info.component_args, "refresh_" + key)
-                create_upload_button(
-                    'Upload Checkpoint',
-                    'upload_' + key,
-                    sd_models.model_path,
-                    button_style="flex-grow: 1 !important; align-self: flex-end;")
-                create_browse_model_button(
-                    'Browse Models',
-                    'browse_' + key,
-                    button_style="width: 200px !important; align-self: flex-end;")
             else:
                 with FormRow():
                     res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
@@ -1661,11 +1653,15 @@ def create_ui():
                             "/></a><div class='user_info-name'><span></span><a "
                             "href='/api/logout' target='_self'>Log out</a></div></div></div>",
                     show_label=False)
-            with gr.Column(scale=6, min_width=640):
+            with gr.Column(scale=6, min_width=850):
                 with gr.Row(elem_id="quicksettings"):
                     for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
                         component = create_setting_component(k, is_quicksettings=True)
                         component_dict[k] = component
+                    create_browse_model_button(
+                        'Browse Models',
+                        'browse_' + k,
+                        button_style="width: 200px !important; align-self: flex-end;")
 
         parameters_copypaste.connect_paste_params_buttons()
 
@@ -1889,6 +1885,8 @@ def javascript_html():
 
 def css_html():
     head = ""
+
+    head += '<link href="https://releases.transloadit.com/uppy/v3.7.0/uppy.min.css" rel="stylesheet" />'
 
     def stylesheet(fn):
         return f'<link rel="stylesheet" property="stylesheet" href="{webpath(fn)}">'

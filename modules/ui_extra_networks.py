@@ -81,6 +81,8 @@ class ExtraNetworksPage:
         self.card_page = shared.html("extra-networks-card.html")
         self.allow_negative_prompt = False
         self.metadata = {}
+        self.max_model_size_mb = None  # If `None`, there is no limitation
+        self.min_model_size_mb = None  # If `None`, there is no limitation
 
     def refresh(self, request: gr.Request):
         pass
@@ -107,7 +109,7 @@ class ExtraNetworksPage:
 
         return ""
 
-    def create_html(self, tabname, upload_button_id, return_callbacks=False):
+    def create_html(self, tabname, upload_button_id, button_id=None, return_callbacks=False):
         view = shared.opts.extra_networks_default_view
         items_html = ''
 
@@ -150,13 +152,33 @@ class ExtraNetworksPage:
         # Add a upload model button
         plus_sign_elem_id=f"{tabname}_{self_name_id}-plus-sign"
         loading_sign_elem_id=f"{tabname}_{self_name_id}-loading-sign"
+        if not button_id:
+            button_id = f"{upload_button_id}-card"
+        dashboard_title_hint = ""
+        model_size = ""
+        if self.min_model_size_mb:
+            model_size += f" min_model_size_mb='{self.min_model_size_mb}'"
+            dashboard_title_hint += f" ( > {self.min_model_size_mb} MB"
+        if self.max_model_size_mb:
+            model_size += f" max_model_size_mb='{self.max_model_size_mb}'"
+            if dashboard_title_hint:
+                dashboard_title_hint += f" and < {self.max_model_size_mb} MB"
+            else:
+                dashboard_title_hint += f" ( < {self.max_model_size_mb} MB"
+        if dashboard_title_hint:
+            dashboard_title_hint += ")"
         height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
         width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
         items_html += shared.html("extra-networks-upload-button.html").format(
+            button_id=button_id,
             style=f"{height}{width}",
-            card_clicked=f'document.querySelector("#{upload_button_id}").click()',
+            model_type=f'{self_name_id}',
+            card_clicked=f'if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}',
+            dashboard_title=f'{self.title} files only.{dashboard_title_hint}',
+            model_size=model_size,
             plus_sign_elem_id=plus_sign_elem_id,
-            loading_sign_elem_id=loading_sign_elem_id
+            loading_sign_elem_id=loading_sign_elem_id,
+            name=f'Upload {self.title} Models'
         )
 
         res = f"""
@@ -297,8 +319,9 @@ def create_ui(container, button, tabname):
 
                 self_name_id = page.name.replace(" ", "_")
                 upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
+                button_id = f"{upload_button_id}-card"
                 page_html_str, start_upload_callback, finish_upload_callback = page.create_html(
-                    ui.tabname, upload_button_id, return_callbacks=True)
+                    ui.tabname, upload_button_id, button_id, return_callbacks=True)
                 page_elem = gr.HTML(page_html_str)
                 # TODO: Need to handle the case where there are multiple sub dirs
                 upload_destination = page.allowed_directories_for_previews()[0] \
@@ -312,6 +335,14 @@ def create_ui(container, button, tabname):
                         start_uploading_call_back=start_upload_callback,
                         finish_uploading_call_back=finish_upload_callback
                     )
+                    element_id_text = gr.Textbox(value=button_id, visible=False, interactive=False)
+                page_elem.change(None, element_id_text, None, _js="""
+                    (card_button_id) => {
+                        if (typeof register_button != "undefined") {
+                            var button = gradioApp().querySelector(`#${card_button_id}`);
+                            register_button(button);
+                        }
+                }""")
                 ui.pages.append(page_elem)
 
     filter = gr.Textbox('', show_label=False, elem_id=tabname+"_extra_search", placeholder="Search...", visible=False)
@@ -334,7 +365,8 @@ def create_ui(container, button, tabname):
             pg.refresh(request)
             self_name_id = pg.name.replace(" ", "_")
             upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
-            res.append(pg.create_html(ui.tabname, upload_button_id))
+            button_id = f"{upload_button_id}-card"
+            res.append(pg.create_html(ui.tabname, upload_button_id, button_id))
 
         return res
 
@@ -357,7 +389,8 @@ def setup_ui(ui, gallery):
             print("There is no image in gallery to save as a preview.")
             return [page.create_html(
                 ui.tabname,
-                f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button") for page in ui.stored_extra_pages]
+                f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button",
+                ) for page in ui.stored_extra_pages]
 
         index = int(index)
         index = 0 if index < 0 else index
@@ -381,7 +414,8 @@ def setup_ui(ui, gallery):
 
         return [page.create_html(
             ui.tabname,
-            f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button") for page in ui.stored_extra_pages]
+            f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button",
+        ) for page in ui.stored_extra_pages]
 
     ui.button_save_preview.click(
         fn=save_preview,

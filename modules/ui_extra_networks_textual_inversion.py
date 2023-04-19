@@ -10,6 +10,7 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Textual Inversion')
         self.allow_negative_prompt = True
+        self.max_model_size_mb = 5
 
     def refresh(self, request: gr.Request):
         sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(force_reload=True)

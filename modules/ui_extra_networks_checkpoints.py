@@ -10,6 +10,7 @@ from modules import shared, ui_extra_networks, sd_models
 class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Checkpoints')
+        self.min_model_size_mb = 1e3
 
     def refresh(self, request: gr.Request):
         shared.refresh_checkpoints(request.request)
@@ -30,4 +31,3 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
 
     def allowed_directories_for_previews(self):
         return [v for v in [shared.cmd_opts.ckpt_dir, sd_models.model_path] if v is not None]
-

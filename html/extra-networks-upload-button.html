@@ -1,5 +1,8 @@
-<div class='card' style='white-space: nowrap; text-align: center; background-image: none; background-color:rgb(171 176 177 / 40%); {style}' onclick='{card_clicked}'>
+<di id='{button_id}' class='card model-upload-button' style='white-space: nowrap; text-align: center; background-image:
+     none; background-color:rgb(171 176 177 / 40%); {style}' onclick='{card_clicked}' model_type='{model_type}'
+    uppy_dashboard_title='{dashboard_title}' {model_size}>
   <span class="helper" style="display: inline-block; height: 100%; vertical-align: middle;"></span>
   <img id='{plus_sign_elem_id}' style='margin: auto; vertical-align: middle; display:inline-block' src='/components/icons/plus.png'>
   <img id='{loading_sign_elem_id}' style='margin: auto; vertical-align: middle; display: none' src='/components/icons/loading.gif'>
+  <div class='actions' style='color:white;'>{name}</div>
 </div>

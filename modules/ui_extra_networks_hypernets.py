@@ -8,6 +8,8 @@ from modules import shared, ui_extra_networks
 class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Hypernetworks')
+        self.min_model_size_mb = 10
+        self.max_model_size_mb = 1e3
 
     def refresh(self, request: gr.Request):
         shared.reload_hypernetworks()
@@ -28,4 +30,3 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
 
     def allowed_directories_for_previews(self):
         return [shared.cmd_opts.hypernetwork_dir]
-

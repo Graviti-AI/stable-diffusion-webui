@@ -1,7 +1,7 @@
 import { setup_uppy_for_upload_button } from "/public/js/upply.mjs"
 
 if (typeof setup_uppy_for_upload_button != "undefined") {
-    const tus_endpoint = '/files/';
+    const tus_endpoint = '/files';
     const model_verification_endpoint= '/verify-model-existence';
     const uppy_object_map = new Map();
 

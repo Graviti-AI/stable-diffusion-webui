@@ -21,7 +21,7 @@ class MonitorException(Exception):
 
 
 def _calculate_image_unit(width, height):
-    return int((int((width - 1) / 512) + 1) * (int((height - 1) / 512) + 1))
+    return max(round((width * height) / (768 * 768)), 1)
 
 
 def _calculate_step_unit(steps):
@@ -235,4 +235,5 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
 
     # log the response if request failed
     if resp.status_code < 200 or resp.status_code > 299:
-        logger.error(f'update monitor log failed, status: monitor_log_id: {monitor_log_id}, {resp.status_code}, message: {resp.text[:1000]}')
+        logger.error(
+            f'update monitor log failed, status: monitor_log_id: {monitor_log_id}, {resp.status_code}, message: {resp.text[:1000]}')

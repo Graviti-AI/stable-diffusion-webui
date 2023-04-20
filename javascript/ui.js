@@ -202,20 +202,20 @@ function modelmerger(){
     return res
 }
 
-function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {
-    const result = ( Math.floor((steps-1) / 50) + 1) * batch_count * batch_size * (Math.floor((height-1) / 512) + 1) * (Math.floor((width-1) / 512) + 1)
-    const buttonId = "txt2img_generate";
+function calcuCreditTimes(width, height, batch_count, batch_size, steps, buttonId) {
+    let calcuRatio = Math.round(width * height / (768 * 768));
+    if (calcuRatio < 1) calcuRatio = 1;
+    let result = ( Math.floor((steps-1) / 50) + 1) * batch_count * batch_size * calcuRatio;
     const buttonEle = gradioApp().querySelector(`#${buttonId}`);
     buttonEle.innerHTML = `Generate <span>(Use ${result} ${result === 1 ? 'credit)': 'credits)'}</span> `;
-     
+}
+
+function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {
+    calcuCreditTimes(width, height, batch_count, batch_size, steps, 'txt2img_generate');
 }
 
 function updateGenerateBtn_img2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {
-    const result = ( Math.floor((steps-1) / 50) + 1) * batch_count * batch_size * (Math.floor((height-1) / 512) + 1) * (Math.floor((width-1) / 512) + 1)
-    const buttonId = "img2img_generate";
-    const buttonEle = gradioApp().querySelector(`#${buttonId}`);
-    buttonEle.innerHTML = `Generate <span> (Use ${result} ${result === 1 ? 'credit)': 'credits)'}</span>`;
-     
+    calcuCreditTimes(width, height, batch_count, batch_size, steps, 'img2img_generate');
 }
 
 

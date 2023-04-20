@@ -21,7 +21,7 @@ logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not
 from modules import paths, timer, import_hook, errors
 from modules.paths_internal import data_path
 
-startup_timer = timer.Timer()
+startup_timer = timer.Timer('main', 'initialize')
 
 import torch
 import pytorch_lightning # pytorch_lightning should be imported after torch, but it re-enables warnings on import so import once to disable them

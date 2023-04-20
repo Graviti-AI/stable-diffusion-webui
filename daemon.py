@@ -263,7 +263,8 @@ def _heartbeat(redis_client,
         'started_at': system_started_at.strftime('%Y-%m-%d %H:%M:%S'),
         'finished_task_count': finished_task_count,
         'labels': {
-            'node/accepted-tiers': _node_accepted_tiers
+            'node/accepted-tiers': _node_accepted_tiers,
+            'node/instance-name': _node_name,
         }
     }
 

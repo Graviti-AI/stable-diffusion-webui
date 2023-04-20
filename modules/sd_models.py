@@ -408,7 +408,7 @@ def load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken_
 
     do_inpainting_hijack()
 
-    timer = Timer()
+    timer = Timer('sd_models.load_model', checkpoint_info.title)
 
     if already_loaded_state_dict is not None:
         state_dict = already_loaded_state_dict
@@ -492,7 +492,7 @@ def reload_model_weights(sd_model=None, info=None):
 
         sd_hijack.model_hijack.undo_hijack(sd_model)
 
-    timer = Timer()
+    timer = Timer('sd_models.reload_model_weights')
 
     state_dict = get_checkpoint_state_dict(checkpoint_info, timer)
 
@@ -527,9 +527,10 @@ def reload_model_weights(sd_model=None, info=None):
 
     return sd_model
 
+
 def unload_model_weights(sd_model=None, info=None):
     from modules import lowvram, devices, sd_hijack
-    timer = Timer()
+    timer = Timer('sd_model.unload_model_weights')
 
     if shared.sd_model:
 

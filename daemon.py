@@ -113,6 +113,7 @@ def start_with_daemon(service_func):
 
             # calculate service pending duration
             if previous_service_status != current_service_status:
+                logger.info(f'service status updated: {previous_service_status} -> {current_service_status}')
                 previous_service_status = current_service_status
                 if current_service_status in (
                         DAEMON_STATUS_DOWN, DAEMON_STATUS_PENDING

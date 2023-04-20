@@ -12,6 +12,7 @@ import gradio.routes
 import modules.system_monitor
 from modules.system_monitor import MonitorException
 from modules import shared, progress
+from modules import sd_vae
 
 queue_lock = threading.Lock()
 
@@ -44,7 +45,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         shared.state.begin()
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')
-            _check_sd_model(model_title=args[-1])
+            _check_sd_model(model_title=args[-2], vae_title=args[-1])
         progress.set_current_task_step('inference')
         res = func(request, *args, **kwargs)
 
@@ -171,10 +172,15 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
     return f
 
 
-def _check_sd_model(model_title):
+def _check_sd_model(model_title, vae_title):
     if not shared.sd_model or shared.sd_model.sd_checkpoint_info.title != model_title:
         import modules.sd_models
         # refresh model, unload it from memory to prevent OOM
         modules.sd_models.unload_model_weights()
         checkpoint = modules.sd_models.get_closet_checkpoint_match(model_title)
         modules.sd_models.reload_model_weights(info=checkpoint)
+
+    if shared.sd_model:
+        vae_file, vae_source = sd_vae.resolve_vae(shared.sd_model.sd_checkpoint_info.filename, vae_title)
+        if sd_vae.loaded_vae_file != vae_file:
+            sd_vae.load_vae(shared.sd_model, vae_file, vae_source)

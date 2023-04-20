@@ -294,12 +294,17 @@ def create_toprow(is_img2img):
             key = 'sd_model_checkpoint'
             return opts.data[key] if key in opts.data else opts.data_labels[key].default
 
+        def get_sd_vae_title_from_setting():
+            key = 'sd_vae'
+            return opts.data[key] if key in opts.data else opts.data_labels[key].default
+
         with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
             with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box"):
                 interrupt = gr.Button('Interrupt', elem_id=f"{id_part}_interrupt", elem_classes="generate-box-interrupt")
                 skip = gr.Button('Skip', elem_id=f"{id_part}_skip", elem_classes="generate-box-skip")
                 submit = gr.Button('Generate', elem_id=f"{id_part}_generate", variant='primary')
                 model_title = gr.Textbox(elem_id=f"{id_part}_model_title", value=get_sd_model_title_from_setting(), visible=False)
+                vae_model_title = gr.Textbox(elem_id=f"{id_part}_vae_model_title", value=get_sd_vae_title_from_setting(), visible=False)
 
                 skip.click(
                     fn=lambda: shared.state.skip(),
@@ -339,7 +344,7 @@ def create_toprow(is_img2img):
                 prompt_styles = gr.Dropdown(label="Styles", elem_id=f"{id_part}_styles", choices=[], value=[], multiselect=True)
                 create_refresh_button(prompt_styles, lambda _: _, current_prompt_styles, f"refresh_{id_part}_styles")
 
-    return prompt, prompt_styles, negative_prompt, submit, button_interrogate, button_deepbooru, prompt_style_apply, save_style, paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, model_title
+    return prompt, prompt_styles, negative_prompt, submit, button_interrogate, button_deepbooru, prompt_style_apply, save_style, paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, model_title, vae_model_title
 
 
 def setup_progressbar(*args, **kwargs):
@@ -472,7 +477,7 @@ def create_ui():
     modules.scripts.scripts_txt2img.initialize_scripts(is_img2img=False)
 
     with gr.Blocks(analytics_enabled=False) as txt2img_interface:
-        txt2img_prompt, txt2img_prompt_styles, txt2img_negative_prompt, submit, _, _, txt2img_prompt_style_apply, txt2img_save_style, txt2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, txt2img_model_title = create_toprow(is_img2img=False)
+        txt2img_prompt, txt2img_prompt_styles, txt2img_negative_prompt, submit, _, _, txt2img_prompt_style_apply, txt2img_save_style, txt2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, txt2img_model_title, txt2img_vae_title = create_toprow(is_img2img=False)
         need_upgrade = gr.Checkbox(
             value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
 
@@ -601,7 +606,7 @@ def create_ui():
                     hr_resize_x,
                     hr_resize_y,
                     override_settings,
-                ] + custom_inputs + [txt2img_model_title, ],
+                ] + custom_inputs + [txt2img_model_title, txt2img_vae_title],
 
                 outputs=[
                     txt2img_gallery,
@@ -694,7 +699,7 @@ def create_ui():
     modules.scripts.scripts_img2img.initialize_scripts(is_img2img=True)
 
     with gr.Blocks(analytics_enabled=False) as img2img_interface:
-        img2img_prompt, img2img_prompt_styles, img2img_negative_prompt, submit, img2img_interrogate, img2img_deepbooru, img2img_prompt_style_apply, img2img_save_style, img2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, img2img_model_title = create_toprow(is_img2img=True)
+        img2img_prompt, img2img_prompt_styles, img2img_negative_prompt, submit, img2img_interrogate, img2img_deepbooru, img2img_prompt_style_apply, img2img_save_style, img2img_paste, extra_networks_button, token_counter, token_button, negative_token_counter, negative_token_button, img2img_model_title, img2img_vae_title = create_toprow(is_img2img=True)
         img2img_need_upgrade = gr.Checkbox(
             value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
 
@@ -929,7 +934,7 @@ def create_ui():
                     img2img_batch_output_dir,
                     img2img_batch_inpaint_mask_dir,
                     override_settings,
-                ] + custom_inputs + [img2img_model_title, ],
+                ] + custom_inputs + [img2img_model_title, img2img_vae_title],
                 outputs=[
                     img2img_gallery,
                     generation_info,
@@ -1691,6 +1696,8 @@ def create_ui():
             info = opts.data_labels[k]
             if k == 'sd_model_checkpoint':
                 outputs = [component, text_settings, txt2img_model_title, img2img_model_title]
+            elif k == 'sd_vae':
+                outputs = [component, text_settings, txt2img_vae_title, img2img_vae_title]
             else:
                 outputs = [component, text_settings, dummy_component, dummy_component]
 

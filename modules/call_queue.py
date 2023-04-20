@@ -30,17 +30,24 @@ def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
 
 
 def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *args, **kwargs):
-    progress.start_task(id_task)
-    shared.state.begin()
-    # log all gpu calls with monitor
-    monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
-
+    monitor_log_id = None
+    status = ''
+    log_message = ''
+    res = list()
     try:
+        # log all gpu calls with monitor
+        monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
+
+        # start job process
+        progress.start_task(id_task)
+        shared.state.begin()
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')
             _check_sd_model(model_title=args[-1])
         progress.set_current_task_step('inference')
         res = func(request, *args, **kwargs)
+
+        # all done, clear status and
         status = 'finished'
         log_message = 'done'
     except Exception as e:
@@ -50,10 +57,11 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     finally:
         progress.finish_task(id_task)
         shared.state.end()
-        try:
-            modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
-        except Exception as e:
-            logging.warning(f'send task finished event to monitor failed: {e.__str__()}')
+        if monitor_log_id:
+            try:
+                modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
+            except Exception as e:
+                logging.warning(f'send task finished event to monitor failed: {e.__str__()}')
     return res
 
 
@@ -76,7 +84,6 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             res = submit_to_gpu_worker(
                 functools.partial(wrap_gpu_call, request, func, func_name, id_task), timeout=60 * 10)(*args, **kwargs)
         except MonitorException as e:
-            shared.state.end()
             extra_outputs_array = extra_outputs
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']

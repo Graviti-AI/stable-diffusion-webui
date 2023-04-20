@@ -144,7 +144,7 @@ def _serialize_object(obj):
 
 def _extract_task_id(*args):
     if len(args) > 0 and type(args[0]) == str and args[0][0:5] == "task(" and args[0][-1] == ")":
-        return args[0][6:-1]
+        return args[0][5:-1]
     else:
         return uuid.uuid4().hex
 

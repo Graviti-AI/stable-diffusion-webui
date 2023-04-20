@@ -36,7 +36,8 @@ def start_task(id_task):
     current_task = id_task
     current_task_step = ''
 
-    pending_tasks.pop(id_task, None)
+    task_info = pending_tasks.pop(id_task, {})
+    task_info['started_at'] = time.time()
 
     # some times, start_task may get a id_task with None or not in _queued_tasks
     # in this case, do not pop task from _queued_tasks
@@ -52,6 +53,7 @@ def start_task(id_task):
                 logging.error(f'un-excepted task in start, want {id_task}, got {queued_task}')
         except Exception as e:
             logger.error(f'pop current task from queue failed, id_task: {id_task}, error: {e.__init__()}')
+    return task_info
 
 
 def set_current_task_step(step):
@@ -137,7 +139,7 @@ def progressapi(req: ProgressRequest):
         return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo=f"In queue({count_ahead} ahead)... ETA: {eta}s" if queued else f"Waiting...")
 
     if current_task_step == 'reload_model_weights':
-        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo='Loading model weights... ETA: 3s')
+        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo='Loading model weights... ETA: 8s')
 
     progress = 0
 

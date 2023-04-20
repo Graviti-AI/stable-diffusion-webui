@@ -35,11 +35,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     log_message = ''
     res = list()
     try:
-        # log all gpu calls with monitor
-        monitor_log_id = modules.system_monitor.on_task(request, func, *args, **kwargs)
-
         # start job process
-        progress.start_task(id_task)
+        task_info = progress.start_task(id_task)
+
+        # log all gpu calls with monitor
+        monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
+
         shared.state.begin()
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')

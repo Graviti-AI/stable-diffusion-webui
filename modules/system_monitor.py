@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 import logging
 import json
@@ -149,7 +150,7 @@ def _extract_task_id(*args):
         return uuid.uuid4().hex
 
 
-def on_task(request: gr.Request, func, *args, **kwargs):
+def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
@@ -191,7 +192,8 @@ def on_task(request: gr.Request, func, *args, **kwargs):
         'args': func_args,
         'extra_args': _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else [],
         'consume': _calculate_consume_unit(api_name, func_args, *args, **kwargs),
-        'node': os.getenv('HOST_IP', default='')
+        'node': os.getenv('HOST_IP', default=''),
+        'added_at': task_info.get('added_at', time.time()),
     }
     resp = requests.post(monitor_addr,
                          headers={

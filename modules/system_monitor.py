@@ -219,7 +219,7 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
         )
 
 
-def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str):
+def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str, time_consumption: dict):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
@@ -232,7 +232,8 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
                          },
                          json={
                              'status': status,
-                             'message': message
+                             'message': message,
+                             'time_consumption': time_consumption
                          })
 
     # log the response if request failed

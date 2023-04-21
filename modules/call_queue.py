@@ -13,6 +13,7 @@ import modules.system_monitor
 from modules.system_monitor import MonitorException
 from modules import shared, progress
 from modules import sd_vae
+from modules.timer import Timer
 
 queue_lock = threading.Lock()
 
@@ -35,19 +36,27 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     status = ''
     log_message = ''
     res = list()
+    time_consumption = {}
     try:
         # start job process
         task_info = progress.start_task(id_task)
 
         # log all gpu calls with monitor
         monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
+        time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
 
+        timer = Timer('gpu_call')
         shared.state.begin()
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')
             _check_sd_model(model_title=args[-2], vae_title=args[-1])
         progress.set_current_task_step('inference')
+        timer.record('load_models')
         res = func(request, *args, **kwargs)
+        timer.record('inference')
+
+        time_consumption.update(timer.records)
+        time_consumption['total'] = time.time() - task_info.get('added_at', time.time())
 
         # all done, clear status and
         status = 'finished'
@@ -61,7 +70,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         shared.state.end()
         if monitor_log_id:
             try:
-                modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message)
+                modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message, time_consumption)
             except Exception as e:
                 logging.warning(f'send task finished event to monitor failed: {e.__str__()}')
     return res

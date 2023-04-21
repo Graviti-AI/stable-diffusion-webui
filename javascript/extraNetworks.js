@@ -177,3 +177,43 @@ function extraNetworksRequestMetadata(event, extraPage, cardName){
 
     event.stopPropagation()
 }
+
+async function updatePrivatePreviews(tabname, model_type) {
+    var cards = gradioApp().querySelectorAll(`#${tabname}_${model_type}_cards>div`);
+    const response = await fetch(`/sd_extra_networks/private_previews?model_type=${model_type}`, {
+        method: "GET", cache: "no-cache"});
+    const private_preview_list = await response.json();
+    cards.forEach((card) => {
+        const filename = card.getAttribute("filename");
+        if (filename) {
+            private_preview_list.forEach((preview_info) => {
+                if (preview_info.filename_no_extension == filename) {
+                    card.style.backgroundImage = preview_info.css_url;
+                }
+            });
+        }
+    });
+}
+
+function updateTabPrivatePreviews(tabname) {
+    const tab_items = gradioApp().querySelectorAll(`#${tabname}_extra_tabs>.tabitem>div>.block.gradio-html`);
+    tab_items.forEach((tab_div) => {
+        const model_type = tab_div.id.substr(tabname.length + 1);
+        updatePrivatePreviews(tabname, model_type);
+    });
+}
+
+function updateAllPrivatePreviewsAndMonitorChanges() {
+    updateTabPrivatePreviews('txt2img');
+    updateTabPrivatePreviews('img2img');
+    var observeTxt2imgModelCardChanges = new MutationObserver((mutationList, observer) => {
+        updateTabPrivatePreviews('txt2img');
+    });
+    observeTxt2imgModelCardChanges.observe( gradioApp().querySelector("#txt2img_extra_tabs"), { childList:true, subtree:true });
+    var observeImg2imgModelCardChanges = new MutationObserver((mutationList, observer) => {
+        updateTabPrivatePreviews('img2img');
+    });
+    observeImg2imgModelCardChanges.observe( gradioApp().querySelector("#img2img_extra_tabs"), { childList:true, subtree:true });
+}
+
+onUiLoaded(updateAllPrivatePreviewsAndMonitorChanges);

@@ -69,9 +69,32 @@ def get_metadata(page: str = "", item: str = ""):
     return JSONResponse({"metadata": metadata})
 
 
+def get_private_previews(request: Request, model_type: str):
+    from starlette.responses import JSONResponse
+    paths = Paths(request)
+    private_preview_search_dir = os.path.join(paths.model_previews_dir(), model_type)
+    private_preview_list = []
+    if os.path.exists(private_preview_search_dir):
+        for filename in os.listdir(private_preview_search_dir):
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in (".png", ".jpg", ".webp"):
+                file_mtime = os.path.getmtime(os.path.join(private_preview_search_dir, filename))
+                preview_info = {
+                    "filename_no_extension": os.path.splitext(filename)[0],
+                    "filename": filename,
+                    "model_type": model_type,
+                    "mtime": file_mtime,
+                    "css_url":
+                        f'url("/sd_extra_networks/thumb?filename={filename}&model_type={model_type}&mtime={file_mtime}")'
+                }
+                private_preview_list.append(preview_info)
+    return JSONResponse(private_preview_list)
+
+
 def add_pages_to_demo(app):
     app.add_api_route("/sd_extra_networks/thumb", fetch_file, methods=["GET"])
     app.add_api_route("/sd_extra_networks/metadata", get_metadata, methods=["GET"])
+    app.add_api_route("/sd_extra_networks/private_previews", get_private_previews, methods=["GET"])
 
 
 class ExtraNetworksPage:
@@ -97,7 +120,7 @@ class ExtraNetworksPage:
             preview_search_dir[model_type].append(dirpath)
         return "/sd_extra_networks/thumb?filename=" + \
             urllib.parse.quote(os.path.basename(filename_unix)) + \
-            "&model_type=" + model_type + "&timestamp=" + str(time.time())
+            "&model_type=" + model_type + "&mtime=" + str(os.path.getmtime(filename))
 
     def search_terms_from_path(self, filename, possible_directories=None):
         abspath = os.path.abspath(filename)
@@ -232,6 +255,7 @@ class ExtraNetworksPage:
 
         args = {
             "style": f"'{height}{width}{background_image}'",
+            "filename": item["name"],
             "prompt": item.get("prompt", None),
             "tabname": json.dumps(tabname),
             "local_preview": json.dumps(preview_filename),
@@ -260,8 +284,7 @@ class ExtraNetworksPage:
             if os.path.isfile(file):
                 return self.link_preview(file)
 
-        # TODO: If generated image is not png, this will likely fail
-        return self.link_preview(os.path.basename(path) + ".png")
+        return None
 
     def find_description(self, path):
         """
@@ -322,7 +345,7 @@ def create_ui(container, button, tabname):
                 button_id = f"{upload_button_id}-card"
                 page_html_str, start_upload_callback, finish_upload_callback = page.create_html(
                     ui.tabname, upload_button_id, button_id, return_callbacks=True)
-                page_elem = gr.HTML(page_html_str)
+                page_elem = gr.HTML(page_html_str, elem_id=f"{ui.tabname}-{self_name_id}")
                 # TODO: Need to handle the case where there are multiple sub dirs
                 upload_destination = page.allowed_directories_for_previews()[0] \
                     if page.allowed_directories_for_previews() else "./"

@@ -335,14 +335,6 @@ def create_ui(container, button, tabname):
                         start_uploading_call_back=start_upload_callback,
                         finish_uploading_call_back=finish_upload_callback
                     )
-                    element_id_text = gr.Textbox(value=button_id, visible=False, interactive=False)
-                page_elem.change(None, element_id_text, None, _js="""
-                    (card_button_id) => {
-                        if (typeof register_button != "undefined") {
-                            var button = gradioApp().querySelector(`#${card_button_id}`);
-                            register_button(button);
-                        }
-                }""")
                 ui.pages.append(page_elem)
 
     filter = gr.Textbox('', show_label=False, elem_id=tabname+"_extra_search", placeholder="Search...", visible=False)

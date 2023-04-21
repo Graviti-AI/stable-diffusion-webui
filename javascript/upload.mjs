@@ -11,13 +11,10 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
             var uppy = uppy_object_map.get(elem_node.id);
             uppy.close();
             uppy = null;
-            uppy_object_map.delete(elem_node.id)
+            uppy_object_map.delete(elem_node.id);
 
-            setTimeout(() =>{
-                const uppy = setup_uppy_for_upload_button(elem_node, tus_endpoint, model_verification_endpoint);
-
-                uppy_object_map.set(elem_node.id, uppy);
-            }, 200);
+            uppy = setup_uppy_for_upload_button(elem_node, tus_endpoint, model_verification_endpoint);
+            uppy_object_map.set(elem_node.id, uppy);
 
         } else {
             const uppy = setup_uppy_for_upload_button(elem_node, tus_endpoint, model_verification_endpoint);
@@ -32,5 +29,15 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
     onUiLoaded(() => {
         var buttons = gradioApp().querySelectorAll('.model-upload-button');
         buttons.forEach(register_button);
+        var observeUploadButtonChange = new MutationObserver((mutationList, observer) => {
+            mutationList.forEach((item) => {
+                var button = item.target.querySelector(".card.model-upload-button");
+                if (button){
+                    register_button(button);
+                }
+            });
+        });
+        observeUploadButtonChange.observe( gradioApp().querySelector('#txt2img_extra_tabs'), { childList:true, subtree:true });
+        observeUploadButtonChange.observe( gradioApp().querySelector('#img2img_extra_tabs'), { childList:true, subtree:true });
     });
 }

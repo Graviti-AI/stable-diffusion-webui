@@ -67,7 +67,7 @@ def start_with_daemon(service_func):
     while True:
         try:
             # get service status
-            current_service_status = _get_service_status(session, server_port, 6 if starting_flag else 3)
+            current_service_status = _get_service_status(session, server_port, 15 if starting_flag else 3)
             starting_flag = False
             memory_usage = psutil.virtual_memory()
             pending_task_info = _get_service_pending_task_info(session, server_port)

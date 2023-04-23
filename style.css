@@ -511,14 +511,6 @@ div.dimensions-tools{
 
 /* fullscreen popup (ie in Lora's (i) button) */
 
-.popup-metadata{
-    color: black;
-    background: white;
-    display: inline-block;
-    padding: 1em;
-    white-space: pre-wrap;
-}
-
 .global-popup{
     display: flex;
     position: fixed;
@@ -769,7 +761,7 @@ footer {
     content: "🛈";
 }
 .extra-network-cards .card .metadata-button, .extra-network-thumbs .card .metadata-button{
-    display: none;
+    display: inline-block;
     position: absolute;
     right: 0;
     color: white;
@@ -947,4 +939,115 @@ footer {
 	display: flex;
 	flex-direction: row-reverse;
 	align-items: flex-end;
+}
+
+.popup-metadata {
+  max-width: 780px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji;
+  font-size: 14px;
+  background-color: #1A1B1E;
+  color: #C1C2C5;
+  margin: auto;
+}
+
+.model-metadata-container {
+  max-width: 750px;
+  padding: 15px;
+}
+
+.model-metadata-table {
+  border: 1px solid #373A40;
+  border-collapse: collapse;
+  line-height: 1.8;
+}
+
+.model-metadata-table-row {
+  border: 1px solid #373A40;
+}
+
+.model-metadata-table-key {
+  border: 1px solid #373A40;
+  color: #C1C2C5;
+  background-color: #25262b;
+  width: 30%;
+  padding: 7px 10px;
+}
+
+.model-metadata-table-value {
+  border: 1px solid #373A40;
+  padding: 7px 10px;
+}
+
+.model-metadata-trigger-word {
+  font-size: 11px;
+  min-height: 20px;
+  line-height: 18px;
+  text-decoration: none;
+  padding: 0 10px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.25px;
+  cursor: inherit;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  background: rgba(25, 113, 194, 0.2);
+  color: #a5d8ff;
+  border: 1px solid transparent;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
+.model-metadata-trigger-word:hover {
+  background: rgba(25, 113, 194, 0.5);
+  color: #8fc9f6;
+}
+
+.model-metadata-trigger-wrods {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.model-metadata-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.model-metadata-tag {
+  font-size: 11px;
+  min-height: 20px;
+  line-height: 18px;
+  text-decoration: none;
+  padding: 0 10px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.25px;
+  cursor: inherit;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  background: rgba(58, 194, 25, 0.2);
+  color: #a5ffa6;
+  border: 1px solid transparent;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
+.model-metadata-metadata-table-key {
+  text-align: right;
+  padding-right: 7px;
+  width: 20%;
 }

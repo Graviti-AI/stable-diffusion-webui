@@ -17,6 +17,7 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
     def list_items(self):
         for name, path in shared.hypernetworks.items():
             path, ext = os.path.splitext(path)
+            metadata_path = "".join([path, ".meta"])
 
             yield {
                 "name": name,
@@ -26,6 +27,7 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
                 "search_term": self.search_terms_from_path(path),
                 "prompt": json.dumps(f"<hypernet:{name}:") + " + opts.extra_networks_default_multiplier + " + json.dumps(">"),
                 "local_preview": f"{path}.preview.{shared.opts.samples_format}",
+                "metadata": ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path),
             }
 
     def allowed_directories_for_previews(self):

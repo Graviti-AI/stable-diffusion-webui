@@ -19,6 +19,7 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
         checkpoint: sd_models.CheckpointInfo
         for name, checkpoint in sd_models.checkpoints_list.items():
             path, ext = os.path.splitext(checkpoint.filename)
+            metadata_path = "".join([path, ".meta"])
             yield {
                 "name": checkpoint.name_for_extra,
                 "filename": path,
@@ -27,6 +28,7 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
                 "search_term": self.search_terms_from_path(checkpoint.filename) + " " + (checkpoint.sha256 or ""),
                 "onclick": '"' + html.escape(f"""return selectCheckpoint({json.dumps(name)})""") + '"',
                 "local_preview": f"{path}.{shared.opts.samples_format}",
+                "metadata": ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path),
             }
 
     def allowed_directories_for_previews(self):

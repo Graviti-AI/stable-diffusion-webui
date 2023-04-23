@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import PngImagePlugin
 import time
 
+from copy import deepcopy
 from modules import shared
 from modules.images import read_info_from_image
 from modules.paths import Paths
@@ -56,17 +57,33 @@ def fetch_file(request: Request, filename: str = "", model_type: str = ""):
 
 
 def get_metadata(page: str = "", item: str = ""):
-    from starlette.responses import JSONResponse
+    from starlette.responses import HTMLResponse
 
     page = next(iter([x for x in extra_pages if x.name == page]), None)
     if page is None:
-        return JSONResponse({})
+        return HTMLResponse("<h1>404, could not find page</h1>")
 
     metadata = page.metadata.get(item)
     if metadata is None:
-        return JSONResponse({})
+        return HTMLResponse("<h1>404, could not find metadata</h1>")
 
-    return JSONResponse({"metadata": metadata})
+    metadata = deepcopy(metadata)
+    metadata["trigger_word"] = "".join(
+        [f"<div class='model-metadata-trigger-word'>{word.strip()}</div>"
+         for item in metadata["trigger_word"]
+         for word in item.split(",") if word.strip()])
+    metadata["tags"] = "".join(
+        [f"<div class='model-metadata-tag'>{item}</div>" for item in metadata["tags"]])
+    metadata["metadata"] = "".join(
+        [f"""<tr class='model-metadata-metadata-table-row'>
+            <td class='model-metadata-metadata-table-key'>{key}:</td>
+            <td class='model-metadata-metadata-table-value'>{metadata['metadata'][key]}</td>
+         </tr>"""
+         for key in metadata["metadata"]])
+    metadata["metadata"] = f"<table>{metadata['metadata']}</table>"
+    metadata_html = shared.html("extra-networks-metadata.html").format(**metadata)
+
+    return HTMLResponse(metadata_html)
 
 
 def get_private_previews(request: Request, model_type: str):
@@ -106,6 +123,14 @@ class ExtraNetworksPage:
         self.metadata = {}
         self.max_model_size_mb = None  # If `None`, there is no limitation
         self.min_model_size_mb = None  # If `None`, there is no limitation
+
+    @staticmethod
+    def read_metadata_from_file(metadata_path: str):
+        metadata = None
+        if os.path.exists(metadata_path):
+            with open(metadata_path, "r", encoding='utf8') as f:
+                metadata = json.load(f)
+        return metadata
 
     def refresh(self, request: gr.Request):
         pass

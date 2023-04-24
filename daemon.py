@@ -37,7 +37,7 @@ class ServiceStatus:
 
     system_deployed_at = datetime.datetime.now()
     host_ip = os.getenv('HOST_IP', default='')
-    node_name = os.getenv('NODE_NAME', '').split(',')
+    node_name = os.getenv('NODE_NAME', '')
     node_accepted_tiers = os.getenv('ACCEPTED_TIERS', '').split(',')
     server_port = cmd_opts.port if cmd_opts.port else 7860
 
@@ -102,10 +102,10 @@ def start_with_daemon(service_func):
             service_status.finished_task_count = pending_task_info.get('finished_task_count', 0)
 
             # check if service is idle:
-            if not service_status.current_task and len(service_status.queued_tasks) == 0:
-                service_status.service_idled_at = datetime.datetime.now()
-            else:
+            if service_status.current_task or len(service_status.queued_tasks) > 0:
                 service_status.service_idled_at = None
+            elif not service_status.service_idled_at:
+                service_status.service_idled_at = datetime.datetime.now()
 
             # check system memory
             service_status.memory_usage = psutil.virtual_memory()

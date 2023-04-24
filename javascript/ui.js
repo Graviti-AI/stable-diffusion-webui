@@ -387,6 +387,8 @@ function selectCheckpoint(name){
 async function browseModels(){
     var txt2img_tab = gradioApp().querySelector("#tab_txt2img");
     var img2img_tab = gradioApp().querySelector("#tab_img2img");
+    var txt2img_model_refresh_button = gradioApp().querySelector('#txt2img_extra_refresh');
+    var img2img_model_refresh_button = gradioApp().querySelector('#img2img_extra_refresh');
 
     if (txt2img_tab.style.display == "none" && img2img_tab.style.display == "none")
     {
@@ -398,12 +400,22 @@ async function browseModels(){
     var txt2img_button = gradioApp().querySelector("#txt2img_extra_networks");
     if (txt2img_tab.style.display == "block")
     {
+        if (gradioApp().querySelector("div#txt2img_extra_networks").classList.contains("hide"))
+        {
+            txt2img_model_refresh_button.click();
+            await new Promise(r => setTimeout(r, 300));
+        }
         txt2img_button.click();
     }
 
     var img2img_button = gradioApp().querySelector("#img2img_extra_networks");
     if (img2img_tab.style.display == "block")
     {
+        if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
+        {
+            img2img_model_refresh_button.click();
+            await new Promise(r => setTimeout(r, 300));
+        }
         img2img_button.click();
     }
 }

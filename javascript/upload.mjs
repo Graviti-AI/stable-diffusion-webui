@@ -5,6 +5,13 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
     const model_verification_endpoint= '/verify-model-existence';
     const uppy_object_map = new Map();
 
+    function refresh_model_list_when_upload_complete(complete_array) {
+        var txt2img_model_refresh_button = gradioApp().querySelector('#txt2img_extra_refresh');
+        var img2img_model_refresh_button = gradioApp().querySelector('#img2img_extra_refresh');
+        txt2img_model_refresh_button.click();
+        img2img_model_refresh_button.click();
+    }
+
     function register_button(elem_node){
         if (uppy_object_map.has(elem_node.id))
         {
@@ -13,11 +20,13 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
             uppy = null;
             uppy_object_map.delete(elem_node.id);
 
-            uppy = setup_uppy_for_upload_button(elem_node, tus_endpoint, model_verification_endpoint);
+            uppy = setup_uppy_for_upload_button(
+                elem_node, tus_endpoint, model_verification_endpoint, refresh_model_list_when_upload_complete);
             uppy_object_map.set(elem_node.id, uppy);
 
         } else {
-            const uppy = setup_uppy_for_upload_button(elem_node, tus_endpoint, model_verification_endpoint);
+            const uppy = setup_uppy_for_upload_button(
+                elem_node, tus_endpoint, model_verification_endpoint, refresh_model_list_when_upload_complete);
 
             uppy_object_map.set(elem_node.id, uppy);
         }

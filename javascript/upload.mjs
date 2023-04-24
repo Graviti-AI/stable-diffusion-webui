@@ -40,7 +40,7 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
         buttons.forEach(register_button);
         var observeUploadButtonChange = new MutationObserver((mutationList, observer) => {
             mutationList.forEach((item) => {
-                var button = item.target.querySelector(".card.model-upload-button");
+                var button = item.target.querySelector(".model-upload-button");
                 if (button){
                     register_button(button);
                 }

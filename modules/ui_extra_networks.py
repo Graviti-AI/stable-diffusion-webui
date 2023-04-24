@@ -86,6 +86,32 @@ def get_metadata(page: str = "", item: str = ""):
     return HTMLResponse(metadata_html)
 
 
+def get_page_query_model(request: Request, model_type:str, page: int, search_value: str, page_size: int):
+    from starlette.responses import JSONResponse
+    
+    model_list = []
+    count = 0
+    allow_negative_prompt = False
+    
+    def item_filter(item: dict) -> bool:
+        return search_value in item.get('search_term', '')
+
+    for page_item in extra_pages:
+        if page_item.name.replace(" ", "_") == model_type:
+            page_item.refresh(request)
+            items = list(filter(item_filter, page_item.list_items()))
+            model_list = items[(page - 1) * page_size: page * page_size]
+            count = len(items)
+            allow_negative_prompt = page_item.allow_negative_prompt
+            break
+    
+    return JSONResponse({
+        "page": page,
+        "total_count": count,
+        "model_list": model_list,
+        "allow_negative_prompt": allow_negative_prompt
+    })
+
 def get_private_previews(request: Request, model_type: str):
     from starlette.responses import JSONResponse
     paths = Paths(request)
@@ -112,6 +138,7 @@ def add_pages_to_demo(app):
     app.add_api_route("/sd_extra_networks/thumb", fetch_file, methods=["GET"])
     app.add_api_route("/sd_extra_networks/metadata", get_metadata, methods=["GET"])
     app.add_api_route("/sd_extra_networks/private_previews", get_private_previews, methods=["GET"])
+    app.add_api_route("/sd_extra_networks/update_page", get_page_query_model, methods=["GET"])
 
 
 class ExtraNetworksPage:
@@ -193,7 +220,7 @@ class ExtraNetworksPage:
             if metadata:
                 self.metadata[item["name"]] = metadata
 
-            items_html += self.create_html_for_item(item, tabname)
+            # items_html += self.create_html_for_item(item, tabname)
 
         self_name_id = self.name.replace(" ", "_")
 
@@ -234,6 +261,7 @@ class ExtraNetworksPage:
 {subdirs_html}
 </div>
 <div id='{tabname}_{self_name_id}_cards' class='extra-network-{view}'>
+<div id="total_count" style="display: none">{len(list(self.list_items()))}</div>
 {items_html}
 </div>
 """
@@ -363,9 +391,8 @@ def create_ui(container, button, tabname):
 
     with gr.Tabs(elem_id=tabname+"_extra_tabs") as tabs:
         for page in ui.stored_extra_pages:
-            with gr.Tab(page.title):
-
-                self_name_id = page.name.replace(" ", "_")
+            self_name_id = page.name.replace(" ", "_")
+            with gr.Tab(label=page.title, id=self_name_id, elem_id=self_name_id) as tab:
                 upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
                 button_id = f"{upload_button_id}-card"
                 page_html_str, start_upload_callback, finish_upload_callback = page.create_html(
@@ -376,14 +403,31 @@ def create_ui(container, button, tabname):
                     if page.allowed_directories_for_previews() else "./"
                 with gr.Row():
                     create_upload_button(
-                        f"Upload {page.name}",
+                        f"Upload {page.title}",
                         upload_button_id,
                         upload_destination,
                         visible=False,
                         start_uploading_call_back=start_upload_callback,
                         finish_uploading_call_back=finish_upload_callback
                     )
+                tab_click_params=gr.JSON(value={"tabname": ui.tabname, "model_type": self_name_id}, visible=False)
+                tab.select(fn=None, _js=f"modelTabClick", inputs=[tab_click_params], outputs=[])
                 ui.pages.append(page_elem)
+                with gr.Row(elem_id=f"{ui.tabname}_{self_name_id}_pagination", elem_classes="pagination"):
+                     with gr.Column(scale=7):
+                         gr.Button("hide", visible=False)
+                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=220):
+                        upload_btn = gr.Button(f"Upload {page.title} Model", elem_classes="model-upload-button", variant="primary")
+                        upload_btn.click(
+                            fn=None,
+                            _js=f'() => {{if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}}}'
+                        )
+                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",  min_width=220):
+                        gr.HTML(
+                            value="<div class='pageniation-info'>"
+                                f"<div class='page-prev' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'previous')\">< Prev </div>"
+                                "<div class='page-total'><span class='current-page'>1</span><span class='separator'>/</span><span class='total-page'></span></div>"
+                                f"<div class='page-next' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'next')\">Next ></div></div>",show_label=False)
 
     filter = gr.Textbox('', show_label=False, elem_id=tabname+"_extra_search", placeholder="Search...", visible=False)
     button_refresh = gr.Button('Refresh', elem_id=tabname+"_extra_refresh")
@@ -397,20 +441,8 @@ def create_ui(container, button, tabname):
 
     state_visible = gr.State(value=False)
     button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button])
-
-    def refresh(request: gr.Request):
-        res = []
-
-        for pg in ui.stored_extra_pages:
-            pg.refresh(request)
-            self_name_id = pg.name.replace(" ", "_")
-            upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
-            button_id = f"{upload_button_id}-card"
-            res.append(pg.create_html(ui.tabname, upload_button_id, button_id))
-
-        return res
-
-    button_refresh.click(fn=refresh, inputs=[], outputs=ui.pages)
+    refresh_params=gr.JSON(value={"tabname": ui.tabname}, visible=False)
+    button_refresh.click(fn=None, _js=f"refreshModelList", inputs=[refresh_params], outputs=[])
 
     return ui
 

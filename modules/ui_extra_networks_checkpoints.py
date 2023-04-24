@@ -5,15 +5,15 @@ import os
 import gradio as gr
 
 from modules import shared, ui_extra_networks, sd_models
-
+from fastapi import Request
 
 class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Checkpoints')
         self.min_model_size_mb = 1e3
 
-    def refresh(self, request: gr.Request):
-        shared.refresh_checkpoints(request.request)
+    def refresh(self, request: Request):
+        shared.refresh_checkpoints(request)
 
     def list_items(self):
         checkpoint: sd_models.CheckpointInfo

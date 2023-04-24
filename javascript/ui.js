@@ -407,8 +407,7 @@ async function browseModels(){
     {
         if (gradioApp().querySelector("div#txt2img_extra_networks").classList.contains("hide"))
         {
-            txt2img_model_refresh_button.click();
-            await new Promise(r => setTimeout(r, 300));
+            fetchPageDataAndUpdateList({tabname: 'txt2img', model_type: 'checkpoints', page: 1});
         }
         txt2img_button.click();
     }
@@ -418,8 +417,7 @@ async function browseModels(){
     {
         if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
         {
-            img2img_model_refresh_button.click();
-            await new Promise(r => setTimeout(r, 300));
+            fetchPageDataAndUpdateList({tabname: 'img2img', model_type: 'checkpoints', page: 1});
         }
         img2img_button.click();
     }

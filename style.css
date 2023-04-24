@@ -416,6 +416,29 @@ div.dimensions-tools{
     overflow-wrap: break-word;
 }
 
+.pageniation-info {
+    display: flex;
+    font-size: 20px;
+    justify-content: flex-end;
+    margin-right: 10px;
+}
+
+.pagination_row {
+    justify-content: center;
+}
+
+.page-next:hover, .page-prev:hover {
+    cursor: pointer;
+}
+
+.page-total {
+    margin: 0 10px;
+}
+
+.separator {
+    margin: 0 5px;
+}
+
 /* settings */
 #quicksettings {
     width: fit-content;

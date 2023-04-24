@@ -14,8 +14,10 @@ function setupExtraNetworksForTab(tabname){
         searchTerm = search.value.toLowerCase()
 
         gradioApp().querySelectorAll('#'+tabname+'_extra_tabs div.card').forEach(function(elem){
-            text = elem.querySelector('.name').textContent.toLowerCase() + " " + elem.querySelector('.search_term').textContent.toLowerCase()
-            elem.style.display = text.indexOf(searchTerm) == -1 ? "none" : ""
+            if (!elem.classList.contains("model-upload-button")) {
+                text = elem.querySelector('.name').textContent.toLowerCase() + " " + elem.querySelector('.search_term').textContent.toLowerCase()
+                elem.style.display = text.indexOf(searchTerm) == -1 ? "none" : ""
+            }
         })
     });
 }
@@ -165,6 +167,8 @@ function requestGet(url, data, handler, errorHandler){
 }
 
 async function extraNetworksRequestMetadata(event, extraPage, cardName){
+    event.stopPropagation()
+
     showError = function(){ extraNetworksShowMetadata("<h1>there was an error getting metadata</h1>"); }
 
     try {
@@ -180,8 +184,6 @@ async function extraNetworksRequestMetadata(event, extraPage, cardName){
     } catch (error) {
         showError()
   }
-
-    event.stopPropagation()
 }
 
 async function updatePrivatePreviews(tabname, model_type) {

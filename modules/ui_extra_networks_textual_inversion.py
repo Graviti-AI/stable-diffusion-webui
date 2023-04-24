@@ -20,15 +20,24 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
         for embedding in sd_hijack.model_hijack.embedding_db.word_embeddings.values():
             path, ext = os.path.splitext(embedding.filename)
             metadata_path = "".join([path, ".meta"])
+            metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+            search_term = self.search_terms_from_path(embedding.filename)
+            if metadata is not None:
+                search_term = " ".join([
+                    search_term,
+                    ", ".join(metadata["tags"]),
+                    ", ".join(metadata["trigger_word"]),
+                    metadata["model_name"],
+                    metadata["sha256"]])
             yield {
                 "name": embedding.name,
                 "filename": embedding.filename,
                 "preview": self.find_preview(path),
                 "description": self.find_description(path),
-                "search_term": self.search_terms_from_path(embedding.filename),
+                "search_term": search_term,
                 "prompt": json.dumps(embedding.name),
                 "local_preview": f"{path}.preview.{shared.opts.samples_format}",
-                "metadata": ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path),
+                "metadata": metadata,
             }
 
     def allowed_directories_for_previews(self):

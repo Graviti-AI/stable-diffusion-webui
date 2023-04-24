@@ -756,25 +756,25 @@ footer {
     margin-left: 0.5em;
 }
 
-
-.extra-network-cards .card .metadata-button:before, .extra-network-thumbs .card .metadata-button:before{
-    content: "🛈";
-}
 .extra-network-cards .card .metadata-button, .extra-network-thumbs .card .metadata-button{
+    background-image: url('/components/icons/info_icon_norm.svg');
+    background-size: cover;
+    width: 40px !important;
+    height: 40px !important;
     display: inline-block;
     position: absolute;
-    right: 0;
+    right: 10px;
+    top: 10px;
     color: white;
-    text-shadow: 2px 2px 3px black;
     padding: 0.25em;
     font-size: 22pt;
-    width: 1.5em;
 }
+
 .extra-network-cards .card:hover .metadata-button, .extra-network-thumbs .card:hover .metadata-button{
     display: inline-block;
 }
 .extra-network-cards .card .metadata-button:hover, .extra-network-thumbs .card .metadata-button:hover{
-    color: red;
+    background-image: url('/components/icons/info_icon.svg');
 }
 
 

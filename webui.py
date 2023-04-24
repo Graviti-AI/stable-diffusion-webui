@@ -330,6 +330,10 @@ def webui(server_port: int = 0):
 
         print(f"Startup time: {startup_timer.summary()}.")
 
+        @app.on_event("shutdown")
+        def shutdown_event():
+            gradio.close_all()
+
         wait_on_server(shared.demo)
         print('Restarting UI...')
 

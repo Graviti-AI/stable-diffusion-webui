@@ -121,7 +121,7 @@ def calc_resolution_hires(request: gradio.routes.Request, enable, width, height,
         return ""
 
     p = processing.StableDiffusionProcessingTxt2Img(width=width, height=height, enable_hr=True, hr_scale=hr_scale, hr_resize_x=hr_resize_x, hr_resize_y=hr_resize_y)
-    p.set_global_prompt_styles(shared.prompt_styles(request.request))
+    p.set_request(request)
 
     with devices.autocast():
         p.init([""], [0], [0])

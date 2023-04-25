@@ -722,7 +722,7 @@ def train_hypernetwork(request: starlette.requests.Request, id_task, hypernetwor
                         do_not_save_grid=True,
                         do_not_save_samples=True,
                     )
-                    p.set_global_prompt_styles(shared.prompt_styles(request))
+                    p.set_request(request)
                     p.disable_extra_networks = True
 
                     if preview_from_txt2img:

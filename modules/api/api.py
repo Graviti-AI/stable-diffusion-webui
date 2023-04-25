@@ -306,7 +306,7 @@ class Api:
         with self.queue_lock:
             from modules.paths import Paths
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
-            p.set_global_prompt_styles(shared.prompt_styles(request))
+            p.set_request(request)
 
             p.scripts = script_runner
 
@@ -367,7 +367,7 @@ class Api:
         with self.queue_lock:
             from modules.paths import Paths
             p = StableDiffusionProcessingImg2Img(sd_model=shared.sd_model, **args)
-            p.set_global_prompt_styles(shared.prompt_styles(request))
+            p.set_request(request)
             p.init_images = [decode_base64_to_image(x) for x in init_images]
             p.scripts = script_runner
 
@@ -392,17 +392,17 @@ class Api:
 
         return ImageToImageResponse(images=b64images, parameters=vars(img2imgreq), info=processed.js())
 
-    def extras_single_image_api(self, req: ExtrasSingleImageRequest):
+    def extras_single_image_api(self, request: gr.Request, req: ExtrasSingleImageRequest):
         reqDict = setUpscalers(req)
 
         reqDict['image'] = decode_base64_to_image(reqDict['image'])
 
         with self.queue_lock:
-            result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
+            result = postprocessing.run_extras(request, extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **reqDict)
 
         return ExtrasSingleImageResponse(image=encode_pil_to_base64(result[0][0]), html_info=result[1])
 
-    def extras_batch_images_api(self, req: ExtrasBatchImagesRequest):
+    def extras_batch_images_api(self, request: Request, req: ExtrasBatchImagesRequest):
         reqDict = setUpscalers(req)
 
         def prepareFiles(file):

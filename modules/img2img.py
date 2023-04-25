@@ -163,7 +163,7 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
         inpainting_mask_invert=inpainting_mask_invert,
         override_settings=override_settings,
     )
-    p.set_global_prompt_styles(shared.prompt_styles(request.request))
+    p.set_request(request)
 
     p.scripts = modules.scripts.scripts_txt2img
     p.script_args = args

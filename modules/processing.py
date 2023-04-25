@@ -163,12 +163,17 @@ class StableDiffusionProcessing:
         self.all_subseeds = None
         self.iteration = 0
         self._global_prompt_styles = None
+        self._request = None
 
     def global_prompt_styles(self):
         return self._global_prompt_styles
 
-    def set_global_prompt_styles(self, global_prompt_styles):
-        self._global_prompt_styles = global_prompt_styles
+    def set_request(self, request):
+        self._request = request
+        self._global_prompt_styles = shared.prompt_styles(request.request)
+
+    def get_request(self):
+        return self._request
 
     @property
     def sd_model(self):

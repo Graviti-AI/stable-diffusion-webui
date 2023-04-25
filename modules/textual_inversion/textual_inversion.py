@@ -577,7 +577,7 @@ def train_embedding(request: starlette.requests.Request, id_task, embedding_name
                         do_not_save_samples=True,
                         do_not_reload_embeddings=True,
                     )
-                    p.set_global_prompt_styles(shared.prompt_styles(request))
+                    p.set_request(request)
 
                     if preview_from_txt2img:
                         p.prompt = preview_prompt

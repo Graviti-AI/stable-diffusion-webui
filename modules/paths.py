@@ -76,12 +76,13 @@ class Paths:
             self._model_dir.mkdir(parents=True, exist_ok=True)
 
         # output dir save user generated files
+        self._private_output_dir = base_dir.joinpath('workdir', *parents_path, 'outputs')
         if not user.tire or user.tire.lower() == 'free':
             # free users use same output dir
             self._output_dir = base_dir.joinpath('workdir', 'public', 'outputs')
         else:
             # other users use their own dir
-            self._output_dir = base_dir.joinpath('workdir', *parents_path, 'outputs')
+            self._output_dir = self._private_output_dir
         self._fix_legacy_workdir(base_dir, user.uid)
 
         splits = user.uid.split('|')
@@ -209,6 +210,24 @@ class Paths:
     # dir to store user model previews
     def model_previews_dir(self):
         return self._check_dir(self._work_dir.joinpath("model_previews"))
+
+    def save_image(self, filename: str):
+        if self._private_output_dir == self._output_dir:
+            # image file generated in private output dir, do nothing
+            pass
+        else:
+            # image is generated at public folder, make a symlink to src image
+            src_path = pathlib.Path(filename)
+            relative_to = src_path.relative_to(self._output_dir)
+            # out_put_dir = src_path.parents[3]
+            # dest_path = self._private_output_dir.joinpath(src_path.parts[-4],
+            #                                               src_path.parts[-3],
+            #                                               src_path.parts[-2],
+            #                                               src_path.parts[-1])
+            dest_path = self._private_output_dir.joinpath(relative_to)
+            if not dest_path.parent.exists():
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+            dest_path.symlink_to(src_path)
 
 
 class Prioritize:

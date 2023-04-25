@@ -202,16 +202,21 @@ function modelmerger(){
     return res
 }
 
-function calcuCreditTimes(width, height, batch_count, batch_size, steps, buttonId) {
-    let calcuRatio = Math.round(width * height / (768 * 768));
+function calcuCreditTimes(width, height, batch_count, batch_size, steps, buttonId, hr_scale = 1) {
+    let calcuRatio = Math.round((width * hr_scale * height * hr_scale) / (768 * 768));
     if (calcuRatio < 1) calcuRatio = 1;
     let result = ( Math.floor((steps-1) / 50) + 1) * batch_count * batch_size * calcuRatio;
     const buttonEle = gradioApp().querySelector(`#${buttonId}`);
     buttonEle.innerHTML = `Generate <span>(Use ${result} ${result === 1 ? 'credit)': 'credits)'}</span> `;
 }
 
-function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {
-    calcuCreditTimes(width, height, batch_count, batch_size, steps, 'txt2img_generate');
+function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20, hr_scale = 1, enable_hr) {
+    if (enable_hr) {
+        calcuCreditTimes(width, height, batch_count, batch_size, steps, 'txt2img_generate', hr_scale);
+    } else {
+        calcuCreditTimes(width, height, batch_count, batch_size, steps, 'txt2img_generate');
+    }
+    
 }
 
 function updateGenerateBtn_img2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {

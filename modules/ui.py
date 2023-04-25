@@ -569,11 +569,11 @@ def create_ui():
             connect_reuse_seed(subseed, reuse_subseed, generation_info, dummy_component, is_subseed=True)
 
             # generateBtnType = gradio.JSON({type: 'text2Img'})
-            selectors = [batch_count, width, height, batch_size, steps]
+            selectors = [batch_count, width, height, batch_size, steps, hr_scale, enable_hr]
             for selector in selectors:
                 selector.change(
                     fn=None,
-                    inputs=[width, height, batch_count, batch_size, steps],
+                    inputs=[width, height, batch_count, batch_size, steps, hr_scale, enable_hr],
                     outputs=[],
                     _js="updateGenerateBtn_txt2img"
                 )

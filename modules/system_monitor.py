@@ -45,14 +45,19 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
     if func_name in ('modules.txt2img.txt2img', 'modules.img2img.img2img'):
         width = named_args.get('width', 512)
         height = named_args.get('height', 512)
-        batch_count = named_args.get('n_iter', 1)
+        n_iter = named_args.get('n_iter', 1)
         batch_size = named_args.get('batch_size', 1)
         steps = named_args.get('steps', 20)
+        enable_hr = named_args.get('enable_hr', False)
+        if enable_hr:
+            hr_scale = named_args.get('hr_scale', 2)
+        else:
+            hr_scale = 1
 
         # calculate consume unit
-        image_unit = _calculate_image_unit(width, height)
-        step_count = _calculate_step_unit(steps)
-        result = image_unit * batch_size * batch_count * step_count
+        image_unit = _calculate_image_unit(width * hr_scale, height * hr_scale)
+        step_unit = _calculate_step_unit(steps)
+        result = image_unit * batch_size * n_iter * step_unit
         return int(result)
     elif func_name in ('modules.postprocessing.run_postprocessing',):
         scale_type = args[3]  # 0: scale by, 1: scale to

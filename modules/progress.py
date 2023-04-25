@@ -73,7 +73,7 @@ def finish_task(id_task):
         current_task_step = ''
 
     finished_tasks.append(id_task)
-    if len(finished_tasks) > 16:
+    if len(finished_tasks) > 600:
         finished_tasks.pop(0)
 
     finished_task_count += 1

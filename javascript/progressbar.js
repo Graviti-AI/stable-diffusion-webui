@@ -21,10 +21,10 @@ function request(url, data, handler, errorHandler){
                     handler(js)
                 } catch (error) {
                     console.error(error);
-                    errorHandler()
+                    errorHandler(xhr.status)
                 }
             } else{
-                errorHandler()
+                errorHandler(xhr.status)
             }
         }
     };
@@ -94,8 +94,10 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
         atEnd()
     }
 
+    var lastFailedAt = null
     var fun = function(id_task, id_live_preview){
         request("./internal/progress", {"id_task": id_task, "id_live_preview": id_live_preview}, function(res){
+             lastFailedAt = null
             if(res.completed){
                 removeProgressBar()
                 console.log("remove progress bar: res.completed")
@@ -140,12 +142,11 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 return
             }
 
-            if(elapsedFromStart > 20 && !res.queued && !res.active){
-                console.log("remove progress bar: elapsedFromStart > 20 && !res.queued && !res.active")
+            if(elapsedFromStart > 60 && !res.queued && !res.active){
+                console.log("remove progress bar: elapsedFromStart > 60 && !res.queued && !res.active")
                 removeProgressBar()
                 return
             }
-
 
             if(res.live_preview && gallery){
                 var rect = gallery.getBoundingClientRect()
@@ -164,7 +165,6 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 img.src = res.live_preview;
             }
 
-
             if(onProgress){
                 onProgress(res)
             }
@@ -172,9 +172,25 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
             setTimeout(() => {
                 fun(id_task, res.id_live_preview);
             }, opts.live_preview_refresh_period || 500)
-        }, function(){
-            console.log("remove progress bar: progress request is failed")
-            removeProgressBar()
+        }, function(status){
+            if(lastFailedAt == null) {
+                lastFailedAt = new Date()
+            }
+            var failedElapsed = (new Date() - lastFailedAt) / 1000
+            // network error: retry for 5m
+            // server error: retry for 30s
+            // retry interval is at least 15s
+            if (failedElapsed < (status === 0 ? 60 * 5 : 30)) {
+                console.log("progress request error")
+                setTimeout(() => {
+                    // reset dateStart to prevent progress is removed due to timeout
+                    dateStart = new Date()
+                    fun(id_task, res.id_live_preview)
+                }, Math.min(Math.max(failedElapsed, 1), 15)*1000)
+            } else {
+                console.log("remove progress bar: progress request is failed")
+                removeProgressBar()
+            }
         })
     }
 

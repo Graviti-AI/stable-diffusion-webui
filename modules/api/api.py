@@ -414,7 +414,7 @@ class Api:
         reqDict.pop('imageList')
 
         with self.queue_lock:
-            result = postprocessing.run_extras(extras_mode=1, image="", input_dir="", output_dir="", save_output=False, **reqDict)
+            result = postprocessing.run_extras(request, extras_mode=1, image="", input_dir="", output_dir="", save_output=False, **reqDict)
 
         return ExtrasBatchImagesResponse(images=list(map(encode_pil_to_base64, result[0])), html_info=result[1])
 

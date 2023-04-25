@@ -76,7 +76,7 @@ def run_postprocessing(request: gr.Request, extras_mode, image, image_folder, *a
             from modules.processing import StableDiffusionProcessing
             p = StableDiffusionProcessing()
             p.set_request(request)
-            images.save_image(pp.image, path=outpath, basename=basename, seed=None, prompt=None, extension=opts.samples_format, info=infotext, short_filename=True, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=None, p=p)
+            images.save_image(pp.image, path=outpath, basename=basename, seed=None, prompt=None, extension=opts.samples_format, info=infotext, short_filename=True, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=None, p=p, save_to_dirs=True)
 
         if extras_mode != 2 or show_extras_results:
             outputs.append(pp.image)

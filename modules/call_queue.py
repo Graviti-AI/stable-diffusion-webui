@@ -19,6 +19,8 @@ queue_lock = threading.Lock()
 
 gpu_worker_pool: ThreadPoolExecutor | None = None
 
+logger = logging.getLogger(__name__)
+
 
 def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
     def call_function_in_gpu_wroker(*args, **kwargs):
@@ -45,7 +47,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
         time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
 
-        timer = Timer('gpu_call')
+        timer = Timer('gpu_call', func_name)
         shared.state.begin()
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')
@@ -57,6 +59,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
 
         time_consumption.update(timer.records)
         time_consumption['total'] = time.time() - task_info.get('added_at', time.time())
+        logger.info(timer.summary())
 
         # all done, clear status and
         status = 'finished'

@@ -140,8 +140,8 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 return
             }
 
-            if(elapsedFromStart > 10 && !res.queued && !res.active){
-                console.log("remove progress bar: elapsedFromStart > 5 && !res.queued && !res.active")
+            if(elapsedFromStart > 20 && !res.queued && !res.active){
+                console.log("remove progress bar: elapsedFromStart > 20 && !res.queued && !res.active")
                 removeProgressBar()
                 return
             }

@@ -685,11 +685,11 @@ def create_ui():
             ]
 
             token_button.click(
-                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 10),
+                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 30),
                 inputs=[txt2img_prompt, steps],
                 outputs=[token_counter])
             negative_token_button.click(
-                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 10),
+                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 30),
                 inputs=[txt2img_negative_prompt, steps],
                 outputs=[negative_token_counter])
 
@@ -998,7 +998,7 @@ def create_ui():
 
             token_button.click(fn=update_token_counter, inputs=[img2img_prompt, steps], outputs=[token_counter])
             negative_token_button.click(
-                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 10),
+                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 30),
                 inputs=[img2img_negative_prompt, steps],
                 outputs=[negative_token_counter])
 

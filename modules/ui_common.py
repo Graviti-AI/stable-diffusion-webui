@@ -279,14 +279,7 @@ def create_upload_button(
                 const target = e.target;
                 if (!target.files || target.files.length == 0) return;
 
-                // Launch modal for notification
-                var modal = document.querySelector("#notification-modal");
-                var modal_content = modal.getElementsByTagName("p")[0];
-                modal_content.innerText = "Start to upload model."
-                modal.style.display = "block";
-                setTimeout(function(){{
-                    modal.style.display = "none";
-                }}, 3000);
+                notifier.info('Start to upload model.');
                 var button = document.querySelector("#{button_id}");
                 button.disabled = true;
                 {start_uploading_call_back}
@@ -314,14 +307,7 @@ def create_upload_button(
     hidden_button = gr.Button("Verify hash", elem_id=hidden_button_id, visible=False)
     hidden_button.click(verify_model_existence, hash_str, existing_filepath, api_name="check_hash")
     upload_finish_js = """
-        // Launch modal for notification
-        var modal = document.querySelector("#notification-modal");
-        var modal_content = modal.getElementsByTagName("p")[0];
-        modal_content.innerText = "Model uploaded. Use the refresh button to load it."
-        modal.style.display = "block";
-        setTimeout(function(){{
-            modal.style.display = "none";
-        }}, 3000);
+        notifier.success('Model uploaded. Use the refresh button to load it.');
         var button = document.querySelector("#{button_id}");
         button.disabled = false;
         {finish_uploading_call_back}
@@ -363,7 +349,7 @@ def create_upload_button(
 
 def create_browse_model_button(label, elem_id, button_style="", visible=True):
     button = gr.Button(label, elem_id=elem_id, variant="secondary", visible=visible)
-    button.click(None, None, None, _js="browseModels")
+    button.click(None, list(), list(), _js="browseModels")
     if button_style:
         gr.HTML("""
         <style>

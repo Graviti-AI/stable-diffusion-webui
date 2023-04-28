@@ -427,6 +427,11 @@ async function browseModels(){
     }
 }
 
+// get model form url
+const urlParam = new URLSearchParams(location.search);
+const modelValueFromUrl = urlParam.get('model');
+document.cookie = `selected_model=${modelValueFromUrl}`;
+
 // get user info
 onUiLoaded(function(){
     // update generate button text

@@ -1726,13 +1726,20 @@ def create_ui():
 
         component_keys = [k for k in opts.data_labels.keys() if k in component_dict]
 
-        def get_settings_values():
-            return [get_value_for_setting(key) for key in component_keys]
+        def get_settings_values(request: gr.Request):
+            model_title = request.cookies.selected_model
+            if model_title:
+                checkpoint_info = sd_models.get_closet_checkpoint_match(model_title)
+                if checkpoint_info:
+                    model_title = checkpoint_info.title
+                else: 
+                    model_title = opts.sd_model_checkpoint
+            return [get_value_for_setting(key) for key in component_keys] + [model_title, model_title, model_title, ]
 
         demo.load(
             fn=get_settings_values,
             inputs=[],
-            outputs=[component_dict[k] for k in component_keys],
+            outputs=[component_dict[k] for k in component_keys] + [component_dict['sd_model_checkpoint'], txt2img_model_title, img2img_model_title],
             queue=False,
         )
 

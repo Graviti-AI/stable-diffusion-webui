@@ -337,6 +337,7 @@ class ExtraNetworksUi:
         self.preview_target_filename = None
 
         self.tabname = None
+        self.saved_preview_url = None
 
 
 def pages_in_preferred_order(pages):
@@ -390,6 +391,9 @@ def create_ui(container, button, tabname):
 
     ui.button_save_preview = gr.Button('Save preview', elem_id=tabname+"_save_preview", visible=False)
     ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=tabname+"_preview_filename", visible=False)
+    ui.saved_preview_url = gr.Textbox('', elem_id=tabname+"_preview_url", visible=False, interactive=False)
+    ui.saved_preview_url.change(
+        None, ui.saved_preview_url, None, _js=f"(preview_url) => {{updateTabPrivatePreviews('{ui.tabname}');}}")
 
     def toggle_visibility(is_visible):
         is_visible = not is_visible
@@ -427,10 +431,7 @@ def setup_ui(ui, gallery):
         paths = Paths(request)
         if len(images) == 0:
             print("There is no image in gallery to save as a preview.")
-            return [page.create_html(
-                ui.tabname,
-                f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button",
-                ) for page in ui.stored_extra_pages]
+            return ""
 
         index = int(index)
         index = 0 if index < 0 else index
@@ -451,16 +452,15 @@ def setup_ui(ui, gallery):
             image.save(preview_path, pnginfo=pnginfo_data)
         else:
             image.save(preview_path)
+        file_mtime = os.path.getmtime(preview_path)
+        model_type = os.path.dirname(filename)
+        base_filename = os.path.basename(filename)
 
-        return [page.create_html(
-            ui.tabname,
-            f"{ui.tabname}_" + page.name.replace(' ', '_') + "_upload_button",
-        ) for page in ui.stored_extra_pages]
+        return f'url("/sd_extra_networks/thumb?filename={base_filename}&model_type={model_type}&mtime={file_mtime}")'
 
     ui.button_save_preview.click(
         fn=save_preview,
         _js="function(x, y, z){return [selected_gallery_index(), y, z]}",
         inputs=[ui.preview_target_filename, gallery, ui.preview_target_filename],
-        outputs=[*ui.pages]
+        outputs=ui.saved_preview_url
     )
-

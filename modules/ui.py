@@ -1783,7 +1783,6 @@ def create_ui():
     try:
         if os.path.exists(ui_config_file):
             with open(ui_config_file, "r", encoding="utf8") as file:
-                import json
                 ui_settings = json.load(file)
     except Exception:
         error_loading = True

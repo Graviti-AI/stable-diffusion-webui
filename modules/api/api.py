@@ -392,7 +392,7 @@ class Api:
 
         return ImageToImageResponse(images=b64images, parameters=vars(img2imgreq), info=processed.js())
 
-    def extras_single_image_api(self, request: gr.Request, req: ExtrasSingleImageRequest):
+    def extras_single_image_api(self, request: Request, req: ExtrasSingleImageRequest):
         reqDict = setUpscalers(req)
 
         reqDict['image'] = decode_base64_to_image(reqDict['image'])

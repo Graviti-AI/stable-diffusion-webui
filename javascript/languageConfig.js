@@ -61,6 +61,7 @@ function iniatlLanguage() {
         const language = laguageList.find(item => item.toLowerCase() === navigatorLanguage.toLowerCase());
         setSelectChecked('language-select', language ? language : 'None');
         Cookies.set(languageCookieKey, navigatorLanguage);
+        language && location.reload();
     }
     gradioApp().querySelector(`#language-select`).addEventListener('change', (event) => {
         Cookies.set(languageCookieKey, event.target.value);

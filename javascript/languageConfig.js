@@ -49,7 +49,7 @@ function generateLanguageSelectOptions() {
 }
 
 function iniatlLanguage() {
-    const navigatorLanguage = navigator.language;
+    const navigatorLanguage = navigator.language.replaceAll('-', '_');
     const cookieLanguage = Cookies.get(languageCookieKey);
     const languageListNode = gradioApp().querySelector(`#language-list`);
 
@@ -58,7 +58,8 @@ function iniatlLanguage() {
     if (cookieLanguage) {
         setSelectChecked('language-select', cookieLanguage);
     } else {
-        setSelectChecked('language-select', laguageList.includes(navigatorLanguage) ? navigatorLanguage : 'None');
+        const language = laguageList.find(item => item.toLowerCase() === navigatorLanguage.toLowerCase());
+        setSelectChecked('language-select', language ? language : 'None');
         Cookies.set(languageCookieKey, navigatorLanguage);
     }
     gradioApp().querySelector(`#language-select`).addEventListener('change', (event) => {

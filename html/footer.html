@@ -1,13 +1,25 @@
-<div>
+<div id="footer-nav">
         <a href="https://discord.gg/QfBbBYqQ7z">Discord</a>
          • 
         <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">Github</a>
          • 
         <a href="https://gradio.app">Gradio</a>
          • 
-        <a href="/" onclick="javascript:gradioApp().getElementById('settings_restart_gradio').click(); return false">Reload UI</a>
+        <!-- <a href="/" onclick="javascript:gradioApp().getElementById('settings_restart_gradio').click(); return false">Reload UI</a> -->
+        <div id="language-list" style="display: none;">{language_list}</div>
 </div>
 <br />
 <div class="versions">
 {versions}
 </div>
+
+<style>
+.language-list {{
+    background-color: #0b0f19 !important;
+    color: #fff !important;
+    padding-right: 0;
+    margin-left: 10px;
+}}
+
+
+</style>

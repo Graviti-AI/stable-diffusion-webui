@@ -1681,7 +1681,8 @@ def create_ui():
             audio_notification = gr.Audio(interactive=False, value=os.path.join(script_path, "notification.mp3"), elem_id="audio_notification", visible=False)
 
         footer = shared.html("footer.html")
-        footer = footer.format(versions=versions_html())
+        languages = list(localization.localizations.keys())
+        footer = footer.format(versions=versions_html(), language_list=languages + ['None'])
         gr.HTML(footer, elem_id="footer")
 
         text_settings = gr.Textbox(elem_id="settings_json", value=lambda: opts.dumpjson(), visible=False)
@@ -1874,6 +1875,7 @@ def javascript_html(request: gr.Request):
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
+    head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
 
     inline = f"{localization.localization_js(request.cookies.get('localization', 'None'))};"
     if cmd_opts.theme is not None:

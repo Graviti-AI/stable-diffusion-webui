@@ -1,12 +1,12 @@
 <div id="footer-nav">
-        <a href="https://discord.gg/QfBbBYqQ7z">Discord</a>
-         • 
-        <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">Github</a>
-         • 
-        <a href="https://gradio.app">Gradio</a>
-         • 
+        <a href="https://discord.gg/QfBbBYqQ7z" class="nav-item">Discord</a>
+         <span class="nav-item">•</span>
+        <a class="nav-item" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">Github</a>
+        <span class="nav-item">•</span>
+        <a class="nav-item" href="https://gradio.app">Gradio</a>
+        <span class="nav-item">•</span>
         <!-- <a href="/" onclick="javascript:gradioApp().getElementById('settings_restart_gradio').click(); return false">Reload UI</a> -->
-        <div id="language-list" style="display: none;">{language_list}</div>
+        <div class="nav-item" id="language-list" style="display: none;">{language_list}</div>
 </div>
 <br />
 <div class="versions">
@@ -22,12 +22,8 @@
     font-size: 14px !important;
 }}
 
-#footer-nav {{
-    display: flex !important;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-evenly;
-    max-width: 500px;
+.nav-item {{
+    margin-right: 10px;
 }}
 
 .language-list:hover {{

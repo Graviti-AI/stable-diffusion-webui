@@ -365,7 +365,7 @@ function setPageSize() {
 async function refreshModelList({tabname}) {
     const model_type = currentTab.get(tabname);
     const currentPageTabsId = `${tabname}_${model_type}_current_page`;
-    const currentPage = currentPageForTabs.get(currentPageTabsId);
+    const currentPage = currentPageForTabs.get(currentPageTabsId) || 1;
     fetchPageDataAndUpdateList({tabname, model_type, page: currentPage, need_refresh: true});
 }
 

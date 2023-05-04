@@ -49,6 +49,7 @@ function generateLanguageSelectOptions() {
 }
 
 function iniatlLanguage() {
+    if (!Cookies) return;
     const navigatorLanguage = navigator.language.replaceAll('-', '_');
     const cookieLanguage = Cookies.get(languageCookieKey);
     const languageListNode = gradioApp().querySelector(`#language-list`);

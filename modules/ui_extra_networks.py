@@ -86,7 +86,7 @@ def get_metadata(page: str = "", item: str = ""):
     return HTMLResponse(metadata_html)
 
 
-def get_page_query_model(request: Request, model_type:str, page: int, search_value: str, page_size: int):
+def get_page_query_model(request: Request, model_type:str, page: int, search_value: str, page_size: int, need_refresh: bool):
     from starlette.responses import JSONResponse
     
     model_list = []
@@ -98,7 +98,8 @@ def get_page_query_model(request: Request, model_type:str, page: int, search_val
 
     for page_item in extra_pages:
         if page_item.name.replace(" ", "_") == model_type:
-            page_item.refresh(request)
+            if need_refresh:
+                page_item.refresh(request)
             items = list(filter(item_filter, page_item.list_items()))
             model_list = items[(page - 1) * page_size: page * page_size]
             count = len(items)

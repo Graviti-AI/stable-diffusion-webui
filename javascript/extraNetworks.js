@@ -11,7 +11,7 @@ function setupExtraNetworksForTab(tabname){
     tabs.appendChild(refresh)
 
     search.addEventListener("input", function(evt){
-        const model_type = currentTab;
+        const model_type = currentTab.get(tabname);
         // reset page
         const currentPageTabsId = `${tabname}_${model_type}_current_page`;
         currentPageForTabs.set(currentPageTabsId, 1);
@@ -222,18 +222,18 @@ function updateAllPrivatePreviewsAndMonitorChanges() {
 
 const currentPageForTabs = new Map();
 const totalCountForTabs = new Map();
-let currentTab = 'checkpoints';
+let currentTab = new Map();
+currentTab.set('txt2img', 'checkpoints');
+currentTab.set('img2img', 'checkpoints');
 
-async function fetchPageDataAndUpdateList({tabname, model_type, page}) {
+async function handleData({response, tabname, model_type }) {
     const cardsParentNode = gradioApp().querySelector(`#${tabname}_${model_type}_cards`);
-    const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
     const currentPageTabsId = `${tabname}_${model_type}_current_page`;
     const currentTotalCountId = `${tabname}_${model_type}_total_count`;
     const totalPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .total-page`);
     const currentPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .current-page`);
+    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card`);
 
-    const response = await fetch(`/sd_extra_networks/update_page?model_type=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}`, {
-        method: "GET", cache: "no-cache"});
     const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt } = await response.json();
 
     // set page
@@ -244,8 +244,6 @@ async function fetchPageDataAndUpdateList({tabname, model_type, page}) {
     totalCountForTabs.set(currentTotalCountId, totalCount);
     totalPageNode.innerHTML = Math.ceil(totalCount / pageSize);
 
-    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card`);
-
     // remove child node
     const cards = cardsParentNode.querySelectorAll(".card");
     cards.forEach(card => {
@@ -254,6 +252,12 @@ async function fetchPageDataAndUpdateList({tabname, model_type, page}) {
             cardsParentNode.removeChild(card);
         }
     })
+
+    if (model_list.length  === 0) {
+        uploadBtnNode.style.display = 'block';
+    } else {
+        uploadBtnNode.style.display = 'none';
+    }
     
     // add new child
     model_list.forEach(item => {
@@ -316,6 +320,23 @@ async function fetchPageDataAndUpdateList({tabname, model_type, page}) {
     })
 }
 
+async function fetchPageDataAndUpdateList({tabname, model_type, page, need_refresh = false, loading=true}) {
+    const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
+
+    const promise = fetch(`/sd_extra_networks/update_page?model_type=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=${need_refresh}`, {
+        method: "GET", cache: "no-cache"});
+    
+    // loading
+    if (loading) {
+        notifier.asyncBlock(promise, (response) => {
+            handleData({response, tabname, model_type })
+        });
+    } else {
+        const response = await promise;
+        handleData({ response, tabname, model_type })
+    }
+}
+
 function updatePage(tabname, model_type, page_type) {
     let currentPage = 1;
     let totalCount;
@@ -342,10 +363,10 @@ function setPageSize() {
 }
 
 async function refreshModelList({tabname}) {
-    const model_type = currentTab;
+    const model_type = currentTab.get(tabname);
     const currentPageTabsId = `${tabname}_${model_type}_current_page`;
     const currentPage = currentPageForTabs.get(currentPageTabsId);
-    fetchPageDataAndUpdateList({tabname, model_type, page: currentPage});
+    fetchPageDataAndUpdateList({tabname, model_type, page: currentPage, need_refresh: true});
 }
 
 function modelTabClick({tabname, model_type}) {
@@ -357,7 +378,7 @@ function modelTabClick({tabname, model_type}) {
         currentPageForTabs.set(currentPageTabsId, 1);
     }
 
-    currentTab = model_type;
+    currentTab.set(tabname, model_type);
 
     fetchPageDataAndUpdateList({tabname, model_type, page: currentPage});
 }

@@ -14,6 +14,7 @@ import gradio as gr
 from fastapi import Request
 import json
 import html
+from threading import Lock
 
 from modules.generation_parameters_copypaste import image_from_url_text
 from modules.ui_common import create_upload_button
@@ -21,6 +22,7 @@ from modules.ui_common import create_upload_button
 extra_pages = []
 allowed_dirs = set()
 preview_search_dir = dict()
+model_list_refresh_lock = Lock()
 
 
 def register_page(page):
@@ -98,9 +100,10 @@ def get_page_query_model(request: Request, model_type:str, page: int, search_val
 
     for page_item in extra_pages:
         if page_item.name.replace(" ", "_") == model_type:
-            if need_refresh:
-                page_item.refresh(request)
-            items = list(filter(item_filter, page_item.list_items()))
+            with model_list_refresh_lock:
+                if need_refresh:
+                    page_item.refresh(request)
+                items = list(filter(item_filter, page_item.list_items()))
             model_list = items[(page - 1) * page_size: page * page_size]
             count = len(items)
             allow_negative_prompt = page_item.allow_negative_prompt

@@ -16,7 +16,7 @@ function setupExtraNetworksForTab(tabname){
         const currentPageTabsId = `${tabname}_${model_type}_current_page`;
         currentPageForTabs.set(currentPageTabsId, 1);
 
-        fetchPageDataAndUpdateList({tabname, model_type, page: 1});
+        fetchPageDataAndUpdateList({tabname, model_type, page: 1, loading: false});
     });
 }
 

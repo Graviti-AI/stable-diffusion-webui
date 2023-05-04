@@ -28,6 +28,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"],
                     metadata["sha256"]])
+                self.metadata[name] = metadata
             yield {
                 "name": name,
                 "filename": path,

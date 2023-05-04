@@ -29,6 +29,7 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"],
                     metadata["sha256"]])
+                self.metadata[embedding.name] = metadata
             yield {
                 "name": embedding.name,
                 "filename": embedding.filename,

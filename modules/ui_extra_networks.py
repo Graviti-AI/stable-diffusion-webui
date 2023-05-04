@@ -59,7 +59,10 @@ def fetch_file(request: Request, filename: str = "", model_type: str = ""):
 def get_metadata(page: str = "", item: str = ""):
     from starlette.responses import HTMLResponse
 
-    page = next(iter([x for x in extra_pages if x.name == page]), None)
+    # There are two sources where this api being called
+    # one is construct in python code, which directly users page.name
+    # the other one is in js code which uses model_type
+    page = next(iter([x for x in extra_pages if x.name == page or x.name.lower().replace(" ", "_") == page]), None)
     if page is None:
         return HTMLResponse("<h1>404, could not find page</h1>")
 
@@ -189,8 +192,6 @@ class ExtraNetworksPage:
         view = shared.opts.extra_networks_default_view
         items_html = ''
 
-        self.metadata = {}
-
         subdirs = {}
         for parentdir in [os.path.abspath(x) for x in self.allowed_directories_for_previews()]:
             for x in glob.glob(os.path.join(parentdir, '**/*'), recursive=True):
@@ -215,13 +216,6 @@ class ExtraNetworksPage:
 {html.escape(subdir if subdir!="" else "all")}
 </button>
 """ for subdir in subdirs])
-
-        for item in self.list_items():
-            metadata = item.get("metadata")
-            if metadata:
-                self.metadata[item["name"]] = metadata
-
-            # items_html += self.create_html_for_item(item, tabname)
 
         self_name_id = self.name.replace(" ", "_")
 

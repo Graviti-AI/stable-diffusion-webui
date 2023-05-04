@@ -2,10 +2,9 @@ import html
 import json
 import os
 
-import gradio as gr
-
 from modules import shared, ui_extra_networks, sd_models
 from fastapi import Request
+
 
 class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
@@ -28,6 +27,7 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
                     ", ".join(metadata["tags"]),
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"]])
+                self.metadata[checkpoint.name_for_extra] = metadata
             yield {
                 "name": checkpoint.name_for_extra,
                 "filename": path,

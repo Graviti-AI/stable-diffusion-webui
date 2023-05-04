@@ -88,11 +88,11 @@ def get_metadata(page: str = "", item: str = ""):
 
 def get_page_query_model(request: Request, model_type:str, page: int, search_value: str, page_size: int, need_refresh: bool):
     from starlette.responses import JSONResponse
-    
+
     model_list = []
     count = 0
     allow_negative_prompt = False
-    
+
     def item_filter(item: dict) -> bool:
         return search_value in item.get('search_term', '')
 
@@ -105,7 +105,7 @@ def get_page_query_model(request: Request, model_type:str, page: int, search_val
             count = len(items)
             allow_negative_prompt = page_item.allow_negative_prompt
             break
-    
+
     return JSONResponse({
         "page": page,
         "total_count": count,
@@ -248,7 +248,8 @@ class ExtraNetworksPage:
         items_html += shared.html("extra-networks-upload-button.html").format(
             button_id=button_id,
             style=f"{height}{width}",
-            model_type=f'{self_name_id}',
+            model_type=self_name_id,
+            tabname=tabname,
             card_clicked=f'if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}',
             dashboard_title=f'{self.title} files only.{dashboard_title_hint}',
             model_size=model_size,
@@ -419,10 +420,13 @@ def create_ui(container, button, tabname):
                      with gr.Column(scale=7):
                          gr.Button("hide", visible=False)
                      with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=220):
-                        upload_btn = gr.Button(f"Upload {page.title} Model", elem_classes="model-upload-button", variant="primary")
+                        upload_btn = gr.Button(f"Upload {page.title} Model", variant="primary")
                         upload_btn.click(
                             fn=None,
-                            _js=f'() => {{if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}}}'
+                            _js=f'''() => {{
+                                if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}
+                                else {{document.querySelector("#{button_id}").click();}}
+                            }}'''
                         )
                      with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",  min_width=220):
                         gr.HTML(

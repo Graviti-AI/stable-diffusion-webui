@@ -427,16 +427,81 @@ async function browseModels(){
     }
 }
 
-// get model form url
-const urlParam = new URLSearchParams(location.search);
-const modelValueFromUrl = urlParam.get('model');
-document.cookie = `selected_model=${modelValueFromUrl}`;
+function searchModel({model_type, searchValue}) {
+    return fetch(`/sd_extra_networks/update_page?model_type=${model_type}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
+        method: "GET", cache: "no-cache"});
+}
+
+async function getModelFromUrl() {
+
+    // get model form url
+    const urlParam = new URLSearchParams(location.search);
+    const checkpointModelValueFromUrl = urlParam.get('checkpoint');
+
+    document.cookie = `selected_checkpoint_model=${checkpointModelValueFromUrl}`;
+    const keyMapModelType = {
+        "checkpoint": "checkpoints",
+        "lora": "lora",
+        "ti": "textual_inversion",
+        "hn": "hypernetworks"
+    }
+
+    const promiseList = [];
+    const urlList = urlParam.entries();
+    const urlKeys =  [];
+    const urlValues =  [];
+    let checkpoint = null;
+
+    for (const [key, value] of urlList) {
+        if (keyMapModelType[key]) {
+             if(key === 'checkpoint') {
+                if (!checkpoint) {
+                    checkpoint = value;
+                    const response = searchModel({ model_type: keyMapModelType[key], searchValue: value.toLowerCase() })
+                    promiseList.push(response);
+                    urlKeys.push(key);
+                    urlValues.push(value);
+                } else {
+                    notifier.alert('There are multiple checkpoint in the url, we will use the first one and discard the rest')
+                }
+             } else {
+                const response = searchModel({ model_type: keyMapModelType[key], searchValue: value.toLowerCase() })
+                promiseList.push(response);
+                urlKeys.push(key);
+                urlValues.push(value);
+             }
+        }
+    }
+
+    const allPromise = Promise.all(promiseList);
+
+    notifier.asyncBlock(allPromise, async (promisesRes) => {
+        promisesRes.forEach(async (response, index) => {
+            const { model_list, allow_negative_prompt } = await response.json()
+            if (model_list.length === 0) {
+                notifier.alert(`${keyMapModelType[urlKeys[index]]} ${urlValues[index]} not found`, {
+                    labels: {
+                        alert: 'Model not Found'
+                    }
+                })
+            } else {
+                // checkpoint dont need to replace text
+                if (model_list[0].prompt) {
+                    cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);
+                }
+            }
+        })
+    });
+    
+}
 
 // get user info
 onUiLoaded(function(){
     // update generate button text
     updateGenerateBtn_txt2img();
     updateGenerateBtn_img2img();
+
+    getModelFromUrl();
 
     const {origin: hostOrigin, search} = location;
     const isDarkTheme = /theme=dark/g.test(search);

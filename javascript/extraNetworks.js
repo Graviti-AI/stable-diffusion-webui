@@ -237,8 +237,8 @@ async function handleData({response, tabname, model_type }) {
     const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt } = await response.json();
 
     // set page
-    currentPageForTabs.set(currentPageTabsId, resPage);
-    currentPageNode.innerHTML = resPage;
+    currentPageForTabs.set(currentPageTabsId, resPage || currentPage);
+    currentPageNode.innerHTML = resPage || currentPage;
 
     // set total count
     totalCountForTabs.set(currentTotalCountId, totalCount);

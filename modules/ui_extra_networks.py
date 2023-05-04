@@ -94,7 +94,7 @@ def get_page_query_model(request: Request, model_type:str, page: int, search_val
     allow_negative_prompt = False
     
     def item_filter(item: dict) -> bool:
-        return search_value in item.get('search_term', '')
+        return search_value in item.get('search_term', '').lower()
 
     for page_item in extra_pages:
         if page_item.name.replace(" ", "_") == model_type:

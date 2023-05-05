@@ -11,15 +11,23 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
         self.min_model_size_mb = 10
         self.max_model_size_mb = 1e3
 
-    def refresh(self, request: gr.Request):
-        shared.reload_hypernetworks()
-
-    def list_items(self):
+    def refresh_metadata(self):
         for name, path in shared.hypernetworks.items():
             path, ext = os.path.splitext(path)
             metadata_path = "".join([path, ".meta"])
             metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+            if metadata is not None:
+                self.metadata[name] = metadata
+
+    def refresh(self, request: gr.Request):
+        shared.reload_hypernetworks()
+        self.refresh_metadata()
+
+    def list_items(self):
+        for name, path in shared.hypernetworks.items():
+            path, ext = os.path.splitext(path)
             search_term = self.search_terms_from_path(path)
+            metadata = self.metadata.get(name, None)
             if metadata is not None:
                 search_term = " ".join([
                     search_term,
@@ -27,7 +35,6 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"],
                     metadata["sha256"]])
-                self.metadata[name] = metadata
 
             yield {
                 "name": name,

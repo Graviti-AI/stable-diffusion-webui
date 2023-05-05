@@ -169,6 +169,9 @@ class ExtraNetworksPage:
     def refresh(self, request: gr.Request):
         pass
 
+    def refresh_metadata(self):
+        pass
+
     def link_preview(self, filename):
         model_type = self.name.replace(" ", "_")
         filename_unix = os.path.abspath(filename.replace('\\', '/'))
@@ -221,6 +224,8 @@ class ExtraNetworksPage:
 """ for subdir in subdirs])
 
         self_name_id = self.name.replace(" ", "_")
+
+        self.refresh_metadata()
 
         # Add a upload model button
         plus_sign_elem_id=f"{tabname}_{self_name_id}-plus-sign"

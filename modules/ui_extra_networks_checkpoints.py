@@ -11,23 +11,30 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
         super().__init__('Checkpoints')
         self.min_model_size_mb = 1e3
 
+    def refresh_metadata(self):
+        for name, checkpoint in sd_models.checkpoints_list.items():
+            path, ext = os.path.splitext(checkpoint.filename)
+            metadata_path = "".join([path, ".meta"])
+            metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+            if metadata is not None:
+                self.metadata[checkpoint.name_for_extra] = metadata
+
     def refresh(self, request: Request):
         shared.refresh_checkpoints(request)
+        self.refresh_metadata()
 
     def list_items(self):
         checkpoint: sd_models.CheckpointInfo
         for name, checkpoint in sd_models.checkpoints_list.items():
             path, ext = os.path.splitext(checkpoint.filename)
-            metadata_path = "".join([path, ".meta"])
-            metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
             search_term = " ".join([self.search_terms_from_path(checkpoint.filename), (checkpoint.sha256 or "")])
+            metadata = self.metadata.get(checkpoint.name_for_extra, None)
             if metadata is not None:
                 search_term = " ".join([
                     search_term,
                     ", ".join(metadata["tags"]),
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"]])
-                self.metadata[checkpoint.name_for_extra] = metadata
             yield {
                 "name": checkpoint.name_for_extra,
                 "filename": path,

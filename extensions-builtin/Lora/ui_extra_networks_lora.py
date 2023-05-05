@@ -12,15 +12,23 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         self.min_model_size_mb = 10
         self.max_model_size_mb = 1e3
 
-    def refresh(self, request: gr.Request):
-        lora.list_available_loras()
-
-    def list_items(self):
+    def refresh_metadata(self):
         for name, lora_on_disk in lora.available_loras.items():
             path, ext = os.path.splitext(lora_on_disk.filename)
             metadata_path = "".join([path, ".meta"])
             metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+            if metadata is not None:
+                self.metadata[name] = metadata
+
+    def refresh(self, request: gr.Request):
+        lora.list_available_loras()
+        self.refresh_metadata()
+
+    def list_items(self):
+        for name, lora_on_disk in lora.available_loras.items():
+            path, ext = os.path.splitext(lora_on_disk.filename)
             search_term = self.search_terms_from_path(lora_on_disk.filename)
+            metadata = self.metadata.get(name, None)
             if metadata is not None:
                 search_term = " ".join([
                     search_term,
@@ -28,7 +36,6 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"],
                     metadata["sha256"]])
-                self.metadata[name] = metadata
             yield {
                 "name": name,
                 "filename": path,

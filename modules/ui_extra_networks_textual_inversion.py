@@ -12,16 +12,25 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
         self.allow_negative_prompt = True
         self.max_model_size_mb = 5
 
-    def refresh(self, request: gr.Request):
-        sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(force_reload=True)
-
-    def list_items(self):
+    def refresh_metadata(self):
         sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings()
         for embedding in sd_hijack.model_hijack.embedding_db.word_embeddings.values():
             path, ext = os.path.splitext(embedding.filename)
             metadata_path = "".join([path, ".meta"])
             metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+            if metadata is not None:
+                self.metadata[embedding.name] = metadata
+
+    def refresh(self, request: gr.Request):
+        sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(force_reload=True)
+        self.refresh_metadata()
+
+    def list_items(self):
+        sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings()
+        for embedding in sd_hijack.model_hijack.embedding_db.word_embeddings.values():
+            path, ext = os.path.splitext(embedding.filename)
             search_term = self.search_terms_from_path(embedding.filename)
+            metadata = self.metadata.get(embedding.name, None)
             if metadata is not None:
                 search_term = " ".join([
                     search_term,
@@ -29,7 +38,6 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
                     ", ".join(metadata["trigger_word"]),
                     metadata["model_name"],
                     metadata["sha256"]])
-                self.metadata[embedding.name] = metadata
             yield {
                 "name": embedding.name,
                 "filename": embedding.filename,

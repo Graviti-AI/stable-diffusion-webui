@@ -437,9 +437,9 @@ async function getModelFromUrl() {
 
     // get model form url
     const urlParam = new URLSearchParams(location.search);
-    const checkpointModelValueFromUrl = urlParam.get('checkpoint');
+    // const checkpointModelValueFromUrl = urlParam.get('checkpoint');
 
-    document.cookie = `selected_checkpoint_model=${checkpointModelValueFromUrl}`;
+    // document.cookie = `selected_checkpoint_model=${checkpointModelValueFromUrl}`;
     const keyMapModelType = {
         "checkpoint": "checkpoints",
         "lora": "lora",
@@ -486,6 +486,9 @@ async function getModelFromUrl() {
                     }
                 })
             } else {
+                if(urlKeys[index] === 'checkpoint') {
+                    selectCheckpoint(model_list[0].name)
+                }
                 // checkpoint dont need to replace text
                 if (model_list[0].prompt) {
                     cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);

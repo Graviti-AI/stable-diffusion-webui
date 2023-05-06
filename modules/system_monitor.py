@@ -48,8 +48,10 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
         n_iter = named_args.get('n_iter', 1)
         batch_size = named_args.get('batch_size', 1)
         steps = named_args.get('steps', 20)
-        enable_hr = named_args.get('enable_hr', False)
-        if enable_hr:
+
+        # enable_hr is a str, not bool
+        enable_hr = named_args.get('enable_hr', 'False')
+        if str(enable_hr).lower() == 'true':
             hr_scale = named_args.get('hr_scale', 2)
         else:
             hr_scale = 1
@@ -158,9 +160,9 @@ def _extract_task_id(*args):
 def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
-    if not monitor_addr or not system_monitor_api_secret:
-        logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
-        return None
+    # if not monitor_addr or not system_monitor_api_secret:
+    #     logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
+    #     return None
 
     monitor_log_id = _extract_task_id(*args)
     # inspect func args

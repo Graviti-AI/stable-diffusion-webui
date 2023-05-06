@@ -499,6 +499,17 @@ async function getModelFromUrl() {
     
 }
 
+function imgExists(url, imgNode, name){
+    const img = new Image();
+    img.src= url;
+    img.onerror = () => {
+        imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=7F8B95&color=fff&length=1&format=svg`
+    }
+    img.onload = () => {
+        imgNode.src = url;
+    }
+}
+
 // get user info
 onUiLoaded(function(){
     // update generate button text
@@ -530,7 +541,7 @@ onUiLoaded(function(){
                     userInfo.style.display = 'flex';
                     const img = userInfo.querySelector("a > img");
                     if (img) {
-                        img.src = result.picture;
+                        imgExists(result.picture, img, result.name);
                     }
                     const name = userInfo.querySelector(".user_info-name > span");
                     if (name) {

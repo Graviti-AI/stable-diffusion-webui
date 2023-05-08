@@ -21,14 +21,6 @@ class MonitorException(Exception):
         return self._msg
 
 
-def _calculate_image_unit(width, height):
-    return max(round((width * height) / (768 * 768)), 1)
-
-
-def _calculate_step_unit(steps):
-    return int(int(steps - 1) / 50 + 1)
-
-
 def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
     """
     Make the object which will be used to calculate the consume by FE.

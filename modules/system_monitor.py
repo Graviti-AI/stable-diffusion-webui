@@ -29,10 +29,9 @@ def _calculate_step_unit(steps):
     return int(int(steps - 1) / 50 + 1)
 
 
-def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
+def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
     """
-    Calculate how many unit the GPU func will consume.
-    One unit means generate one image in (512 x 512) pixels
+    Make the object which will be used to calculate the consume by FE.
 
     Args:
         func_name: the gpu_call func name
@@ -40,68 +39,66 @@ def _calculate_consume_unit(func_name, named_args, *args, **kwargs):
         *args: func args that has no name
         **kwargs: kwargs
 
-    Returns: consume unit
+    Returns: dict
     """
+    result = {
+        'type': '',
+        'batch_count': 0,
+        'batch_size': 0,
+        'steps': 0,
+        'scale': 1,
+        'image_sizes': [],
+    }
+
     if func_name in ('modules.txt2img.txt2img', 'modules.img2img.img2img'):
-        width = named_args.get('width', 512)
-        height = named_args.get('height', 512)
-        n_iter = named_args.get('n_iter', 1)
-        batch_size = named_args.get('batch_size', 1)
-        steps = named_args.get('steps', 20)
+        result['type'] = func_name.split('.')[-1]
+        result['image_sizes'].append({
+            'width': named_args.get('width', 512),
+            'height': named_args.get('height', 512),
+        })
+        result['batch_count'] = named_args.get('n_iter', 1)
+        result['batch_size'] = named_args.get('batch_size', 1)
+        result['steps'] = named_args.get('steps', 20)
 
         # enable_hr is a str, not bool
         enable_hr = named_args.get('enable_hr', 'False')
         if str(enable_hr).lower() == 'true':
-            hr_scale = named_args.get('hr_scale', 2)
-        else:
-            hr_scale = 1
-
-        # calculate consume unit
-        image_unit = _calculate_image_unit(width * hr_scale, height * hr_scale)
-        step_unit = _calculate_step_unit(steps)
-        result = image_unit * batch_size * n_iter * step_unit
-        return int(result)
+            result['scale'] = named_args.get('hr_scale', 2)
     elif func_name in ('modules.postprocessing.run_postprocessing',):
+        result['type'] = 'extras'
+
         scale_type = args[3]  # 0: scale by, 1: scale to
         extras_mode = named_args.get('extras_mode', 0)
 
         if extras_mode == 0:  # single image
-            image_count = 1
             if scale_type == 0:  # scale by, resultSize is srcSize * scaleBy
-                scale = args[4]
+                result['scale'] = args[4]
                 source_img_size = named_args.get('image', {}).get('size', (512, 512))
-
-                width = source_img_size[0] * scale
-                height = source_img_size[1] * scale
+                result['image_sizes'].append({
+                    'width': source_img_size[0],
+                    'height': source_img_size[1],
+                })
             else:  # scale to, resultSize is provided in request
-                width = args[5]
-                height = args[6]
-            image_unit = _calculate_image_unit(width, height)
-            result = image_unit * image_count
+                result['image_sizes'].append({
+                    'width': args[5],
+                    'height': args[6],
+                })
         elif extras_mode == 1:  # batch process
             from PIL import Image
             image_folder = args[2]
             image_count = len(image_folder)
             if scale_type == 0:  # scale by, need calculate resultSize for every image particularly
-                result = 0
+                result['scale'] = args[4]
                 for img in image_folder:
-                    scale = args[4]
                     source_img = Image.open(img)
-                    width = source_img.width * scale
-                    height = source_img.width * scale
-
-                    image_unit = _calculate_image_unit(width, height)
-                    result += image_unit
+                    result['image_sizes'].append({
+                        'width': source_img.width,
+                        'height': source_img.height,
+                    })
             else:  # scale to, every image will be scaled to same size
-                width = args[5]
-                height = args[6]
-                image_unit = _calculate_image_unit(width, height)
-                result = image_count * image_unit
-        else:
-            result = 0
-        return int(result)
+                result['image_sizes'] = [{'width': args[5], 'height': args[6]} for _ in range(image_count)]
 
-    return 0
+    return result
 
 
 def _serialize_object(obj):
@@ -161,7 +158,7 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
-        logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
+        logger.error('system_monitor_addr or system_monitor_api_secret is not present')
         return None
 
     monitor_log_id = _extract_task_id(*args)
@@ -198,7 +195,7 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
         'user': modules.user.User.current_user(request).uid,
         'args': func_args,
         'extra_args': _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else [],
-        'consume': _calculate_consume_unit(api_name, func_args, *args, **kwargs),
+        'gpu_consumption': _make_gpu_consumption(api_name, func_args, *args, **kwargs),
         'node': os.getenv('HOST_IP', default=''),
         'added_at': task_info.get('added_at', time.time()),
     }
@@ -215,22 +212,14 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
 
     # log the response if request failed
     logger.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
-
-    if resp.status_code == 402:
-        raise MonitorException(
-            f"<div class='error'>billing error: check <a href='/user' class='billing'>here</a> for more information.</div>"
-        )
-    else:
-        raise MonitorException(
-            f"<div class='error'>system error, please join our Discord <a href='https://discord.gg/darTYpt2Yh' class='support'>#support</a> channel to get more help.</div>"
-        )
+    raise MonitorException(resp.text)
 
 
 def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str, time_consumption: dict):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
     if not monitor_addr or not system_monitor_api_secret:
-        logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
+        logger.error('system_monitor_addr or system_monitor_api_secret is not present')
         return
     request_url = f'{monitor_addr}/{monitor_log_id}'
     resp = requests.post(request_url,
@@ -245,5 +234,5 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
 
     # log the response if request failed
     if resp.status_code < 200 or resp.status_code > 299:
-        logger.error(
-            f'update monitor log failed, status: monitor_log_id: {monitor_log_id}, {resp.status_code}, message: {resp.text[:1000]}')
+        logger.error((f'update monitor log failed, status: monitor_log_id: {monitor_log_id}, {resp.status_code}, '
+                      f'message: {resp.text[:1000]}'))

@@ -160,9 +160,9 @@ def _extract_task_id(*args):
 def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
     system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
-    # if not monitor_addr or not system_monitor_api_secret:
-    #     logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
-    #     return None
+    if not monitor_addr or not system_monitor_api_secret:
+        logger.error(f'system_monitor_addr or system_monitor_api_secret is not present')
+        return None
 
     monitor_log_id = _extract_task_id(*args)
     # inspect func args

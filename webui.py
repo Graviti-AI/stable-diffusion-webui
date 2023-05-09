@@ -17,7 +17,8 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from modules.api.daemon_api import DaemonApi
-from modules.cache import use_sdd_to_cache_remote_file
+from modules.cache import use_sdd_to_cache_remote_file, setup_remote_file_cache
+from modules.lru_cache import LruCache
 
 logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not available' not in record.getMessage())
 
@@ -159,14 +160,18 @@ Use --skip-version-check commandline argument to disable this check.
 def initialize():
     call_queue.gpu_worker_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gpu_worker_")
     file_mover_worker_pool = ThreadPoolExecutor(thread_name_prefix="file_mover_threads_")
+    lru_cache = LruCache()
+    setup_remote_file_cache(lru_cache, cmd_opts.model_cache_dir)
     torch.load = use_sdd_to_cache_remote_file(
         torch.load,
+        lru_cache,
         data_path,
         cmd_opts.model_cache_dir,
         file_mover_worker_pool,
         cache_size_gb=cmd_opts.model_cache_max_size)
     safetensors.torch.load_file = use_sdd_to_cache_remote_file(
         safetensors.torch.load_file,
+        lru_cache,
         data_path,
         cmd_opts.model_cache_dir,
         file_mover_worker_pool,

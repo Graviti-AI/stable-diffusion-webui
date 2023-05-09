@@ -1877,6 +1877,7 @@ def javascript_html(request: gr.Request):
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
+    head += "<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='​https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NJBVS8D');</script>"
 
     inline = f"{localization.localization_js(request.cookies.get('localization', 'None'))};"
     if cmd_opts.theme is not None:

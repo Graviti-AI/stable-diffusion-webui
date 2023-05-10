@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class MonitorException(Exception):
-    def __init__(self, msg):
+    def __init__(self, status_code, msg):
+        self.status_code = status_code
         self._msg = msg
 
     def __repr__(self) -> str:
@@ -204,7 +205,7 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
 
     # log the response if request failed
     logger.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
-    raise MonitorException(resp.text)
+    raise MonitorException(resp.status_code, resp.text)
 
 
 def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str, time_consumption: dict):

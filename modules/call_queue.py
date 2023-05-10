@@ -105,7 +105,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
             if add_monitor_state:
-                return extra_outputs_array + [str(e)], True
+                return extra_outputs_array + [str(e)], 399 < e.status_code < 500
             return extra_outputs_array + [str(e)]
 
         if add_monitor_state:

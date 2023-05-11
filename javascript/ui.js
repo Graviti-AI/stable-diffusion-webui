@@ -251,7 +251,7 @@ function modelmerger(){
     return res
 }
 
-function debounce(func, type, wait=1000,immediate) {
+function debounceCalcuteTimes(func, type, wait=1000,immediate) {
     let timer = {};
     timer[type] = null;
     return function () {
@@ -273,8 +273,8 @@ function debounce(func, type, wait=1000,immediate) {
 }
 
 const debounceCalcute = {
-    'txt2img_generate': debounce(calcuCreditTimes, 'txt2img_generate'),
-    'img2img_generate': debounce(calcuCreditTimes, 'img2img_generate'),
+    'txt2img_generate': debounceCalcuteTimes(calcuCreditTimes, 'txt2img_generate'),
+    'img2img_generate': debounceCalcuteTimes(calcuCreditTimes, 'img2img_generate'),
 };
 
 

@@ -599,6 +599,7 @@ div#extras_scale_to_tab div.form{
     display: inline-block;
     margin: auto;
     padding: 2em;
+    width: 100%;
 }
 
 /* fullpage image viewer */
@@ -779,9 +780,22 @@ footer {
 /* extra networks UI */
 
 .extra-network-cards{
-    max-height: 725px;
-    overflow: hidden;
     resize: vertical;
+    padding: 0;
+}
+
+.scrollload-container {
+    margin-bottom: 10px;
+}
+
+.gallery-cards {
+    border: 1px solid #d3d3d3;
+    border-top: none;
+}
+
+.gallery-cards  p {
+    margin: 0;
+    padding: 20px;
 }
 
 .extra-networks > div > [id *= '_extra_']{
@@ -833,8 +847,28 @@ footer {
     padding: 0.25em;
     font-size: 22pt;
 }
+.extra-network-cards .card .operation-button:hover {
+    color: var(--secondary-400);
+}
 
-.extra-network-cards .card:hover .metadata-button, .extra-network-thumbs .card:hover .metadata-button{
+.extra-network-cards .card .operation-button {
+    display: none;
+    position: absolute;
+    color: white;
+    padding: 0.45em;
+    font-size: 16pt;
+    background: rgba(0,0,0,0.5);
+    box-shadow: 0 0 0.25em 0.25em rgba(0,0,0,0.5);
+    text-shadow: 0 0 0.2em black;
+    border-radius: 50px;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    text-align: center;
+    transform: translateX(-50%) translateY(-50%);
+}
+
+.extra-network-cards .card:hover .metadata-button, .extra-network-cards .card:hover .operation-button, .extra-network-thumbs .card:hover .metadata-button{
     display: inline-block;
 }
 .extra-network-cards .card .metadata-button:hover, .extra-network-thumbs .card .metadata-button:hover{
@@ -1118,4 +1152,115 @@ footer {
 
 textarea {
     font-family: monospace !important;
+}
+.gallery-container {
+    background-color: #ffffff;
+    width: var(--size-full);
+}
+
+.personal-workspace-top {
+    justify-content: space-between;
+    margin-bottom: 20px;
+   
+}
+
+.personal-workspace-top > span {
+    font-size: 20px;
+}
+
+.personal-workspace {
+    border-bottom: 1px solid var(--border-color-primary);
+    padding: 20px 30px;
+}
+
+.personal-workspace-top {
+    display: flex;
+    flex-direction: space-around;
+}
+
+.public-workspace {
+    padding: 20px 30px;
+}
+
+.public-workspace-top {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.public-workspace-top input {
+    display: inline-block;
+    max-width: 46em;
+    margin: 0.3em;
+    align-self: center;
+    position: relative;
+    outline: none!important;
+    box-shadow: var(--input-shadow);
+    border: var(--input-border-width) solid var(--input-border-color);
+    border-radius: var(--input-radius);
+    padding: var(--input-padding);
+    width: 100%;
+    font-weight: var(--input-text-weight);
+    font-size: var(--input-text-size);
+    line-height: var(--line-sm);
+}
+
+.public-workspace-top input:focus{
+    box-shadow: #3b82f6;
+    border-color: #93c5fd;
+}
+
+.public-workspace-top .search-btn {
+    display: flex;
+    margin: 0.3em;
+}
+
+.card {
+    font-size: var(--body-text-size);
+}
+
+.public-workspace-top button {
+    border-radius: var(--button-large-radius);
+    padding: var(--button-large-padding);
+    font-weight: var(--button-large-text-weight);
+    font-size: var(--button-large-text-size);
+    border: var(--button-border-width) solid #e5e7eb;
+    background: var(--button-primary-background-fill);
+    color: var(--button-primary-text-color);
+    width: var(--size-full);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    transition: var(--button-transition);
+    box-shadow: var(--button-shadow);
+    text-align: center;
+    cursor: pointer;
+}
+
+.personal-workspace-top-mature {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.personal-workspace-top-mature select {
+    width: 100px;
+    border-radius: 5px;
+    height: 30px;
+}
+
+.personal-workspace-top-mature > span {
+    font-size: 16px;
+    margin-right: 20px;
+}
+
+.uppy-Dashboard-AddFiles-list {
+    border-bottom: none;
+}
+
+[role=tab][aria-selected=false] {
+    color: #000000;
+}
+
+.extra-network-cards .card-no-model {
+    background-image: url('/components/icons/card-no-model.png')
 }

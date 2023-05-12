@@ -102,32 +102,38 @@ function extraNetworksSearchButton(tabs_id, event){
     updateInput(searchTextarea)
 }
 
-var globalPopup = null;
-var globalPopupInner = null;
-function popup(contents){
-    if(!globalPopup){
-        globalPopup = document.createElement('div')
-        globalPopup.onclick = function(){ globalPopup.style.display = "none"; };
-        globalPopup.classList.add('global-popup');
+var globalPopup = {
+    meta: null,
+    gallary: null
+};
+var globalPopupInner = {
+    meta: null,
+    gallary: null
+};
+function popup(contents, type){
+    if(!globalPopup[type]){
+        globalPopup[type] = document.createElement('div')
+        globalPopup[type].onclick = function(){  globalPopup[type].style.display = "none"; };
+        globalPopup[type].classList.add('global-popup');
 
         var close = document.createElement('div')
         close.classList.add('global-popup-close');
-        close.onclick = function(){ globalPopup.style.display = "none"; };
+        close.onclick = function(){ globalPopup[type].style.display = "none"; };
         close.title = "Close";
-        globalPopup.appendChild(close)
+        globalPopup[type].appendChild(close)
 
-        globalPopupInner = document.createElement('div')
-        globalPopupInner.onclick = function(event){ event.stopPropagation(); return false; };
-        globalPopupInner.classList.add('global-popup-inner');
-        globalPopup.appendChild(globalPopupInner)
+        globalPopupInner[type] = document.createElement('div')
+        globalPopupInner[type].onclick = function(event){ event.stopPropagation(); return false; };
+        globalPopupInner[type].classList.add('global-popup-inner');
+        globalPopup[type].appendChild(globalPopupInner[type])
 
-        gradioApp().appendChild(globalPopup);
+        gradioApp().appendChild(globalPopup[type]);
     }
 
-    globalPopupInner.innerHTML = '';
-    globalPopupInner.appendChild(contents);
+    globalPopupInner[type].innerHTML = '';
+    globalPopupInner[type].appendChild(contents);
 
-    globalPopup.style.display = "flex";
+    globalPopup[type].style.display = "flex";
 }
 
 function extraNetworksShowMetadata(text){
@@ -135,7 +141,7 @@ function extraNetworksShowMetadata(text){
     elem.classList.add('popup-metadata');
     elem.innerHTML = text;
 
-    popup(elem);
+    popup(elem, 'meta');
 }
 
 function requestGet(url, data, handler, errorHandler){
@@ -200,24 +206,7 @@ async function updatePrivatePreviews(tabname, page_name) {
 }
 
 function updateTabPrivatePreviews(tabname) {
-    const tab_items = gradioApp().querySelectorAll(`#${tabname}_extra_tabs>.tabitem>div>.block.gradio-html`);
-    tab_items.forEach((tab_div) => {
-        const page_name = tab_div.id.substr(tabname.length + 1);
-        updatePrivatePreviews(tabname, page_name);
-    });
-}
-
-function updateAllPrivatePreviewsAndMonitorChanges() {
-    updateTabPrivatePreviews('txt2img');
-    updateTabPrivatePreviews('img2img');
-    var observeTxt2imgModelCardChanges = new MutationObserver((mutationList, observer) => {
-        updateTabPrivatePreviews('txt2img');
-    });
-    observeTxt2imgModelCardChanges.observe( gradioApp().querySelector("#txt2img_extra_tabs"), { childList:true, subtree:true });
-    var observeImg2imgModelCardChanges = new MutationObserver((mutationList, observer) => {
-        updateTabPrivatePreviews('img2img');
-    });
-    observeImg2imgModelCardChanges.observe( gradioApp().querySelector("#img2img_extra_tabs"), { childList:true, subtree:true });
+    refreshModelList({tabname})
 }
 
 const currentPageForTabs = new Map();
@@ -322,8 +311,8 @@ async function handleData({response, tabname, page_name }) {
 
 async function fetchPageDataAndUpdateList({tabname, page_name, page, need_refresh = false, loading=true}) {
     const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
-
-    const promise = fetch(`/sd_extra_networks/models?page_name=${page_name}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=${need_refresh}`, {
+    
+    const promise = fetch(`/internal/favorite/${model_type_mapper[page_name]}?search_value=${searchValue}&page=${page}&page_size=${pageSize}`, {
         method: "GET", cache: "no-cache"});
 
     // loading
@@ -385,6 +374,5 @@ function modelTabClick({tabname, page_name}) {
 
 onUiLoaded(function() {
     setupExtraNetworks();
-    updateAllPrivatePreviewsAndMonitorChanges();
     setPageSize();
 });

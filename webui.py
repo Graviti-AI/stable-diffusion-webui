@@ -334,6 +334,7 @@ def webui(server_port: int = 0):
     initialize()
     if not server_port:
         server_port = cmd_opts.port if cmd_opts.port else 7861
+    shared.state.server_port = server_port
 
     while 1:
         if shared.opts.clean_temp_dir_at_start:

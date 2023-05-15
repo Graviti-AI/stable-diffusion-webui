@@ -118,6 +118,7 @@ class State:
     time_start = None
     need_restart = False
     server_start = None
+    server_port = 0
 
     def skip(self):
         self.skipped = True

@@ -50,7 +50,8 @@ def create_ui():
             html_info_x,
             html_info,
             need_upgrade
-        ]
+        ],
+        _js='submit_postprocessing'
     )
 
     need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment")

@@ -632,18 +632,18 @@ onUiLoaded(function(){
 
     getModelFromUrl();
 
-    const {origin: hostOrigin, search} = location;
+    const {search} = location;
     const isDarkTheme = /theme=dark/g.test(search);
     if (isDarkTheme) {
         const rightContent = gradioApp().querySelector(".right-content");
-        const discordIcon = rightContent.querySelector("div.discord-icon > a > img");
-        discordIcon.style.filter = 'invert(100%)';
-        const lightningIcon = rightContent.querySelector("div.upgrade-content > a > img");
-        lightningIcon.style.filter = 'invert(100%)';
+        const imgNodes = rightContent.querySelectorAll("a > img");
+        imgNodes.forEach(item => {
+            item.style.filter = 'invert(100%)';
+        })
     }
    
 
-    fetch(`${hostOrigin}/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
+    fetch(`/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
         if (res && res.ok && !res.redirected) {
             return res.json();
         }
@@ -671,7 +671,7 @@ onUiLoaded(function(){
                     }
 
                     if (result.tier === 'Free') {
-                        const upgradeContent = userContent.querySelector(".upgrade-content");
+                        const upgradeContent = userContent.querySelector("#upgrade");
                         if (upgradeContent) {
                             upgradeContent.style.display = 'flex';
                         }

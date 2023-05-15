@@ -1,0 +1,1 @@
+const PRICING_URL = 'https://www.diffus.graviti.com/pricing';

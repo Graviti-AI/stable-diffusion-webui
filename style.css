@@ -16,11 +16,19 @@
 }
 
 .right-content {
-    margin-right: 20px;
+    margin-right: 10px;
 }
 
 .discord-icon img {
     width: 30px;
+}
+
+.upgrade-content {
+    margin-right: 10px;
+}
+
+.upgrade-content:hover {
+    cursor: pointer;
 }
 
 .upgrade-content img {
@@ -66,6 +74,7 @@
 .user_info .user_info-name {
     display: flex;
     flex-direction: column;
+    margin-left: 5px;
 }
 
 .user_info .user_info-name a:hover {

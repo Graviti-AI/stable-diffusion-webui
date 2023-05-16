@@ -490,7 +490,22 @@ function selectCheckpoint(name){
 
 function currentImg2imgSourceResolution(_, _, scaleBy){
     var img = gradioApp().querySelector('#mode_img2img > div[style="display: block;"] img')
-    return img ? [img.naturalWidth, img.naturalHeight, scaleBy] : [0, 0, scaleBy]
+    const img2imgScaleDom = gradioApp().querySelector("#img2img_scale");
+    const sliderDom = img2imgScaleDom.querySelector("input[type='range']");
+    const inputDom = img2imgScaleDom.querySelector("input[type='number']");
+    const maxImgSizeLimit = 4096;
+    if (img) {
+        const maxScale = Math.min(Math.floor(maxImgSizeLimit / img.naturalWidth), Math.floor(maxImgSizeLimit / img.naturalHeight)).toFixed(2);
+        if (sliderDom.max !== maxScale) {
+            sliderDom.max = maxScale;
+            inputDom.max = maxScale;
+        }
+        
+        return [img.naturalWidth, img.naturalHeight, scaleBy]
+    }
+
+    return [0, 0, scaleBy];
+
 }
 
 function updateImg2imgResizeToTextAfterChangingImage(){

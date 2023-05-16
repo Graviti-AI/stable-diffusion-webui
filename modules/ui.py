@@ -134,6 +134,11 @@ def calc_resolution_hires(request: gradio.routes.Request, enable, width, height,
 
 
 def resize_from_to_html(width, height, scale_by):
+    if width * scale_by > 4096 or height * scale_by > 4096:
+        target_width = 4096
+        target_height = 4096
+        return f"<span class='resolution' style='color: red'>Maximum Size {target_width}x{target_height}</span>" 
+    
     target_width = int(width * scale_by)
     target_height = int(height * scale_by)
 
@@ -847,7 +852,7 @@ def create_ui():
                                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="img2img_res_switch_btn")
 
                                     with gr.Tab(label="Resize by") as tab_scale_by:
-                                        scale_by = gr.Slider(minimum=0.05, maximum=4.0, step=0.05, label="Scale", value=1.0, elem_id="img2img_scale")
+                                        scale_by = gr.Slider(minimum=0.05, step=0.05, label="Scale By", value=1.0, elem_id="img2img_scale")
 
                                         with FormRow():
                                             scale_by_html = FormHTML(resize_from_to_html(0, 0, 0.0), elem_id="img2img_scale_resolution_preview")

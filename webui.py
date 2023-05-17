@@ -24,6 +24,7 @@ logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not
 
 from modules import paths, timer, import_hook, errors
 from modules.paths_internal import data_path
+from modules.state_holder import make_state_holder
 
 startup_timer = timer.Timer('main', 'initialize')
 
@@ -314,6 +315,7 @@ def api_only(server_port: int = 0):
     initialize()
 
     app = FastAPI()
+    make_state_holder(app)
     setup_middleware(app)
     api = create_api(app)
     DaemonApi(app)
@@ -371,6 +373,7 @@ def webui(server_port: int = 0):
             prevent_thread_lock=True,
             max_threads=MAX_ANYIO_WORKER_THREAD
         )
+        make_state_holder(app)
         # after initial launch, disable --autolaunch for subsequent restarts
         cmd_opts.autolaunch = False
 

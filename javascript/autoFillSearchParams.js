@@ -1,5 +1,5 @@
 class AutoFillSearchParams {
-    searchParams = new URLSearchParams(decodeURIComponent(location.search));
+    searchParams = new URLSearchParams(location.search);
     result = '__prompt__ __negative_prompt__';
     paramsKeys = ['prompt', 'negative_prompt', 'width', 'height', 'seed', 'steps', 'sampler', 'cfg', 'clip_skip', 'batch_size', 'ensd']
     defaultWidth = 512;

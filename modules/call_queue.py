@@ -90,9 +90,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             id_task = args[0]
             progress.add_task_to_queue(
                 id_task,
-                {
-                    'job_type': func_name,
-                }
+                {'job_type': func_name}
             )
         else:
             id_task = None

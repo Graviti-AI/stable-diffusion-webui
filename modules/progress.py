@@ -89,10 +89,15 @@ def record_results(id_task, res):
 
 def add_task_to_queue(id_job, job_info=None):
     logger.info(f'add_task_to_queue, id_task: {id_job}')
-    task_info = {
-        'added_at': time.time(),
-        'last_accessed_at': time.time(),
-    }
+
+    if id_job not in pending_tasks:
+        task_info = {
+            'added_at': time.time(),
+            'last_accessed_at': time.time(),
+        }
+    else:
+        task_info = pending_tasks[id_job]
+
     if job_info:
         task_info.update(job_info)
 

@@ -221,7 +221,7 @@ def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, mess
                          },
                          json={
                              'status': status,
-                             'message': message,
+                             'result': message,
                              'time_consumption': time_consumption
                          })
 

@@ -50,6 +50,10 @@ def save_files(request: gr.Request, js_data, images, do_make_zip, index):
             if d is not None:
                 for key, value in d.items():
                     setattr(self, key, value)
+            self._request = request
+
+        def get_request(self):
+            return self._request
 
     data = json.loads(js_data)
 

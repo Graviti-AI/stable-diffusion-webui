@@ -2,6 +2,7 @@ import base64
 import io
 import logging
 import time
+import gradio as gr
 
 from queue import Queue
 from pydantic import BaseModel, Field
@@ -48,6 +49,7 @@ def start_task(id_task):
         if task_id_in_queue == id_task:
             id_task_in_queue = True
             break
+
     if id_task_in_queue:
         try:
             queued_task = _queued_tasks.get(block=True, timeout=1)
@@ -90,19 +92,21 @@ def record_results(id_task, res):
 def add_task_to_queue(id_job, job_info=None):
     logger.info(f'add_task_to_queue, id_task: {id_job}')
 
+    task_was_added = False
     if id_job not in pending_tasks:
         task_info = {
             'added_at': time.time(),
             'last_accessed_at': time.time(),
         }
     else:
+        task_was_added = True
         task_info = pending_tasks[id_job]
 
     if job_info:
         task_info.update(job_info)
 
     pending_tasks[id_job] = task_info
-    if id_job:
+    if id_job and not task_was_added:
         try:
             _queued_tasks.put(id_job, block=True, timeout=1)
         except Exception as e:

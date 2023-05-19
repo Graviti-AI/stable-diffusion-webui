@@ -356,6 +356,10 @@ def create_toprow(is_img2img):
                     inputs=[prompt, negative_prompt],
                     outputs=[prompt, negative_prompt],
                 )
+                extra_networks_button.click(
+                    fn=lambda *x: x,
+                    _js="browseModels",
+                )
 
             def current_prompt_styles(request: gr.Request = None):
                 return {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}

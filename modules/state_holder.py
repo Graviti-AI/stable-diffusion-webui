@@ -36,13 +36,16 @@ class _RedisBasedSessionStateHolder:
     def _load_state_from_redis(self, session_hash):
         try:
             buff = self._redis_client.getex(self._key_name(session_hash), ex=self.SESSION_HASH_TTL)
+            if not buff:
+                logging.warning(f'not found session state from redis, session_has: {session_hash}')
+                return None
             return pickle.loads(buff)
         except Exception as e:
-            logging.error(f'load state from redis failed: {e.__str__()}')
-            return {}
+            logging.error(f'load state from redis failed, session_hash: {session_hash}, err: {e.__str__()}')
+            return None
 
     def persistent_state(self, session_hash):
-        if session_hash not in self:
+        if session_hash not in self._state_cache:
             logging.warning(f'try to persistent non existing session state to redis: {session_hash}')
             return
 
@@ -64,21 +67,22 @@ class _RedisBasedSessionStateHolder:
         return buff
 
     def __getitem__(self, session_hash):
+        # refresh cache
         if session_hash not in self._state_cache:
-            self._state_cache[session_hash] = self._load_state_from_redis(session_hash)
+            state = self._load_state_from_redis(session_hash)
+            if state is not None:
+                self._state_cache[session_hash] = state
 
+        # get value from cache
         if session_hash not in self._state_cache and self._default_factory:
             self._state_cache[session_hash] = self._default_factory()
-
         return self._state_cache[session_hash]
 
     def __setitem__(self, session_hash, state):
         self._state_cache[session_hash] = state
 
     def __contains__(self, session_hash):
-        if session_hash in self._state_cache:
-            return True
-        return self._redis_client.exists(self._key_name(session_hash)) > 0
+        return self._redis_client.expire(self._key_name(session_hash), self.SESSION_HASH_TTL) > 0
 
     def __delitem__(self, session_hash):
         del self._state_cache[session_hash]

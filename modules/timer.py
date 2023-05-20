@@ -43,7 +43,7 @@ class Timer:
         values.extend([f'{self.records[x]:.2f}' for x in keys])
 
         # save records to log file
-        _logger.error(','.join(values))
+        _logger.info(','.join(values))
 
     def summary(self):
         self._save_to_logger()

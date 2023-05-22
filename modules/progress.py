@@ -11,7 +11,6 @@ from modules.shared import opts
 
 import modules.shared as shared
 
-
 current_task = None
 current_task_step = ''
 pending_tasks = {}
@@ -39,24 +38,9 @@ def start_task(id_task):
     current_task = id_task
     current_task_step = ''
 
-    task_info = pending_tasks.pop(id_task, {})
+    task_info = _pop_task_from_queue(id_task)
     task_info['started_at'] = time.time()
 
-    # some times, start_task may get a id_task with None or not in _queued_tasks
-    # in this case, do not pop task from _queued_tasks
-    id_task_in_queue = False
-    for task_id_in_queue in _queued_tasks.queue:
-        if task_id_in_queue == id_task:
-            id_task_in_queue = True
-            break
-
-    if id_task_in_queue:
-        try:
-            queued_task = _queued_tasks.get(block=True, timeout=1)
-            if queued_task != id_task:
-                logging.error(f'un-excepted task in start, want {id_task}, got {queued_task}')
-        except Exception as e:
-            logger.error(f'pop current task from queue failed, id_task: {id_task}, error: {e.__init__()}')
     return task_info
 
 
@@ -70,7 +54,11 @@ def finish_task(id_task):
     global current_task
     global current_task_step
     global finished_task_count
-    logger.info(f'finish_task, id_task: {id_task}, current_task: {current_task}, current_task_step: {current_task_step}')
+    logger.info(
+        f'finish_task, id_task: {id_task}, current_task: {current_task}, current_task_step: {current_task_step}')
+
+    # if a task was finished before start, we need pop it out from pending queue
+    _pop_task_from_queue(id_task)
 
     if current_task == id_task:
         current_task = None
@@ -113,9 +101,31 @@ def add_task_to_queue(id_job, job_info=None):
             logger.error(f'put task to task_queue failed, task_id: {id_job}, error: {e.__str__()}')
 
 
+def _pop_task_from_queue(id_task):
+    task_info = pending_tasks.pop(id_task, {})
+
+    # some times, start_task may get a id_task with None or not in _queued_tasks
+    # in this case, do not pop task from _queued_tasks
+    id_task_in_queue = False
+    for task_id_in_queue in _queued_tasks.queue:
+        if task_id_in_queue == id_task:
+            id_task_in_queue = True
+            break
+
+    if id_task_in_queue:
+        try:
+            queued_task = _queued_tasks.get(block=True, timeout=1)
+            if queued_task != id_task:
+                logging.error(f'un-excepted task in start, want {id_task}, got {queued_task}')
+        except Exception as e:
+            logger.error(f'pop current task from queue failed, id_task: {id_task}, error: {e.__init__()}')
+    return task_info
+
+
 class ProgressRequest(BaseModel):
     id_task: str = Field(default=None, title="Task ID", description="id of the task to get progress for")
-    id_live_preview: int = Field(default=-1, title="Live preview image ID", description="id of last received last preview image")
+    id_live_preview: int = Field(default=-1, title="Live preview image ID",
+                                 description="id of last received last preview image")
 
 
 class ProgressResponse(BaseModel):
@@ -125,7 +135,8 @@ class ProgressResponse(BaseModel):
     progress: float = Field(default=None, title="Progress", description="The progress with a range of 0 to 1")
     eta: float = Field(default=None, title="ETA in secs")
     live_preview: str = Field(default=None, title="Live preview image", description="Current live preview; a data: uri")
-    id_live_preview: int = Field(default=None, title="Live preview image ID", description="Send this together with next request to prevent receiving same image")
+    id_live_preview: int = Field(default=None, title="Live preview image ID",
+                                 description="Send this together with next request to prevent receiving same image")
     textinfo: str = Field(default=None, title="Info text", description="Info text used by WebUI.")
 
 
@@ -137,7 +148,8 @@ def progressapi(req: ProgressRequest):
     active = req.id_task == current_task
     queued = req.id_task in pending_tasks
     completed = req.id_task in finished_tasks
-    logger.debug(f'progressapi, current_task: {current_task}, id_task: {req.id_task}, queued: {queued}, completed: {completed}')
+    logger.debug(
+        f'progressapi, current_task: {current_task}, id_task: {req.id_task}, queued: {queued}, completed: {completed}')
     # log last access time for this task.
     # if there is no active task, and a queued task is not accessed for a long time, we should
     # consider to remove it from queue.
@@ -153,10 +165,12 @@ def progressapi(req: ProgressRequest):
                 count_ahead += 1
         # 8s is a estimate of inference time consumption
         eta = count_ahead * 8
-        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo=f"In queue({count_ahead} ahead)... ETA: {eta}s" if queued else f"Waiting...")
+        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1,
+                                textinfo=f"In queue({count_ahead} ahead)... ETA: {eta}s" if queued else f"Waiting...")
 
     if current_task_step == 'reload_model_weights':
-        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1, textinfo='Loading model weights... ETA: 8s')
+        return ProgressResponse(active=active, queued=queued, completed=completed, id_live_preview=-1,
+                                textinfo='Loading model weights... ETA: 8s')
 
     progress = 0
 
@@ -175,7 +189,9 @@ def progressapi(req: ProgressRequest):
     eta = predicted_duration - elapsed_since_start if predicted_duration is not None else None
 
     id_live_preview = req.id_live_preview
-    shared.state.set_current_image()
+
+    if current_task_step == 'inference':
+        shared.state.set_current_image()
     if opts.live_previews_enable and shared.state.id_live_preview != req.id_live_preview:
         image = shared.state.current_image
         if image is not None:
@@ -188,7 +204,8 @@ def progressapi(req: ProgressRequest):
     else:
         live_preview = None
 
-    return ProgressResponse(active=active, queued=queued, completed=completed, progress=progress, eta=eta, live_preview=live_preview, id_live_preview=id_live_preview, textinfo=shared.state.textinfo)
+    return ProgressResponse(active=active, queued=queued, completed=completed, progress=progress, eta=eta,
+                            live_preview=live_preview, id_live_preview=id_live_preview, textinfo=shared.state.textinfo)
 
 
 def restore_progress(id_task):

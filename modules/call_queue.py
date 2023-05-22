@@ -40,27 +40,28 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     res = list()
     time_consumption = {}
     try:
+        # start job process
+        task_info = progress.start_task(id_task)
 
-        # log all gpu calls with monitor
-        _, pending_tasks, _, _ = progress.get_task_queue_info()
-        monitor_log_id = modules.system_monitor.on_task(
-            request, func, pending_tasks.get(id_task, dict()), *args, **kwargs)
-        time_consumption['in_queue'] = time.time() - pending_tasks.get(id_task, dict()).get('added_at', time.time())
+        # log all gpu calls with monitor, we should log it before task begin
+        monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
+        time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
 
         timer = Timer('gpu_call', func_name)
+        # reset global state
         shared.state.begin()
+
+        # reload model if necessary
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')
             _check_sd_model(model_title=args[-2], vae_title=args[-1])
         timer.record('load_models')
 
-        # start job process
-        task_info = progress.start_task(id_task)
-
         # do gpu task
         progress.set_current_task_step('inference')
         res = func(request, *args, **kwargs)
         timer.record('inference')
+        progress.set_current_task_step('done')
 
         # all done, clear status and log res
         time_consumption.update(timer.records)

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 import modules.sd_models
-from modules.model_management.database import get_db, repository
+from modules.model_management.database import get_db, favorite
 from modules.user import User
 
 logger = logging.getLogger(__name__)
@@ -54,9 +54,9 @@ def add_favorite_model(request: Request, req: AddFavoriteModelRequest, db: Sessi
     }
 
     try:
-        if repository.get_favorite_model_count_for_user(db, user.uid, req.model_type, model_info) > 0:
+        if favorite.get_favorite_model_count_for_user(db, user.uid, req.model_type, model_info) > 0:
             raise HTTPException(status_code=400, detail=f"'{req.model_title}' is already favorited")
-        repository.add_favorite_model_for_user(db, user.uid, model_info)
+        favorite.add_favorite_model_for_user(db, user.uid, model_info)
         return AddFavoriteModelResponse(ok=True, model_title=checkpoint_info.title)
     except HTTPException as e:
         raise e
@@ -84,14 +84,14 @@ def get_favorite_model(request: Request,
     if size > 20:
         size = 20
     if total == 0:
-        total = repository.get_favorite_model_count_for_user(db, user.uid, model_type, {})
+        total = favorite.get_favorite_model_count_for_user(db, user.uid, model_type, {})
     model_titles = []
     if total > 0:
-        for record in repository.get_favorite_models_for_user(db,
-                                                              user.uid,
-                                                              model_type,
-                                                              skip=(page - 1) * size,
-                                                              limit=size):
+        for record in favorite.get_favorite_models_for_user(db,
+                                                            user.uid,
+                                                            model_type,
+                                                            skip=(page - 1) * size,
+                                                            limit=size):
             model_titles.append(record.model_title)
     return GetFavoriteModelResponse(
         records=model_titles,
@@ -104,7 +104,7 @@ def get_favorite_model(request: Request,
 def touch_favorite_model(request: Request, model_title: str):
     user = User.current_user(request)
     for db in get_db():
-        repository.touch_favorite_models_for_user(db, user.uid, {'model_title': model_title})
+        favorite.touch_favorite_models_for_user(db, user.uid, {'model_title': model_title})
         break
 
 
@@ -115,7 +115,7 @@ class DeleteFavoriteModelResponse(BaseModel):
 def delete_favorite_model(request: Request, model_type: str, model_title: str, db: Session = Depends(get_db)):
     user = User.current_user(request)
     try:
-        repository.remove_favorite_models_for_user(db, user.uid, {'model_title': model_title, 'model_type': model_type})
+        favorite.remove_favorite_models_for_user(db, user.uid, {'model_title': model_title, 'model_type': model_type})
         return DeleteFavoriteModelResponse(ok=True)
     except Exception as e:
         logger.error(f'failed to add favorite models: {e.__str__()}')

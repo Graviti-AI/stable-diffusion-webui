@@ -14,7 +14,7 @@ class FavoriteModel(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     created_at = Column(DateTime)
-    updated_at = Column(DateTime, onupdate=datetime.now)
+    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime, default=None, index=True)
     last_accessed_at = Column(DateTime, index=True)
 

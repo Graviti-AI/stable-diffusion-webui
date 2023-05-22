@@ -1,13 +1,13 @@
-import datetime
+from sqlalchemy import Column, Integer, String
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, Query
 
-from sqlalchemy import select, update, delete, func
-from sqlalchemy.orm import Session
 from modules.model_management.database import Base
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
 
 
 class CheckpointInfo(Base):
     __tablename__ = "checkpoints"
+
     id = Column(Integer, primary_key=True, index=True)
 
     filename = Column(String)
@@ -22,20 +22,50 @@ class CheckpointInfo(Base):
     description = Column(String)
 
     name_for_extra = Column(String)
-    metadata = Column(String)
+    mdata = Column(String)
 
     local_preview = Column(String)
     preview = Column(String)
+    model_type = Column(String)
 
 
-def list_checkpoints(session: Session, skip: int = 0, limit: int = 20):
-    stmt = select(
-        CheckpointInfo
-    ).order_by(
-        CheckpointInfo.name,
-    ).offset(
-        skip,
-    ).limit(
-        limit,
+def list_checkpoints(session: Session, search_value: str = None, model_type: str = None, skip: int = 0,
+                     limit: int = 20):
+    query = session.query(CheckpointInfo)
+    stmt = (
+        _checkpoints_filter(query, search_value, model_type)
+        .order_by(CheckpointInfo.name)
+        .offset(skip)
+        .limit(limit)
     )
+
     return session.scalars(stmt)
+
+
+def count_checkpoints(session: Session, search_value: str = None, model_type: str = None) -> int:
+    query = session.query(CheckpointInfo)
+    query = _checkpoints_filter(query, search_value, model_type)
+
+    return query.count()
+
+
+def _checkpoints_filter(query: Query, search_value: str = None, model_type: str = None) -> Query:
+    if model_type:
+        query = query.filter(CheckpointInfo.model_type == model_type)
+
+    if search_value:
+        value = f'%{search_value}%'
+        query = query.filter(
+            or_(
+                CheckpointInfo.name.like(value),
+                CheckpointInfo.model_name.like(value),
+                CheckpointInfo.title.like(value),
+                CheckpointInfo.name_hash.like(value),
+                CheckpointInfo.shorthash.like(value),
+                CheckpointInfo.sha256.like(value),
+                CheckpointInfo.name_shorthash.like(value),
+                CheckpointInfo.hash.like(value),
+            )
+        )
+
+    return query

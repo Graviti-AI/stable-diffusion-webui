@@ -19,6 +19,7 @@ import logging
 from modules.api.daemon_api import DaemonApi
 from modules.cache import use_sdd_to_cache_remote_file, setup_remote_file_cache
 from modules.lru_cache import LruCache
+from modules.model_management.api.checkpoint import setup_checkpoint_api
 
 logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not available' not in record.getMessage())
 
@@ -319,6 +320,7 @@ def api_only(server_port: int = 0):
     setup_middleware(app)
     api = create_api(app)
     DaemonApi(app)
+    setup_checkpoint_api(app)
 
     modules.script_callbacks.app_started_callback(None, app)
 
@@ -392,6 +394,7 @@ def webui(server_port: int = 0):
         if launch_api:
             create_api(app)
         DaemonApi(app)
+        setup_checkpoint_api(app)
 
         add_static_filedir_to_demo(app, route="components")
         ui_extra_networks.add_pages_to_demo(app)

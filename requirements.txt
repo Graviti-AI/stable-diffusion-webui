@@ -32,3 +32,7 @@ safetensors
 psutil
 rich
 redis
+fastapi
+pydantic
+PyMySQL
+SQLAlchemy

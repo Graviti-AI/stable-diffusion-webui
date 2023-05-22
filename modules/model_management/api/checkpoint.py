@@ -24,7 +24,7 @@ def setup_checkpoint_api(app):
         if app:
             break
         time.sleep(10)
-    app.add_api_route("sd_extra_networks/update_page",
+    app.add_api_route("/internal/models",
                       list_checkpoint,
                       methods=["GET"],
                       response_model=ListCheckpointResponse)
@@ -44,29 +44,40 @@ class CheckpointInfo:
                     ] + (
                        [self.shorthash, self.sha256, f'{self.name} [{self.shorthash}]'] if self.shorthash else []
                    )
-        self.metadata = json.loads(checkpoint_info.metadata)
+        self.metadata = json.loads(checkpoint_info.mdata)
 
 
 class ListCheckpointResponse(BaseModel):
     page: int = Field(default=1, title="PageIndex", description="page index")
-    totoal_count: int = Field(default=0, title="TotalCount", description="total count")
-    model_list: list[CheckpointInfo] = Field(default=[], title="ModelList", description="model list")
+    total_count: int = Field(default=0, title="TotalCount", description="total count")
+    model_list: list = Field(default=[], title="ModelList", description="model list")
     allow_negative_prompt: bool = Field(default=False, title="allow_negative_prompt",
                                         description="allow_negative_prompt")
 
 
+# noinspection PyUnusedLocal
 def list_checkpoint(request: Request,
-                    model_type,
-                    search_value,
-                    page=1,
-                    page_size=14,
-                    need_refresh=False,
+                    search_value: str = '',
+                    model_type: str = '',
+                    page: int = 1,
+                    page_size: int = 14,
+                    need_refresh: bool = False,
                     db: Session = Depends(get_db)):
     if page < 1:
         page = 1
-    if size > 20:
-        size = 20
 
-    result = list()
-    for record in checkpoint_repository.list_checkpoints(db, skip=(page - 1) * size, limit=size):
-        result.append(CheckpointInfo(record))
+    if page_size <= 0 or page_size > 20:
+        page_size = 20
+
+    models = list()
+    for record in checkpoint_repository.list_checkpoints(db, search_value=search_value, model_type=model_type,
+                                                         skip=(page - 1) * page_size, limit=page_size):
+        models.append(CheckpointInfo(record))
+
+    response = ListCheckpointResponse()
+    response.total_count = checkpoint_repository.count_checkpoints(db, search_value=search_value, model_type=model_type)
+    response.model_list = models
+    response.page = page
+    response.allow_negative_prompt = False
+
+    return response

@@ -23,6 +23,7 @@ def create_ui():
                 #     show_extras_results = gr.Checkbox(label='Show result images', value=True, elem_id="extras_show_extras_results")
 
             submit = gr.Button('Generate', elem_id="extras_generate", variant='primary')
+            dummy_component = gr.Label(visible=False)
 
             script_inputs = scripts.scripts_postproc.setup_ui()
 
@@ -37,6 +38,7 @@ def create_ui():
     submit.click(
         fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing, extra_outputs=[None, ''], add_monitor_state=True),
         inputs=[
+            dummy_component,
             tab_index,
             extras_image,
             image_batch,

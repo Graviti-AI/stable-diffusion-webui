@@ -7,7 +7,7 @@ from modules import shared, images, devices, scripts, scripts_postprocessing, ui
 from modules.shared import opts
 
 
-def run_postprocessing(request: gr.Request, extras_mode, image, image_folder, *args, save_output: bool = True):
+def run_postprocessing(request: gr.Request, id_task, extras_mode, image, image_folder, *args, save_output: bool = True):
     devices.torch_gc()
 
     shared.state.begin()

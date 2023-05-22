@@ -40,12 +40,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     res = list()
     time_consumption = {}
     try:
-        # start job process
-        task_info = progress.start_task(id_task)
 
         # log all gpu calls with monitor
-        monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
-        time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
+        _, pending_tasks, _, _ = progress.get_task_queue_info()
+        monitor_log_id = modules.system_monitor.on_task(
+            request, func, pending_tasks.get(id_task, dict()), *args, **kwargs)
+        time_consumption['in_queue'] = time.time() - pending_tasks.get(id_task, dict()).get('added_at', time.time())
 
         timer = Timer('gpu_call', func_name)
         shared.state.begin()
@@ -53,6 +53,9 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
             progress.set_current_task_step('reload_model_weights')
             _check_sd_model(model_title=args[-2], vae_title=args[-1])
         timer.record('load_models')
+
+        # start job process
+        task_info = progress.start_task(id_task)
 
         # do gpu task
         progress.set_current_task_step('inference')
@@ -129,7 +132,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
                 res = list(func(request, *args, **kwargs))
         except Exception as e:
             # When printing out our debug argument list, do not print out more than a MB of text
-            max_debug_str_len = 131072 # (1024*1024)/8
+            max_debug_str_len = 131072  # (1024*1024)/8
 
             print("Error completing request", file=sys.stderr)
             argStr = f"Arguments: {str(args)} {str(kwargs)}"

@@ -101,13 +101,15 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
 
         try:
             res = submit_to_gpu_worker(
-                functools.partial(wrap_gpu_call, request, func, func_name, id_task), timeout=60 * 30)(*args, **kwargs)
+                functools.partial(wrap_gpu_call, request, func, func_name, id_task),
+                timeout=shared.cmd_opts.predict_timeout
+            )(*args, **kwargs)
         except MonitorException as e:
             extra_outputs_array = extra_outputs
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
             if add_monitor_state:
-                return extra_outputs_array + [str(e)], 399 < e.status_code < 500
+                return extra_outputs_array + [str(e)], e.status_code == 402
             return extra_outputs_array + [str(e)]
 
         if add_monitor_state:

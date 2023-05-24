@@ -9,7 +9,7 @@ from modules import shared, ui_extra_networks
 class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Lora')
-        self.min_model_size_mb = 5
+        self.min_model_size_mb = 1
         self.max_model_size_mb = 1e3
 
     def refresh_metadata(self):

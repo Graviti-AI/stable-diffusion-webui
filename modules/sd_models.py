@@ -112,8 +112,8 @@ def checkpoint_tiles():
 
 
 def list_models():
-    checkpoints_list.clear()
-    checkpoint_alisases.clear()
+    # checkpoints_list.clear()
+    # checkpoint_alisases.clear()
 
     cmd_ckpt = shared.cmd_opts.ckpt
     if shared.cmd_opts.no_download_sd_model or cmd_ckpt != shared.sd_model_file or os.path.exists(cmd_ckpt):

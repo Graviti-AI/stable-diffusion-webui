@@ -62,9 +62,11 @@ class CheckpointInfo:
                 errors.display(e, f"reading checkpoint metadata: {filename}")
 
     def register(self):
-        checkpoints_list[self.title] = self
+        if self.title not in checkpoints_list:
+            checkpoints_list[self.title] = self
         for id in self.ids:
-            checkpoint_alisases[id] = self
+            if id not in checkpoint_alisases:
+                checkpoint_alisases[id] = self
 
     def calculate_shorthash(self):
         self.sha256 = hashes.sha256(self.filename, "checkpoint/" + self.name)

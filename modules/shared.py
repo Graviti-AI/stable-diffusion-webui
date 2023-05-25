@@ -231,14 +231,14 @@ def options_section(section_identifier, options_dict):
     return options_dict
 
 
-def list_checkpoint_tiles():
+def list_checkpoint_tiles(request: gr.Request = None):
     import modules.sd_models
-    return modules.sd_models.checkpoint_tiles()
+    return modules.sd_models.checkpoint_tiles(request)
 
 
-def refresh_checkpoints(request: starlette.requests.Request):
+def refresh_checkpoints(request: gr.Request = None):
     import modules.sd_models
-    return modules.sd_models.list_models()
+    return modules.sd_models.list_models(request)
 
 
 def list_samplers():
@@ -346,8 +346,13 @@ options_templates.update(options_section(('training', "Training"), {
     "training_tensorboard_flush_every": OptionInfo(120, "How often, in seconds, to flush the pending tensorboard events and summaries to disk."),
 }))
 
+
+def _list_checkpoint_tiles(request: gr.Request = None):
+    return {"choices": list_checkpoint_tiles(request)}
+
+
 options_templates.update(options_section(('sd', "Stable Diffusion"), {
-    "sd_model_checkpoint": OptionInfo(None, "Stable Diffusion checkpoint", gr.Dropdown, lambda: {"choices": list_checkpoint_tiles()}, refresh=refresh_checkpoints),
+    "sd_model_checkpoint": OptionInfo(None, "Stable Diffusion checkpoint", gr.Dropdown, _list_checkpoint_tiles, refresh=refresh_checkpoints),
     "sd_checkpoint_cache": OptionInfo(0, "Checkpoints to cache in RAM", gr.Slider, {"minimum": 0, "maximum": 10, "step": 1}),
     "sd_vae_checkpoint_cache": OptionInfo(0, "VAE Checkpoints to cache in RAM", gr.Slider, {"minimum": 0, "maximum": 10, "step": 1}),
     "sd_vae": OptionInfo("Automatic", "SD VAE", gr.Dropdown, lambda: {"choices": shared_items.sd_vae_items()}, refresh=shared_items.refresh_vae_list),

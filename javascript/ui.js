@@ -537,7 +537,7 @@ async function browseModels(){
     {
         if (gradioApp().querySelector("div#txt2img_extra_networks").classList.contains("hide"))
         {
-            fetchPageDataAndUpdateList({tabname: 'txt2img', model_type: currentTab.get('txt2img'), page: 1});
+            fetchPageDataAndUpdateList({tabname: 'txt2img', page_name: currentTab.get('txt2img'), page: 1});
         }
         txt2img_button.click();
     }
@@ -547,14 +547,14 @@ async function browseModels(){
     {
         if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
         {
-            fetchPageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
+            fetchPageDataAndUpdateList({tabname: 'img2img', page_name: currentTab.get('img2img'), page: 1});
         }
         img2img_button.click();
     }
 }
 
-function searchModel({model_type, searchValue}) {
-    return fetch(`/sd_extra_networks/update_page?model_type=${model_type}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
+function searchModel({page_name, searchValue}) {
+    return fetch(`/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
         method: "GET", cache: "no-cache"});
 }
 
@@ -583,7 +583,7 @@ async function getModelFromUrl() {
              if(key === 'checkpoint') {
                 if (!checkpoint) {
                     checkpoint = value;
-                    const response = searchModel({ model_type: keyMapModelType[key], searchValue: value.toLowerCase() })
+                    const response = searchModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
                     promiseList.push(response);
                     urlKeys.push(key);
                     urlValues.push(value);
@@ -591,7 +591,7 @@ async function getModelFromUrl() {
                     notifier.alert('There are multiple checkpoint in the url, we will use the first one and discard the rest')
                 }
              } else {
-                const response = searchModel({ model_type: keyMapModelType[key], searchValue: value.toLowerCase() })
+                const response = searchModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
                 promiseList.push(response);
                 urlKeys.push(key);
                 urlValues.push(value);

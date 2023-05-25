@@ -416,7 +416,7 @@ def create_ui(container, button, tabname):
                         start_uploading_call_back=start_upload_callback,
                         finish_uploading_call_back=finish_upload_callback
                     )
-                tab_click_params=gr.JSON(value={"tabname": ui.tabname, "model_type": self_name_id}, visible=False)
+                tab_click_params = gr.JSON(value={"tabname": ui.tabname, "page_name": self_name_id}, visible=False)
                 tab.select(fn=None, _js=f"modelTabClick", inputs=[tab_click_params], outputs=[])
                 ui.pages.append(page_elem)
                 with gr.Row(elem_id=f"{ui.tabname}_{self_name_id}_pagination", elem_classes="pagination"):

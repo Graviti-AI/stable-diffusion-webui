@@ -1,5 +1,5 @@
 from modules import extra_networks, shared
-import lora
+from modules.Lora import lora
 
 
 class ExtraNetworkLora(extra_networks.ExtraNetwork):

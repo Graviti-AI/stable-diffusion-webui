@@ -11,12 +11,12 @@ function setupExtraNetworksForTab(tabname){
     tabs.appendChild(refresh)
 
     search.addEventListener("input", function(evt){
-        const model_type = currentTab.get(tabname);
+        const page_name = currentTab.get(tabname);
         // reset page
-        const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+        const currentPageTabsId = `${tabname}_${page_name}_current_page`;
         currentPageForTabs.set(currentPageTabsId, 1);
 
-        fetchPageDataAndUpdateList({tabname, model_type, page: 1, loading: false});
+        fetchPageDataAndUpdateList({tabname, page_name, page: 1, loading: false});
     });
 }
 
@@ -169,7 +169,7 @@ async function extraNetworksRequestMetadata(event, extraPage, cardName){
 
     try {
         const response = await fetch(
-            `./sd_extra_networks/metadata?page=${encodeURIComponent(extraPage)}&item=${encodeURIComponent(cardName)}`, 
+            `./sd_extra_networks/metadata?page=${encodeURIComponent(extraPage)}&item=${encodeURIComponent(cardName)}`,
             {method: "GET"});
         const metadata_html_str = await response.text();
         if(metadata_html_str){
@@ -182,9 +182,9 @@ async function extraNetworksRequestMetadata(event, extraPage, cardName){
   }
 }
 
-async function updatePrivatePreviews(tabname, model_type) {
-    var cards = gradioApp().querySelectorAll(`#${tabname}_${model_type}_cards>div`);
-    const response = await fetch(`/sd_extra_networks/private_previews?model_type=${model_type}`, {
+async function updatePrivatePreviews(tabname, page_name) {
+    var cards = gradioApp().querySelectorAll(`#${tabname}_${page_name}_cards>div`);
+    const response = await fetch(`/sd_extra_networks/private_previews?page_name=${page_name}`, {
         method: "GET", cache: "no-cache"});
     const private_preview_list = await response.json();
     cards.forEach((card) => {
@@ -202,8 +202,8 @@ async function updatePrivatePreviews(tabname, model_type) {
 function updateTabPrivatePreviews(tabname) {
     const tab_items = gradioApp().querySelectorAll(`#${tabname}_extra_tabs>.tabitem>div>.block.gradio-html`);
     tab_items.forEach((tab_div) => {
-        const model_type = tab_div.id.substr(tabname.length + 1);
-        updatePrivatePreviews(tabname, model_type);
+        const page_name = tab_div.id.substr(tabname.length + 1);
+        updatePrivatePreviews(tabname, page_name);
     });
 }
 
@@ -226,13 +226,13 @@ let currentTab = new Map();
 currentTab.set('txt2img', 'checkpoints');
 currentTab.set('img2img', 'checkpoints');
 
-async function handleData({response, tabname, model_type }) {
-    const cardsParentNode = gradioApp().querySelector(`#${tabname}_${model_type}_cards`);
-    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
-    const currentTotalCountId = `${tabname}_${model_type}_total_count`;
-    const totalPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .total-page`);
-    const currentPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .current-page`);
-    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card`);
+async function handleData({response, tabname, page_name }) {
+    const cardsParentNode = gradioApp().querySelector(`#${tabname}_${page_name}_cards`);
+    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
+    const currentTotalCountId = `${tabname}_${page_name}_total_count`;
+    const totalPageNode = gradioApp().querySelector(`#${tabname}_${page_name}_pagination_row .total-page`);
+    const currentPageNode = gradioApp().querySelector(`#${tabname}_${page_name}_pagination_row .current-page`);
+    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${page_name}_upload_button-card`);
 
     const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt } = await response.json();
 
@@ -258,7 +258,7 @@ async function handleData({response, tabname, model_type }) {
     } else {
         uploadBtnNode.style.display = 'none';
     }
-    
+
     // add new child
     model_list.forEach(item => {
         const cardNode = document.createElement('div');
@@ -267,9 +267,9 @@ async function handleData({response, tabname, model_type }) {
             cardNode.setAttribute('onclick', item.onclick.replaceAll(/\"/g, '').replaceAll(/&quot;/g, '"'));
         } else {
             cardNode.setAttribute('onclick', `return cardClicked('${tabname}', ${item.prompt}), ${allow_negative_prompt}`)
-            
+
         }
-        
+
         cardNode.setAttribute('filename', item.name);
         if (item.preview) {
             cardNode.style.backgroundImage = `url(${item.preview})`;
@@ -278,7 +278,7 @@ async function handleData({response, tabname, model_type }) {
         const metaDataButtonNode = document.createElement('div');
         metaDataButtonNode.className = 'metadata-button';
         metaDataButtonNode.title = "Show metadata";
-        metaDataButtonNode.setAttribute('onclick', `extraNetworksRequestMetadata(event, "${model_type}", "${item.name}")`);
+        metaDataButtonNode.setAttribute('onclick', `extraNetworksRequestMetadata(event, "${page_name}", "${item.name}")`);
 
         const actionsNode = document.createElement('div');
         actionsNode.className = 'actions';
@@ -289,7 +289,7 @@ async function handleData({response, tabname, model_type }) {
         const ulNode = document.createElement('ul');
         const aNode = document.createElement('a');
         aNode.title = "replace preview image with currently selected in gallery";
-        aNode.setAttribute('onclick', `return saveCardPreview(event, "${tabname}", "${model_type}/${item.name}.png")`);
+        aNode.setAttribute('onclick', `return saveCardPreview(event, "${tabname}", "${page_name}/${item.name}.png")`);
         aNode.target = "_blank";
         aNode.innerHTML = "set private preview";
 
@@ -320,29 +320,29 @@ async function handleData({response, tabname, model_type }) {
     })
 }
 
-async function fetchPageDataAndUpdateList({tabname, model_type, page, need_refresh = false, loading=true}) {
+async function fetchPageDataAndUpdateList({tabname, page_name, page, need_refresh = false, loading=true}) {
     const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
 
-    const promise = fetch(`/sd_extra_networks/update_page?model_type=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=${need_refresh}`, {
+    const promise = fetch(`/sd_extra_networks/models?page_name=${page_name}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=${need_refresh}`, {
         method: "GET", cache: "no-cache"});
-    
+
     // loading
     if (loading) {
         notifier.asyncBlock(promise, (response) => {
-            handleData({response, tabname, model_type })
+            handleData({response, tabname, page_name })
         });
     } else {
         const response = await promise;
-        handleData({ response, tabname, model_type })
+        handleData({ response, tabname, page_name })
     }
 }
 
-function updatePage(tabname, model_type, page_type) {
+function updatePage(tabname, page_name, page_type) {
     let currentPage = 1;
     let totalCount;
-    
-    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
-    const currentTotalCountId = `${tabname}_${model_type}_total_count`;
+
+    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
+    const currentTotalCountId = `${tabname}_${page_name}_total_count`;
 
     currentPage = currentPageForTabs.get(currentPageTabsId);
     totalCount = totalCountForTabs.get(currentTotalCountId);
@@ -354,7 +354,7 @@ function updatePage(tabname, model_type, page_type) {
         return
      }
     const page = page_type === 'previous' ? currentPage - 1 : currentPage + 1;
-    fetchPageDataAndUpdateList({ tabname, model_type, page });
+    fetchPageDataAndUpdateList({ tabname, page_name, page });
 }
 
 function setPageSize() {
@@ -363,24 +363,24 @@ function setPageSize() {
 }
 
 async function refreshModelList({tabname}) {
-    const model_type = currentTab.get(tabname);
-    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const page_name = currentTab.get(tabname);
+    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
     const currentPage = currentPageForTabs.get(currentPageTabsId) || 1;
-    fetchPageDataAndUpdateList({tabname, model_type, page: currentPage, need_refresh: true});
+    fetchPageDataAndUpdateList({tabname, page_name, page: currentPage, need_refresh: true});
 }
 
-function modelTabClick({tabname, model_type}) {
+function modelTabClick({tabname, page_name}) {
     let currentPage = 1;
-    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
     if (currentPageForTabs.has(currentPageTabsId)) {
         currentPage = currentPageForTabs.get(currentPageTabsId);
     } else {
         currentPageForTabs.set(currentPageTabsId, 1);
     }
 
-    currentTab.set(tabname, model_type);
+    currentTab.set(tabname, page_name);
 
-    fetchPageDataAndUpdateList({tabname, model_type, page: currentPage});
+    fetchPageDataAndUpdateList({tabname, page_name, page: currentPage});
 }
 
 onUiLoaded(function() {

@@ -91,7 +91,7 @@ def get_metadata(page: str = "", item: str = ""):
     return HTMLResponse(metadata_html)
 
 
-def get_page_query_model(request: Request, model_type:str, page: int, search_value: str, page_size: int, need_refresh: bool):
+def get_extra_networks_models(request: Request, page_name: str, search_value: str, page: int, page_size: int, need_refresh: bool):
     from starlette.responses import JSONResponse
 
     model_list = []
@@ -102,7 +102,7 @@ def get_page_query_model(request: Request, model_type:str, page: int, search_val
         return search_value in item.get('search_term', '').lower()
 
     for page_item in extra_pages:
-        if page_item.name.replace(" ", "_") == model_type:
+        if page_item.name.replace(" ", "_") == page_name:
             with model_list_refresh_lock:
                 if need_refresh:
                     page_item.refresh(request)
@@ -118,6 +118,7 @@ def get_page_query_model(request: Request, model_type:str, page: int, search_val
         "model_list": model_list,
         "allow_negative_prompt": allow_negative_prompt
     })
+
 
 def get_private_previews(request: Request, model_type: str):
     from starlette.responses import JSONResponse
@@ -145,7 +146,7 @@ def add_pages_to_demo(app):
     app.add_api_route("/sd_extra_networks/thumb", fetch_file, methods=["GET"])
     app.add_api_route("/sd_extra_networks/metadata", get_metadata, methods=["GET"])
     app.add_api_route("/sd_extra_networks/private_previews", get_private_previews, methods=["GET"])
-    app.add_api_route("/sd_extra_networks/update_page", get_page_query_model, methods=["GET"])
+    app.add_api_route("/sd_extra_networks/models", get_extra_networks_models, methods=["GET"])
 
 
 class ExtraNetworksPage:

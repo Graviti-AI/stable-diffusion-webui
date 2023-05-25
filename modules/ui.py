@@ -17,6 +17,7 @@ import gradio.utils
 import numpy as np
 from PIL import Image, PngImagePlugin
 from modules.call_queue import wrap_gradio_gpu_call, submit_to_gpu_worker, wrap_gradio_call
+import modules.call_utils
 
 from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, postprocessing, ui_components, ui_common, ui_postprocessing, progress, hashes
 from modules.ui_components import FormRow, FormColumn, FormGroup, ToolButton, FormHTML
@@ -410,8 +411,6 @@ def apply_setting(key, value):
 
 def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id):
     def refresh(request: gr.Request):
-        import modules.call_utils
-
         inputs = modules.call_utils.special_args(refresh_method, [], request)
         if inputs:
             # the refresh_method either needs a gr.Request object
@@ -467,11 +466,18 @@ def ordered_ui_categories():
         yield category
 
 
-def get_value_for_setting(key):
+def get_value_for_setting(key, request: gr.Request = None):
     value = getattr(opts, key)
 
     info = opts.data_labels[key]
-    args = info.component_args() if callable(info.component_args) else info.component_args or {}
+    if callable(info.component_args):
+        inputs = modules.call_utils.special_args(info.component_args, [], request)
+        if inputs:
+            args = info.component_args(*inputs)
+        else:
+            args = info.component_args()
+    else:
+        args = info.component_args or {}
     args = {k: v for k, v in args.items() if k not in {'precision'}}
 
     return gr.update(value=value, **args)
@@ -1828,8 +1834,8 @@ def create_ui():
 
         component_keys = [k for k in opts.data_labels.keys() if k in component_dict]
 
-        def get_settings_values():
-            return [get_value_for_setting(key) for key in component_keys]
+        def get_settings_values(request: gr.Request):
+            return [get_value_for_setting(key, request) for key in component_keys]
 
         demo.load(
             fn=get_settings_values,

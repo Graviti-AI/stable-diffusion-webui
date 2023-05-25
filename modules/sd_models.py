@@ -9,6 +9,7 @@ from omegaconf import OmegaConf
 from os import mkdir
 from urllib import request
 import ldm.modules.midas as midas
+import gradio as gr
 
 from ldm.util import instantiate_from_config
 
@@ -103,7 +104,7 @@ def setup_model():
     enable_midas_autodownload()
 
 
-def checkpoint_tiles():
+def checkpoint_tiles(req: gr.Request = None):
     def convert(name):
         return int(name) if name.isdigit() else name.lower()
 
@@ -113,7 +114,7 @@ def checkpoint_tiles():
     return sorted([x.title for x in checkpoints_list.values()], key=alphanumeric_key)
 
 
-def list_models():
+def list_models(req: gr.Request = None):
     # checkpoints_list.clear()
     # checkpoint_alisases.clear()
 
@@ -167,7 +168,7 @@ def model_hash(filename):
 
 def select_checkpoint():
     model_checkpoint = shared.opts.sd_model_checkpoint
-        
+
     checkpoint_info = checkpoint_alisases.get(model_checkpoint, None)
     if checkpoint_info is not None:
         return checkpoint_info
@@ -374,7 +375,7 @@ def enable_midas_autodownload():
         if not os.path.exists(path):
             if not os.path.exists(midas_path):
                 mkdir(midas_path)
-    
+
             print(f"Downloading midas model weights for {model_type} to {path}")
             request.urlretrieve(midas_urls[model_type], path)
             print(f"{model_type} downloaded")

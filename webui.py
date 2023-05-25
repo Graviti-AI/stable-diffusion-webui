@@ -25,6 +25,7 @@ logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not
 from modules import paths, timer, import_hook, errors
 from modules.paths_internal import data_path
 from modules.state_holder import make_state_holder
+from modules.Lora.scripts import lora_script
 
 startup_timer = timer.Timer('main', 'initialize')
 
@@ -217,6 +218,7 @@ def initialize():
     modelloader.list_builtin_upscalers()
     startup_timer.record("list builtin upscalers")
 
+    lora_script.init()
     modules.scripts.load_scripts()
     startup_timer.record("load scripts")
 
@@ -343,6 +345,7 @@ def webui(server_port: int = 0):
             ui_tempdir.cleanup_tmpdr()
             startup_timer.record("cleanup temp dir")
 
+        lora_script.before_ui()
         modules.script_callbacks.before_ui_callback()
         startup_timer.record("scripts before_ui_callback")
 

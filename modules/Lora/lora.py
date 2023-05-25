@@ -191,14 +191,13 @@ def load_lora(name, filename):
 
 
 def load_loras(names, multipliers=None):
-    global loaded_loras
     already_loaded = {}
 
     for lora in loaded_loras:
         if lora.name in names:
             already_loaded[lora.name] = lora
 
-    being_loaded_loras = []
+    loaded_loras.clear()
 
     loras_on_disk = [available_loras.get(name, None) for name in names]
     if any([x is None for x in loras_on_disk]):
@@ -223,9 +222,7 @@ def load_loras(names, multipliers=None):
             continue
 
         lora.multiplier = multipliers[i] if multipliers else 1.0
-        being_loaded_loras.append(lora)
-
-    loaded_loras = being_loaded_loras
+        loaded_loras.append(lora)
 
 
 def lora_calc_updown(lora, module, target):
@@ -345,7 +342,7 @@ def lora_MultiheadAttention_load_state_dict(self, *args, **kwargs):
 
 
 def list_available_loras():
-    # available_loras.clear()
+    available_loras.clear()
 
     os.makedirs(shared.cmd_opts.lora_dir, exist_ok=True)
 
@@ -359,8 +356,8 @@ def list_available_loras():
             continue
 
         name = os.path.splitext(os.path.basename(filename))[0]
-        if name not in available_loras:
-            available_loras[name] = LoraOnDisk(name, filename)
+
+        available_loras[name] = LoraOnDisk(name, filename)
 
 
 available_loras = {}

@@ -1115,3 +1115,7 @@ footer {
   padding-right: 7px;
   width: 20%;
 }
+
+textarea {
+    font-family: monospace !important;
+}

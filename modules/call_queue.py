@@ -40,16 +40,17 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     res = list()
     time_consumption = {}
     try:
+        timer = Timer('gpu_call', func_name)
+
+        # reset global state
+        shared.state.begin()
+
         # start job process
         task_info = progress.start_task(id_task)
 
         # log all gpu calls with monitor, we should log it before task begin
         monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
         time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
-
-        timer = Timer('gpu_call', func_name)
-        # reset global state
-        shared.state.begin()
 
         # reload model if necessary
         if func_name in ('txt2img', 'img2img'):

@@ -1,9 +1,9 @@
 import json
 import os
-import lora
 import gradio as gr
 
 from modules import shared, ui_extra_networks
+from modules.Lora import lora
 
 
 class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
@@ -14,11 +14,12 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
 
     def refresh_metadata(self):
         for name, lora_on_disk in lora.available_loras.items():
-            path, ext = os.path.splitext(lora_on_disk.filename)
-            metadata_path = "".join([path, ".meta"])
-            metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
-            if metadata is not None:
-                self.metadata[name] = metadata
+            if name not in self.metadata:
+                path, ext = os.path.splitext(lora_on_disk.filename)
+                metadata_path = "".join([path, ".meta"])
+                metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
+                if metadata is not None:
+                    self.metadata[name] = metadata
 
     def refresh(self, request: gr.Request):
         lora.list_available_loras()

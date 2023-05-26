@@ -341,8 +341,8 @@ def lora_MultiheadAttention_load_state_dict(self, *args, **kwargs):
     return torch.nn.MultiheadAttention_load_state_dict_before_lora(self, *args, **kwargs)
 
 
-def list_available_loras():
-    available_loras.clear()
+def list_available_loras(request: Request = None):
+    # available_loras.clear()
 
     os.makedirs(shared.cmd_opts.lora_dir, exist_ok=True)
 
@@ -356,11 +356,9 @@ def list_available_loras():
             continue
 
         name = os.path.splitext(os.path.basename(filename))[0]
-
-        available_loras[name] = LoraOnDisk(name, filename)
+        if name not in available_loras:
+            available_loras[name] = LoraOnDisk(name, filename)
 
 
 available_loras = {}
 loaded_loras = []
-
-list_available_loras()

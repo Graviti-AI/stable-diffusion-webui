@@ -4,6 +4,7 @@ import re
 import torch
 from typing import Union
 
+from fastapi import Request
 from modules import shared, devices, sd_models, errors
 
 metadata_tags_order = {"ss_sd_model_name": 1, "ss_resolution": 2, "ss_clip_skip": 3, "ss_num_train_images": 10, "ss_tag_frequency": 20}
@@ -73,17 +74,20 @@ def convert_diffusers_name_to_compvis(key, is_sd2):
 
 
 class LoraOnDisk:
-    def __init__(self, name, filename):
+    def __init__(self, name, filename, metadata: dict = None):
         self.name = name
         self.filename = filename
         self.metadata = {}
 
-        _, ext = os.path.splitext(filename)
-        if ext.lower() == ".safetensors":
-            try:
-                self.metadata = sd_models.read_metadata_from_safetensors(filename)
-            except Exception as e:
-                errors.display(e, f"reading lora {filename}")
+        if not metadata:
+            self.metadata = metadata
+        else:
+            _, ext = os.path.splitext(filename)
+            if ext.lower() == ".safetensors":
+                try:
+                    self.metadata = sd_models.read_metadata_from_safetensors(filename)
+                except Exception as e:
+                    errors.display(e, f"reading lora {filename}")
 
         if self.metadata:
             m = {}

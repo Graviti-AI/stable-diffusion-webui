@@ -79,7 +79,7 @@ class LoraOnDisk:
         self.filename = filename
         self.metadata = {}
 
-        if not metadata:
+        if metadata:
             self.metadata = metadata
         else:
             _, ext = os.path.splitext(filename)

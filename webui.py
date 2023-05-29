@@ -218,8 +218,8 @@ def initialize():
     modelloader.list_builtin_upscalers()
     startup_timer.record("list builtin upscalers")
 
-    lora_script.init()
     modules.scripts.load_scripts()
+    lora_script.init()
     startup_timer.record("load scripts")
 
     modules.sd_vae.refresh_vae_list()

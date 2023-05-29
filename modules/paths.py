@@ -215,6 +215,9 @@ class Paths:
         if self._private_output_dir == self._output_dir:
             # image file generated in private output dir, do nothing
             pass
+        elif filename.startswith(str(self._work_dir)):
+            # image file is already in work dir, do nothing
+            pass
         else:
             # image is generated at public folder, make a symlink to src image
             src_path = pathlib.Path(filename)

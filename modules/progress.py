@@ -209,7 +209,8 @@ def progressapi(req: ProgressRequest):
 
 
 def restore_progress(id_task):
-    while id_task == current_task or id_task in pending_tasks:
+    start = time.time()
+    while (id_task == current_task or id_task in pending_tasks) and (time.time() - start < 10):
         time.sleep(0.1)
 
     res = next(iter([x[1] for x in recorded_results if id_task == x[0]]), None)

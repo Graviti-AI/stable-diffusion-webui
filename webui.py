@@ -345,7 +345,6 @@ def webui(server_port: int = 0):
             ui_tempdir.cleanup_tmpdr()
             startup_timer.record("cleanup temp dir")
 
-        lora_script.before_ui()
         modules.script_callbacks.before_ui_callback()
         startup_timer.record("scripts before_ui_callback")
 

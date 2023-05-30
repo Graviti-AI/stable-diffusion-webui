@@ -25,6 +25,9 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         lora.list_available_loras()
         self.refresh_metadata()
 
+    def get_items_count(self):
+        return len(lora.available_loras)
+
     def list_items(self):
         for name, lora_on_disk in lora.available_loras.items():
             path, ext = os.path.splitext(lora_on_disk.filename)

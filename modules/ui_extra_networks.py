@@ -226,7 +226,7 @@ class ExtraNetworksPage:
 
         self_name_id = self.name.replace(" ", "_")
 
-        self.refresh_metadata()
+        # self.refresh_metadata()
 
         # Add a upload model button
         plus_sign_elem_id=f"{tabname}_{self_name_id}-plus-sign"
@@ -266,7 +266,7 @@ class ExtraNetworksPage:
 {subdirs_html}
 </div>
 <div id='{tabname}_{self_name_id}_cards' class='extra-network-{view}'>
-<div id="total_count" style="display: none">{len(list(self.list_items()))}</div>
+<div id="total_count" style="display: none">{self.get_items_count()}</div>
 {items_html}
 </div>
 """
@@ -288,6 +288,9 @@ class ExtraNetworksPage:
         return res
 
     def list_items(self):
+        raise NotImplementedError()
+
+    def get_items_count(self):
         raise NotImplementedError()
 
     def allowed_directories_for_previews(self):

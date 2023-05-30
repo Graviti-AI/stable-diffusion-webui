@@ -23,6 +23,9 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
         shared.refresh_checkpoints(request)
         self.refresh_metadata()
 
+    def get_items_count(self):
+        return len(sd_models.checkpoints_list)
+
     def list_items(self):
         checkpoint: sd_models.CheckpointInfo
         for name, checkpoint in sd_models.checkpoints_list.items():

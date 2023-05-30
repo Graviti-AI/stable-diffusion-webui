@@ -23,6 +23,9 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
         shared.reload_hypernetworks()
         self.refresh_metadata()
 
+    def get_items_count(self):
+        return len(shared.hypernetworks)
+
     def list_items(self):
         for name, path in shared.hypernetworks.items():
             path, ext = os.path.splitext(path)

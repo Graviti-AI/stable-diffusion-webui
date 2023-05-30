@@ -151,25 +151,25 @@ class EmbeddingDatabase:
         name, ext = os.path.splitext(filename)
         ext = ext.upper()
         if filename not in self.loaded_embeddings:
-            if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
-                _, second_ext = os.path.splitext(name)
-                if second_ext.upper() == '.PREVIEW':
-                    self.loaded_embeddings[filename] = None
-                    return
-
-                embed_image = Image.open(path)
-                if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
-                    data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
-                    name = data.get('name', name)
-                else:
-                    data = extract_image_data_embed(embed_image)
-                    if data:
-                        name = data.get('name', name)
-                    else:
-                        # if data is None, means this is not an embeding, just a preview image
-                        self.loaded_embeddings[filename] = None
-                        return
-            elif ext in ['.BIN', '.PT']:
+            # if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
+            #     _, second_ext = os.path.splitext(name)
+            #     if second_ext.upper() == '.PREVIEW':
+            #         self.loaded_embeddings[filename] = None
+            #         return
+            #
+            #     embed_image = Image.open(path)
+            #     if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
+            #         data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
+            #         name = data.get('name', name)
+            #     else:
+            #         data = extract_image_data_embed(embed_image)
+            #         if data:
+            #             name = data.get('name', name)
+            #         else:
+            #             # if data is None, means this is not an embeding, just a preview image
+            #             self.loaded_embeddings[filename] = None
+            #             return
+            if ext in ['.BIN', '.PT']:
                 data = torch.load(path, map_location="cpu")
             elif ext in ['.SAFETENSORS']:
                 data = safetensors.torch.load_file(path, device="cpu")

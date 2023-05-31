@@ -9,18 +9,18 @@ function openWorkSpaceDialog() {
 
 function getPrivateModelList({ model_type, page, tabname, loading, model_workspace, switchPage }) {
     const searchValue = gradioApp().querySelector('#gallery-search').value.toLowerCase();
-    const promise = fetchGet(`/internal/private/${model_type_mapper[model_type]}?search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
+    const promise = fetchGet(`/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
     getPageDataAndUpdateList({tabname, model_type, page, loading, model_workspace, promise, switchPage});
 }
 
 function getPublicModelList({ model_type, page, tabname, loading, model_workspace, switchPage }) {
     const searchValue = gradioApp().querySelector('#gallery-search').value.toLowerCase();
-    const promise = fetchGet(`/internal/models/${model_type_mapper[model_type]}?search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
+    const promise = fetchGet(`/internal/models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
     getPageDataAndUpdateList({tabname, model_type, page, loading, model_workspace, promise, switchPage});
 }
 
 function getPersonalModelList({ model_type, page, tabname, loading, model_workspace }) {
-    const promise = fetchGet(`/internal/favorite/${model_type_mapper[model_type]}?page=${page}&page_size=100000`);
+    const promise = fetchGet(`/internal/favorite_models?model_type=${model_type_mapper[model_type]}&page=${page}&page_size=100000`);
     getPageDataAndUpdateList({tabname, model_type, page, loading, model_workspace, promise});
 }
 
@@ -204,9 +204,9 @@ function initDomPage() {
 async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
     let promise = null;
     if (model_workspace === 'personal') {
-        promise = fetchDelete(`/internal/favorite/${model_id}`);
+        promise = fetchDelete(`/internal/favorite_models/${model_id}`);
     } else {
-        promise = fetchPost({ data: {model_id: model_id}, url: `/internal/favorite` });
+        promise = fetchPost({ data: {model_id: model_id}, url: `/internal/favorite_models` });
     }
     notifier.asyncBlock(promise, async (response) => {
         if (response.status === 200 && response.statusText === 'OK') {

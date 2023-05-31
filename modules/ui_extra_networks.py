@@ -61,22 +61,28 @@ def fetch_file(request: Request, filename: str = "", model_type: str = ""):
 
 def make_html_metadata(metadata):
     from starlette.responses import HTMLResponse
-    metadata["trigger_word"] = "".join(
-        [f"<div class='model-metadata-trigger-word'>{word.strip()}</div>"
-         for item in metadata["trigger_word"]
-         for word in item.split(",") if word.strip()])
-    metadata["tags"] = "".join(
-        [f"<div class='model-metadata-tag'>{item}</div>" for item in metadata["tags"]])
-    metadata["metadata"] = "".join(
-        [f"""<tr class='model-metadata-metadata-table-row'>
-            <td class='model-metadata-metadata-table-key'>{key}:</td>
-            <td class='model-metadata-metadata-table-value'>{metadata['metadata'][key]}</td>
-         </tr>"""
-         for key in metadata["metadata"]])
-    metadata["metadata"] = f"<table>{metadata['metadata']}</table>"
-    metadata_html = shared.html("extra-networks-metadata.html").format(**metadata)
+    if not metadata:
+        return HTMLResponse("<h1>404, could not find metadata</h1>")
 
-    return HTMLResponse(metadata_html)
+    try:
+        metadata["trigger_word"] = "".join(
+            [f"<div class='model-metadata-trigger-word'>{word.strip()}</div>"
+             for item in metadata["trigger_word"]
+             for word in item.split(",") if word.strip()])
+        metadata["tags"] = "".join(
+            [f"<div class='model-metadata-tag'>{item}</div>" for item in metadata["tags"]])
+        metadata["metadata"] = "".join(
+            [f"""<tr class='model-metadata-metadata-table-row'>
+                <td class='model-metadata-metadata-table-key'>{key}:</td>
+                <td class='model-metadata-metadata-table-value'>{metadata['metadata'][key]}</td>
+             </tr>"""
+             for key in metadata["metadata"]])
+        metadata["metadata"] = f"<table>{metadata['metadata']}</table>"
+
+        metadata_html = shared.html("extra-networks-metadata.html").format(**metadata)
+        return HTMLResponse(metadata_html)
+    except Exception as e:
+        return HTMLResponse(f"<h1>500, {e.__str__()}</h1>")
 
 
 def get_metadata(page: str = "", item: str = ""):
@@ -97,7 +103,8 @@ def get_metadata(page: str = "", item: str = ""):
     return make_html_metadata(metadata)
 
 
-def get_extra_networks_models(request: Request, page_name: str, search_value: str, page: int, page_size: int, need_refresh: bool):
+def get_extra_networks_models(request: Request, page_name: str, search_value: str, page: int, page_size: int,
+                              need_refresh: bool):
     from starlette.responses import JSONResponse
 
     model_list = []
@@ -185,16 +192,17 @@ class ExtraNetworksPage:
         if model_type not in preview_search_dir:
             preview_search_dir[model_type] = list()
         dirpath = os.path.dirname(filename_unix)
-        if  dirpath and (dirpath not in preview_search_dir[model_type]):
+        if dirpath and (dirpath not in preview_search_dir[model_type]):
             preview_search_dir[model_type].append(dirpath)
         return "/sd_extra_networks/thumb?filename=" + \
-            urllib.parse.quote(os.path.basename(filename_unix)) + \
-            "&model_type=" + model_type + "&mtime=" + str(os.path.getmtime(filename))
+               urllib.parse.quote(os.path.basename(filename_unix)) + \
+               "&model_type=" + model_type + "&mtime=" + str(os.path.getmtime(filename))
 
     def search_terms_from_path(self, filename, possible_directories=None):
         abspath = os.path.abspath(filename)
 
-        for parentdir in (possible_directories if possible_directories is not None else self.allowed_directories_for_previews()):
+        for parentdir in (
+                possible_directories if possible_directories is not None else self.allowed_directories_for_previews()):
             parentdir = os.path.abspath(parentdir)
             if abspath.startswith(parentdir):
                 return abspath[len(parentdir):].replace('\\', '/')
@@ -225,8 +233,8 @@ class ExtraNetworksPage:
             subdirs = {"": 1, **subdirs}
 
         subdirs_html = "".join([f"""
-<button class='lg secondary gradio-button custom-button{" search-all" if subdir=="" else ""}' onclick='extraNetworksSearchButton("{tabname}_extra_tabs", event)'>
-{html.escape(subdir if subdir!="" else "all")}
+<button class='lg secondary gradio-button custom-button{" search-all" if subdir == "" else ""}' onclick='extraNetworksSearchButton("{tabname}_extra_tabs", event)'>
+{html.escape(subdir if subdir != "" else "all")}
 </button>
 """ for subdir in subdirs])
 
@@ -235,8 +243,8 @@ class ExtraNetworksPage:
         # self.refresh_metadata()
 
         # Add a upload model button
-        plus_sign_elem_id=f"{tabname}_{self_name_id}-plus-sign"
-        loading_sign_elem_id=f"{tabname}_{self_name_id}-loading-sign"
+        plus_sign_elem_id = f"{tabname}_{self_name_id}-plus-sign"
+        loading_sign_elem_id = f"{tabname}_{self_name_id}-loading-sign"
         if not button_id:
             button_id = f"{upload_button_id}-card"
         dashboard_title_hint = ""
@@ -307,7 +315,8 @@ class ExtraNetworksPage:
 
         onclick = item.get("onclick", None)
         if onclick is None:
-            onclick = '"' + html.escape(f"""return cardClicked({json.dumps(tabname)}, {item["prompt"]}, {"true" if self.allow_negative_prompt else "false"})""") + '"'
+            onclick = '"' + html.escape(
+                f"""return cardClicked({json.dumps(tabname)}, {item["prompt"]}, {"true" if self.allow_negative_prompt else "false"})""") + '"'
 
         height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
         width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
@@ -329,7 +338,8 @@ class ExtraNetworksPage:
             "name": item["name"],
             "description": (item.get("description") or ""),
             "card_clicked": onclick,
-            "save_card_preview": '"' + html.escape(f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(preview_filename)})""") + '"',
+            "save_card_preview": '"' + html.escape(
+                f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(preview_filename)})""") + '"',
             "search_term": item.get("search_term", ""),
             "metadata_button": metadata_button,
         }
@@ -404,7 +414,7 @@ def create_ui(container, button, tabname):
     ui.stored_extra_pages = pages_in_preferred_order(extra_pages.copy())
     ui.tabname = tabname
 
-    with gr.Tabs(elem_id=tabname+"_extra_tabs") as tabs:
+    with gr.Tabs(elem_id=tabname + "_extra_tabs") as tabs:
         for page in ui.stored_extra_pages:
             self_name_id = page.name.replace(" ", "_")
             with gr.Tab(label=page.title, id=self_name_id, elem_id=self_name_id) as tab:
@@ -429,9 +439,10 @@ def create_ui(container, button, tabname):
                 tab.select(fn=None, _js=f"modelTabClick", inputs=[tab_click_params], outputs=[])
                 ui.pages.append(page_elem)
                 with gr.Row(elem_id=f"{ui.tabname}_{self_name_id}_pagination", elem_classes="pagination"):
-                     with gr.Column(scale=7):
-                         gr.Button("hide", visible=False)
-                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=220):
+                    with gr.Column(scale=7):
+                        gr.Button("hide", visible=False)
+                    with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn",
+                                   elem_classes="pagination_upload_btn", scale=2, min_width=220):
                         upload_btn = gr.Button(f"Upload {page.title} Model", variant="primary")
                         upload_btn.click(
                             fn=None,
@@ -440,29 +451,33 @@ def create_ui(container, button, tabname):
                                 else {{document.querySelector("#{button_id}").click();}}
                             }}'''
                         )
-                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",  min_width=220):
+                    with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",
+                                   min_width=220):
                         gr.HTML(
                             value="<div class='pageniation-info'>"
-                                f"<div class='page-prev' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'previous')\">< Prev </div>"
-                                "<div class='page-total'><span class='current-page'>1</span><span class='separator'>/</span><span class='total-page'></span></div>"
-                                f"<div class='page-next' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'next')\">Next ></div></div>",show_label=False)
+                                  f"<div class='page-prev' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'previous')\">< Prev </div>"
+                                  "<div class='page-total'><span class='current-page'>1</span><span class='separator'>/</span><span class='total-page'></span></div>"
+                                  f"<div class='page-next' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'next')\">Next ></div></div>",
+                            show_label=False)
 
-    filter = gr.Textbox('', show_label=False, elem_id=tabname+"_extra_search", placeholder="Search...", visible=False)
-    button_refresh = gr.Button('Refresh', elem_id=tabname+"_extra_refresh")
+    filter = gr.Textbox('', show_label=False, elem_id=tabname + "_extra_search", placeholder="Search...", visible=False)
+    button_refresh = gr.Button('Refresh', elem_id=tabname + "_extra_refresh")
 
-    ui.button_save_preview = gr.Button('Save preview', elem_id=tabname+"_save_preview", visible=False)
-    ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=tabname+"_preview_filename", visible=False)
-    ui.saved_preview_url = gr.Textbox('', elem_id=tabname+"_preview_url", visible=False, interactive=False)
+    ui.button_save_preview = gr.Button('Save preview', elem_id=tabname + "_save_preview", visible=False)
+    ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=tabname + "_preview_filename",
+                                            visible=False)
+    ui.saved_preview_url = gr.Textbox('', elem_id=tabname + "_preview_url", visible=False, interactive=False)
     ui.saved_preview_url.change(
         None, ui.saved_preview_url, None, _js=f"(preview_url) => {{updateTabPrivatePreviews('{ui.tabname}');}}")
 
     def toggle_visibility(is_visible):
         is_visible = not is_visible
-        return is_visible, gr.update(visible=is_visible), gr.update(variant=("secondary-down" if is_visible else "secondary"))
+        return is_visible, gr.update(visible=is_visible), gr.update(
+            variant=("secondary-down" if is_visible else "secondary"))
 
     state_visible = gr.State(value=False)
     button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button])
-    refresh_params=gr.JSON(value={"tabname": ui.tabname}, visible=False)
+    refresh_params = gr.JSON(value={"tabname": ui.tabname}, visible=False)
     button_refresh.click(fn=None, _js=f"refreshModelList", inputs=[refresh_params], outputs=[])
 
     return ui

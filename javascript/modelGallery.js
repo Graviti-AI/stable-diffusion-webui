@@ -235,7 +235,7 @@ function uploadModel() {
     gradioApp().querySelector(`#${currentModelTab}_${currentModelType.public}_upload_button-card`).click();
 }
 
-function searchModels() {
+function searchPublicModels() {
     getPrivateModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
     getPublicModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
 }
@@ -260,7 +260,7 @@ function debounceSearchModels(func, wait=1000, immediate) {
     }
 }
 
-const debounceSearchModelGallery = debounceSearchModels(searchModels);
+const debounceSearchModelGallery = debounceSearchModels(searchPublicModels);
 
 function initalTab () {
     currentModelTab = gradioApp().querySelector("#tabs > div.tab-nav > button.selected").textContent.trim();

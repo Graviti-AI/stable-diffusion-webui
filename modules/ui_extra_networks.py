@@ -58,21 +58,8 @@ def fetch_file(request: Request, filename: str = "", model_type: str = ""):
     return FileResponse(no_preview_background_path, headers={"Accept-Ranges": "bytes"})
 
 
-def get_metadata(page: str = "", item: str = ""):
+def make_html_metadata(metadata):
     from starlette.responses import HTMLResponse
-
-    # There are two sources where this api being called
-    # one is construct in python code, which directly users page.name
-    # the other one is in js code which uses model_type
-    page = next(iter([x for x in extra_pages if x.name == page or x.name.lower().replace(" ", "_") == page]), None)
-    if page is None:
-        return HTMLResponse("<h1>404, could not find page</h1>")
-
-    metadata = page.metadata.get(item)
-    if metadata is None:
-        return HTMLResponse("<h1>404, could not find metadata</h1>")
-
-    metadata = deepcopy(metadata)
     metadata["trigger_word"] = "".join(
         [f"<div class='model-metadata-trigger-word'>{word.strip()}</div>"
          for item in metadata["trigger_word"]
@@ -89,6 +76,24 @@ def get_metadata(page: str = "", item: str = ""):
     metadata_html = shared.html("extra-networks-metadata.html").format(**metadata)
 
     return HTMLResponse(metadata_html)
+
+
+def get_metadata(page: str = "", item: str = ""):
+    from starlette.responses import HTMLResponse
+
+    # There are two sources where this api being called
+    # one is construct in python code, which directly users page.name
+    # the other one is in js code which uses model_type
+    page = next(iter([x for x in extra_pages if x.name == page or x.name.lower().replace(" ", "_") == page]), None)
+    if page is None:
+        return HTMLResponse("<h1>404, could not find page</h1>")
+
+    metadata = page.metadata.get(item)
+    if metadata is None:
+        return HTMLResponse("<h1>404, could not find metadata</h1>")
+
+    metadata = deepcopy(metadata)
+    return make_html_metadata(metadata)
 
 
 def get_extra_networks_models(request: Request, page_name: str, search_value: str, page: int, page_size: int, need_refresh: bool):

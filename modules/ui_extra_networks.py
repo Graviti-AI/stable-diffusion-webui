@@ -480,6 +480,12 @@ def path_is_parent(parent_path, child_path):
     return child_path.startswith(parent_path)
 
 
+# noinspection PyUnusedLocal
+def on_preview_created(tab: str, preview_path: str):
+    # used for hijack, do nothing here
+    pass
+
+
 def setup_ui(ui, gallery):
     def save_preview(index, images, filename, request: gr.Request):
         paths = Paths(request)
@@ -509,6 +515,8 @@ def setup_ui(ui, gallery):
         file_mtime = os.path.getmtime(preview_path)
         model_type = os.path.dirname(filename)
         base_filename = os.path.basename(filename)
+
+        on_preview_created(model_type, preview_path)
 
         return f'url("/sd_extra_networks/thumb?filename={base_filename}&model_type={model_type}&mtime={file_mtime}")'
 

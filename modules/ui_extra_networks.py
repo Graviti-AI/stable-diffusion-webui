@@ -18,6 +18,7 @@ from threading import Lock
 
 from modules.generation_parameters_copypaste import image_from_url_text
 from modules.ui_common import create_upload_button
+import modules.user
 
 extra_pages = []
 allowed_dirs = set()
@@ -481,7 +482,7 @@ def path_is_parent(parent_path, child_path):
 
 
 # noinspection PyUnusedLocal
-def on_preview_created(tab: str, preview_path: str):
+def on_preview_created(user_id: str, tab: str, model_name: str, preview_path: str):
     # used for hijack, do nothing here
     pass
 
@@ -515,8 +516,9 @@ def setup_ui(ui, gallery):
         file_mtime = os.path.getmtime(preview_path)
         model_type = os.path.dirname(filename)
         base_filename = os.path.basename(filename)
-
-        on_preview_created(model_type, preview_path)
+        model_name = os.path.splitext(os.path.basename(filename))[0]
+        user = modules.user.User.current_user(request)
+        on_preview_created(user.uid, model_type, model_name, preview_path)
 
         return f'url("/sd_extra_networks/thumb?filename={base_filename}&model_type={model_type}&mtime={file_mtime}")'
 

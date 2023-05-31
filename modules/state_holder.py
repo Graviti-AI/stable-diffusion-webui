@@ -2,8 +2,12 @@ import json
 import logging
 import os
 import pickle
+import time
+import threading
 
 from fastapi import Request
+
+_logger = logging.getLogger(__name__)
 
 
 def _get_redis_address(redis_address: str = ''):
@@ -30,6 +34,10 @@ class _RedisBasedSessionStateHolder:
         self._default_factory = default_factory
         self._key_type = key_type
 
+        self._recycle_bin = {}
+        self._recycle_locker = threading.RLock()
+        threading.Timer(10, self._clear_recycle_bin).start()
+
     def _key_name(self, session_hash):
         return f'{self.SESSION_HASH_KEY}-{session_hash}-{self._key_type}'
 
@@ -37,25 +45,25 @@ class _RedisBasedSessionStateHolder:
         try:
             buff = self._redis_client.getex(self._key_name(session_hash), ex=self.SESSION_HASH_TTL)
             if not buff:
-                logging.warning(f'not found session state from redis, session_has: {session_hash}')
+                _logger.warning(f'not found session state from redis, session_hash: {session_hash}')
                 return None
             return pickle.loads(buff)
         except Exception as e:
-            logging.error(f'load state from redis failed, session_hash: {session_hash}, err: {e.__str__()}')
+            _logger.error(f'load state from redis failed, session_hash: {session_hash}, err: {e.__str__()}')
             return None
 
     def persistent_state(self, session_hash):
-        if session_hash not in self._state_cache:
-            logging.warning(f'try to persistent non existing session state to redis: {session_hash}')
-            return
-
-        try:
-            buff = self._dump_session_state(self[session_hash])
-            if buff:
-                self._redis_client.setex(self._key_name(session_hash), self.SESSION_HASH_TTL, buff)
-        except Exception as e:
-            logging.error(f'failed to persistent session state to redis: {e.__str__()}')
-        del self._state_cache[session_hash]
+        with self._recycle_locker:
+            if session_hash not in self._state_cache:
+                _logger.warning(f'try to persistent non existing session state to redis: {session_hash}')
+                return
+            try:
+                buff = self._dump_session_state(self[session_hash])
+                if buff:
+                    self._redis_client.setex(self._key_name(session_hash), self.SESSION_HASH_TTL, buff)
+                self._move_state_to_recycle_bin(session_hash)
+            except Exception as e:
+                _logger.error(f'failed to persistent session state to redis: {e.__str__()}')
 
     @staticmethod
     def _dump_session_state(state):
@@ -67,25 +75,49 @@ class _RedisBasedSessionStateHolder:
         return buff
 
     def __getitem__(self, session_hash):
-        # refresh cache
-        if session_hash not in self._state_cache:
-            state = self._load_state_from_redis(session_hash)
-            if state is not None:
-                self._state_cache[session_hash] = state
+        with self._recycle_locker:
+            # refresh cache
+            if session_hash not in self._state_cache:
+                state = self._load_state_from_redis(session_hash)
+                if state is not None:
+                    self._state_cache[session_hash] = state
 
-        # get value from cache
-        if session_hash not in self._state_cache and self._default_factory:
-            self._state_cache[session_hash] = self._default_factory()
-        return self._state_cache[session_hash]
+            # get value from cache
+            if session_hash not in self._state_cache and self._default_factory:
+                self._state_cache[session_hash] = self._default_factory()
+
+            if session_hash in self._recycle_bin:
+                self._recycle_bin.pop(session_hash)
+
+            return self._state_cache[session_hash]
+
+    def _clear_recycle_bin(self):
+        with self._recycle_locker:
+            now = time.time()
+            to_be_deleted = []
+            for session_hash, deleted_at in self._recycle_bin.items():
+                if now - deleted_at > 10:
+                    to_be_deleted.append(session_hash)
+
+            for session_hash in to_be_deleted:
+                self._recycle_bin.pop(session_hash)
+                self._state_cache.pop(session_hash)
+
+            threading.Timer(10, self._clear_recycle_bin).start()
 
     def __setitem__(self, session_hash, state):
-        self._state_cache[session_hash] = state
+        with self._recycle_locker:
+            self._state_cache[session_hash] = state
 
     def __contains__(self, session_hash):
         return self._redis_client.expire(self._key_name(session_hash), self.SESSION_HASH_TTL) > 0
 
     def __delitem__(self, session_hash):
-        del self._state_cache[session_hash]
+        with self._recycle_locker:
+            self._move_state_to_recycle_bin(session_hash)
+
+    def _move_state_to_recycle_bin(self, session_hash):
+        self._recycle_bin[session_hash] = time.time()
 
 
 class _StateSerializer:

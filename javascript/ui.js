@@ -601,6 +601,8 @@ async function getModelFromUrl() {
         }
     }
 
+    if(promiseList.length === 0) return;
+
     const allPromise = Promise.all(promiseList);
 
     notifier.asyncBlock(allPromise, async (promisesRes) => {

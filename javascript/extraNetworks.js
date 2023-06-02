@@ -175,7 +175,7 @@ async function extraNetworksRequestMetadata(event, extraPage, cardName){
 
     try {
         const response = await fetch(
-            `./sd_extra_networks/metadata?page=${encodeURIComponent(extraPage)}&item=${encodeURIComponent(cardName)}`,
+            `/sd_extra_networks/metadata?page=${encodeURIComponent(extraPage)}&item=${encodeURIComponent(cardName)}`,
             {method: "GET"});
         const metadata_html_str = await response.text();
         if(metadata_html_str){
@@ -312,10 +312,10 @@ async function handleData({response, tabname, page_name }) {
 async function fetchPageDataAndUpdateList({tabname, page_name, page, need_refresh = false, loading=true}) {
     const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
     
-//    const promise = fetch(`/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`, {
-//        method: "GET", cache: "no-cache"});
-     const promise = fetch(`/sd_extra_networks/models?page_name=${page_name}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=${need_refresh}`, {
-             method: "GET", cache: "no-cache"});
+   const promise = fetch(`/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`, {
+       method: "GET", cache: "no-cache"});
+    //  const promise = fetch(`/sd_extra_networks/models?page_name=${page_name}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=${need_refresh}`, {
+    //          method: "GET", cache: "no-cache"});
     // loading
     if (loading) {
         notifier.asyncBlock(promise, (response) => {

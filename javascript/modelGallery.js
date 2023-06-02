@@ -2,26 +2,26 @@ function openWorkSpaceDialog() {
     popup(initDomPage(), 'gallery');
     initalTab();
     initLoadMore();
-    getPrivateModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: false, model_workspace: 'private'});
-    getPersonalModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: false, model_workspace: 'personal'});
-    getPublicModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: false, model_workspace: 'public'});
+    // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: false, model_workspace: 'private'});
+    getPersonalModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'personal'});
+    getPublicModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
 }
 
-function getPrivateModelList({ model_type, page, tabname, loading, model_workspace, switchPage }) {
+function getPrivateModelList({ model_type, page, loading, model_workspace, switchPage }) {
     const searchValue = gradioApp().querySelector('#gallery-search').value.toLowerCase();
     const promise = fetchGet(`/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
-    getPageDataAndUpdateList({tabname, model_type, page, loading, model_workspace, promise, switchPage});
+    getPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage});
 }
 
-function getPublicModelList({ model_type, page, tabname, loading, model_workspace, switchPage }) {
+async function getPublicModelList({ model_type, page, loading, model_workspace, switchPage, sl, refreshTabLock }) {
     const searchValue = gradioApp().querySelector('#gallery-search').value.toLowerCase();
     const promise = fetchGet(`/internal/models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
-    getPageDataAndUpdateList({tabname, model_type, page, loading, model_workspace, promise, switchPage});
+    getPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage, sl, refreshTabLock});
 }
 
-function getPersonalModelList({ model_type, page, tabname, loading, model_workspace }) {
+function getPersonalModelList({ model_type, page, loading, model_workspace }) {
     const promise = fetchGet(`/internal/favorite_models?model_type=${model_type_mapper[model_type]}&page=${page}&page_size=100000`);
-    getPageDataAndUpdateList({tabname, model_type, page, loading, model_workspace, promise});
+    getPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise});
 }
 
 function judgeLevel(globalLevel, pictureLevel) {
@@ -34,10 +34,10 @@ function judgeLevel(globalLevel, pictureLevel) {
 }
 
 
-async function handleModelData({tabname, response, model_type, model_workspace, switchPage}) {
+async function handleModelData({response, model_type, model_workspace, switchPage, sl, refreshTabLock}) {
     const cardsParentNode = model_workspace === 'personal' ? gradioApp().querySelector(`#${model_workspace}-${model_type}`)
          : gradioApp().querySelector(`#${model_workspace}-${model_type}-cards`);
-    const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt } = await response.json();
+    const { model_list, total_count: totalCount } = await response.json();
     // set total page
     galleryModelTotalPage[model_workspace][model_type] = Math.ceil(totalCount / pageSize);
     // remove child node
@@ -83,17 +83,25 @@ async function handleModelData({tabname, response, model_type, model_workspace, 
         cardsParentNode.appendChild(cardNode);
     })
 
+    refreshTabLock && updateLockStatus(model_type);
+    sl && sl.unLock()
 }
 
-async function getPageDataAndUpdateList({tabname, model_type, loading=true, model_workspace, promise, switchPage}) {
+function updateLockStatus(modelType) {
+    gallertModelScrollloads.forEach((scrollload, index) => {
+        index === defaultModelType.findIndex(item => item === modelType) ? scrollload.unLock() : scrollload.lock()
+    })
+}
+
+async function getPageDataAndUpdateList({ model_type, loading=true, model_workspace, promise, switchPage, sl, refreshTabLock}) {
     // loading
     if (loading) {
         notifier.asyncBlock(promise, (response) => {
-            handleModelData({response, tabname, model_type, model_workspace, switchPage })
+            handleModelData({response, model_type, model_workspace, switchPage, refreshTabLock })
         });
     } else {
         const response = await promise;
-        handleModelData({  response, tabname, model_type, model_workspace, switchPage })
+        handleModelData({  response, model_type, model_workspace, switchPage, sl })
     }
 }
 
@@ -144,12 +152,8 @@ function initDomPage() {
                     <li><a href="#public-lora">Lora</a></li>
                 </ul>
                 <div class="gallery-cards">
+                    <p>Public Models</p>
                     <div id="public-checkpoints" >
-                        <p>Private Models</p>
-                        <div id="private-checkpoints-cards" class="extra-network-cards">
-                            <div class="card"></div>
-                        </div>
-                        <p>Public Models</p>
                         <div class="scrollload-container" model-type="checkpoints" workspace="public">
                             <ul id="public-checkpoints-cards" class="extra-network-cards scrollload-content">
                                 <li class="card"></li>
@@ -157,11 +161,6 @@ function initDomPage() {
                         </div>
                     </div>
                     <div id="public-textual_inversion">
-                        <p>Private Models</p>
-                        <div id="private-textual_inversion-cards" class="extra-network-cards">
-                            <div class="card"></div>
-                        </div>
-                        <p>Public Models</p>
                         <div class="scrollload-container" model-type="textual_inversion" workspace="public">
                             <ul id="public-textual_inversion-cards" class="extra-network-cards scrollload-content">
                                 <li class="card"></li>
@@ -169,11 +168,6 @@ function initDomPage() {
                         </div>
                     </div>
                     <div id="public-hypernetworks">
-                        <p>Private Models</p>
-                        <ul id="private-hypernetworks-cards" class="extra-network-cards">
-                            <div class="card"></div>
-                        </ul>
-                        <p>Public Models</p>
                         <div class="scrollload-container" model-type="hypernetworks" workspace="public">
                             <ul id="public-hypernetworks-cards" class="extra-network-cards scrollload-content">
                                 <li class="card"></li>
@@ -181,11 +175,6 @@ function initDomPage() {
                         </div>
                     </div>
                     <div id="public-lora">
-                        <p>Private Models</p>
-                        <ul id="private-lora-cards" class="extra-network-cards">
-                            <li class="card"></li>
-                        </ul>
-                        <p>Public Models</p>
                         <div class="scrollload-container" model-type="lora" workspace="public">
                             <ul id="public-lora-cards" class="extra-network-cards scrollload-content">
                                 <li class="card"></li>
@@ -203,14 +192,19 @@ function initDomPage() {
 
 async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
     let promise = null;
+    let msgType = 'Add';
     if (model_workspace === 'personal') {
         promise = fetchDelete(`/internal/favorite_models/${model_id}`);
+        msgType = 'Delete'
     } else {
         promise = fetchPost({ data: {model_id: model_id}, url: `/internal/favorite_models` });
     }
     notifier.asyncBlock(promise, async (response) => {
         if (response.status === 200 && response.statusText === 'OK') {
-            getPersonalModelList({tabname: currentModelTab, model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
+            notifier.success(`${msgType} Success`)
+            getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
+        } else {
+            notifier.success(`${msgType} Failed`)
         }
     });
 }
@@ -223,11 +217,11 @@ function setMatureLevel({list, globalLevel}) {
 }
 
 function changeMatureLevel(self) {
-    const personalCardList = gradioApp().querySelector(`#personal-${currentModelTab.personal}`).querySelectorAll('.card');
+    const personalCardList = gradioApp().querySelector(`#personal-${currentModelType.personal}`).querySelectorAll('.card');
     setMatureLevel({personalCardList, globalLevel: self.value});
-    const privateCardList = gradioApp().querySelector(`#private-${currentModelTab.public}`).querySelectorAll('.card');
-    setMatureLevel({privateCardList, globalLevel: self.value});
-    const publicCardList = gradioApp().querySelector(`#public-${currentModelTab.public}`).querySelectorAll('.card');
+    // const privateCardList = gradioApp().querySelector(`#private-${currentModelType.public}`).querySelectorAll('.card');
+    // setMatureLevel({privateCardList, globalLevel: self.value});
+    const publicCardList = gradioApp().querySelector(`#public-${currentModelType.public}`).querySelectorAll('.card');
     setMatureLevel({publicCardList, globalLevel: self.value});
 }
 
@@ -236,8 +230,8 @@ function uploadModel() {
 }
 
 function searchPublicModels() {
-    getPrivateModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
-    getPublicModelList({tabname: currentModelTab, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
+    // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
+    getPublicModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
 }
 
 function debounceSearchModels(func, wait=1000, immediate) {
@@ -278,19 +272,15 @@ function initalTab () {
         currentModelType[type] = modelType;
 
         if (type === 'public') {
-            gallertModelScrollloads.forEach((scrollload, index) => {
-                index === defaultModelType.findIndex(item => item === modelType) ? scrollload.unLock() : scrollload.lock()
-            })
-            console.log(gallertModelScrollloads, 'gallertModelScrollloads')
             // not refresh data while at other page
             if (gallertModelCurrentPage[modelType] === 1) {
-                getPublicModelList({tabname: currentModelTab, model_type: currentModelType[type], page: 1, model_workspace: type})
-                getPrivateModelList({tabname: currentModelTab, model_type: currentModelType[type], page: 1, model_workspace: 'private' })
+                getPublicModelList({model_type: currentModelType[type], page: 1, model_workspace: type, refreshTabLock: true})
+                // getPrivateModelList({model_type: currentModelType[type], page: 1, model_workspace: 'private' })
             }
         } else {
             // not refresh data while on other page
             if (gallertModelCurrentPage[modelType] === 1) {
-                getPersonalModelList({tabname: currentModelTab, model_type: currentModelType[type], page: 1, model_workspace: type})
+                getPersonalModelList({model_type: currentModelType[type], page: 1, model_workspace: type})
             }
         }
         
@@ -302,10 +292,10 @@ function initalTab () {
     gallerySearchBtn.addEventListener("input", debounceSearchModelGallery);
 }
 
-function refreshModelsGallery(tabname) {
-    getPrivateModelList({tabname, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
-    getPublicModelList({tabname, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
-    getPersonalModelList({tabname, model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'personal'});
+function refreshModelsGallery() {
+    // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
+    getPublicModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
+    getPersonalModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'personal'});
 }
 
 function initLoadMore() {
@@ -316,7 +306,6 @@ function initLoadMore() {
                 container: container,
                 loadMore: function(sl) {
                     const modelType = container.getAttribute('model-type');
-                    console.log(gallertModelCurrentPage,container, galleryModelTotalPage.public[modelType], 111)
                     if (gallertModelCurrentPage[modelType] === galleryModelTotalPage.public[modelType]) {
                       // call noMoreData when on the last page
                       sl.noMoreData()
@@ -324,11 +313,11 @@ function initLoadMore() {
                     }
                     // add page
                     gallertModelCurrentPage[modelType] += 1;
-                    Promise.all([getPrivateModelList({tabname: currentModelTab, model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'private', switchPage: true}),getPublicModelList({tabname: currentModelTab, model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'public', switchPage: true})])
-                    sl.unLock()
+                    getPublicModelList({model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'public', switchPage: true, sl})
                 },
                 isInitLock: index === 0 ? false : true,
                 enablePullRefresh: false,
+                window: gradioApp().querySelector('.global-popup'),
                 // threshold: 20,
             })
         )

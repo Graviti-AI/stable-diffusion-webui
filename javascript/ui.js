@@ -554,8 +554,8 @@ async function browseModels(){
 }
 
 function searchModel({page_name, searchValue}) {
-//    return fetch(`/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`, {
-    return fetch(`/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
+   return fetch(`/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`, {
+    // return fetch(`/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
         method: "GET", cache: "no-cache"});
 
 }

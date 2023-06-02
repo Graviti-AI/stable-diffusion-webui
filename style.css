@@ -781,7 +781,8 @@ footer {
 
 .extra-network-cards{
     resize: vertical;
-    padding: 0;
+    padding: var(--block-padding);
+    margin: 0;
 }
 
 .scrollload-container {
@@ -789,13 +790,13 @@ footer {
 }
 
 .gallery-cards {
-    border: 1px solid #d3d3d3;
+    border: 1px solid var(--border-color-primary);
     border-top: none;
 }
 
 .gallery-cards  p {
     margin: 0;
-    padding: 20px;
+    padding: 20px 20px 0 20px;
 }
 
 .extra-networks > div > [id *= '_extra_']{
@@ -848,7 +849,7 @@ footer {
     font-size: 22pt;
 }
 .extra-network-cards .card .operation-button:hover {
-    color: var(--secondary-400);
+    color: var(--primary-600);
 }
 
 .extra-network-cards .card .operation-button {
@@ -1154,8 +1155,9 @@ textarea {
     font-family: monospace !important;
 }
 .gallery-container {
-    background-color: #ffffff;
+    background-color: var(--body-background-fill);
     width: var(--size-full);
+    font-family: var(--font);
 }
 
 .personal-workspace-top {
@@ -1164,8 +1166,9 @@ textarea {
    
 }
 
-.personal-workspace-top > span {
+.personal-workspace-top > span, .gallery-cards p {
     font-size: 20px;
+    color: var(--body-text-color);
 }
 
 .personal-workspace {
@@ -1202,6 +1205,8 @@ textarea {
     font-weight: var(--input-text-weight);
     font-size: var(--input-text-size);
     line-height: var(--line-sm);
+    background: var(--input-background-fill);
+    color: var(--body-text-color);
 }
 
 .public-workspace-top input:focus{
@@ -1223,7 +1228,7 @@ textarea {
     padding: var(--button-large-padding);
     font-weight: var(--button-large-text-weight);
     font-size: var(--button-large-text-size);
-    border: var(--button-border-width) solid #e5e7eb;
+    border: var(--button-border-width) solid var(--button-primary-border-color);
     background: var(--button-primary-background-fill);
     color: var(--button-primary-text-color);
     width: var(--size-full);
@@ -1251,16 +1256,40 @@ textarea {
 .personal-workspace-top-mature > span {
     font-size: 16px;
     margin-right: 20px;
+    color: var(--body-text-color);
 }
 
 .uppy-Dashboard-AddFiles-list {
     border-bottom: none;
 }
 
+[role=tab][aria-selected=true] {
+    border-color: var(--border-color-primary);
+    color: var(--body-text-color);
+    background: var(--background-fill-primary);
+    border-bottom: none;
+}
+
 [role=tab][aria-selected=false] {
-    color: #000000;
+    color: var(--body-text-color-subdued);
+    border: none;
+}
+
+[role=tab]:hover:not([aria-selected=true]) {
+    background-color: inherit;
+    color: var(--body-text-color);
+    border: none;
+}
+
+[role=tablist] {
+    border-bottom: var(--button-border-width) solid var(--border-color-primary);
 }
 
 .extra-network-cards .card-no-model {
     background-image: url('/components/icons/card-no-model.png')
 }
+
+.scrollload-bottom {
+    color: var(--body-text-color);
+}
+

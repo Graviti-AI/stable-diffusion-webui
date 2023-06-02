@@ -48,8 +48,23 @@ async function handleModelData({response, model_type, model_workspace, switchPag
         })
         if (model_list.length  === 0) {
             const cardNode = document.createElement('li');
-            cardNode.className = 'card card-no-model';
             cardsParentNode.appendChild(cardNode);
+            cardNode.outerHTML = `
+            <li class="card model-upload-button" 
+                id="${model_workspace}_${currentModelTab}_${model_type}_upload_button-card" 
+                style="display: block; white-space: nowrap; text-align: center; background-image: none; background-color: rgba(171, 176, 177, 0.4);" 
+                onclick="uploadModel()" 
+                model_type="textual_inversion" 
+                tabname="${currentModelTab}" 
+                uppy_dashboard_title="Textual Inversion files only. ( < 5 MB)" 
+                max_model_size_mb="5">
+                <span class="helper" style="display: inline-block; height: 100%; vertical-align: middle;"></span>
+                <img id="${model_workspace}_${currentModelTab}_${model_type}-plus-sign" style="max-width: 100%;margin: auto; vertical-align: middle; display:inline-block" src="/components/icons/plus.png">
+                <img id="${model_workspace}_${currentModelTab}_${model_type}-loading-sign" style="margin: auto; vertical-align: middle; display: none" src="/components/icons/loading.gif">
+                <div class="actions" style="color:white;">Upload ${model_type.replace('_', ' ').replace(model_type[0],model_type[0].toUpperCase())} Models</div>
+            </li>
+            `
+            
         }
     }
     const operateButtonName = model_workspace === 'personal' ? "Remove from workspace" : "Add to workspace";
@@ -200,11 +215,12 @@ async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
         promise = fetchPost({ data: {model_id: model_id}, url: `/internal/favorite_models` });
     }
     notifier.asyncBlock(promise, async (response) => {
-        if (response.status === 200 && response.statusText === 'OK') {
+        console.log(response, 'response')
+        if (response.status === 200) {
             notifier.success(`${msgType} Success`)
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
         } else {
-            notifier.success(`${msgType} Failed`)
+            notifier.error(`${msgType} Failed`)
         }
     });
 }
@@ -230,8 +246,9 @@ function uploadModel() {
 }
 
 function searchPublicModels() {
+    gallertModelCurrentPage[currentModelType.public] = 1;
     // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
-    getPublicModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
+    getPublicModelList({model_type: currentModelType.public, page: 1, loading: true, model_workspace: 'public', search: true});
 }
 
 function debounceSearchModels(func, wait=1000, immediate) {
@@ -306,7 +323,7 @@ function initLoadMore() {
                 container: container,
                 loadMore: function(sl) {
                     const modelType = container.getAttribute('model-type');
-                    if (gallertModelCurrentPage[modelType] === galleryModelTotalPage.public[modelType]) {
+                    if (gallertModelCurrentPage[modelType] >= galleryModelTotalPage.public[modelType]) {
                       // call noMoreData when on the last page
                       sl.noMoreData()
                       return

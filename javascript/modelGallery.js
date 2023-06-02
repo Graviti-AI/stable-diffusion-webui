@@ -76,7 +76,7 @@ async function handleModelData({response, model_type, model_workspace, switchPag
         
         cardNode.setAttribute('filename', item.name);
         if (item.preview) {
-            cardNode.style.backgroundImage = `url(${item.preview})`;
+            cardNode.style.background = `url(${item.preview.replace(/\s/g, encodeURIComponent(' '))})`;
         }
 
         if (judgeLevel(matureLevel.value, item.mature_level )) {
@@ -214,12 +214,11 @@ async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
         promise = fetchPost({ data: {model_id: model_id}, url: `/internal/favorite_models` });
     }
     notifier.asyncBlock(promise, async (response) => {
-        console.log(response, 'response')
         if (response.status === 200) {
             notifier.success(`${msgType} Success`)
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
         } else {
-            notifier.error(`${msgType} Failed`)
+            notifier.alert(`${msgType} Failed`)
         }
     });
 }

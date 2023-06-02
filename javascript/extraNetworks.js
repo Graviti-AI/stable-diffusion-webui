@@ -257,12 +257,11 @@ async function handleData({response, tabname, page_name }) {
             cardNode.setAttribute('onclick', item.onclick.replaceAll(/\"/g, '').replaceAll(/&quot;/g, '"'));
         } else {
             cardNode.setAttribute('onclick', `return cardClicked('${tabname}', ${item.prompt}), ${allow_negative_prompt}`)
-
         }
 
         cardNode.setAttribute('filename', item.name);
         if (item.preview) {
-            cardNode.style.backgroundImage = `url(${item.preview})`;
+            cardNode.style.background = `url(${item.preview.replace(/\s/g, encodeURIComponent(' '))})`;
         }
 
         const metaDataButtonNode = document.createElement('div');

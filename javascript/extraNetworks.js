@@ -221,6 +221,7 @@ async function handleData({response, tabname, page_name }) {
     const currentTotalCountId = `${tabname}_${page_name}_total_count`;
     const totalPageNode = gradioApp().querySelector(`#${tabname}_${page_name}_pagination_row .total-page`);
     const currentPageNode = gradioApp().querySelector(`#${tabname}_${page_name}_pagination_row .current-page`);
+    const addModelBtnNode = cardsParentNode.querySelector(`#${tabname}_${page_name}_add_model-to-workspace`);
     const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${page_name}_upload_button-card`);
 
     const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt } = await response.json();
@@ -237,15 +238,15 @@ async function handleData({response, tabname, page_name }) {
     const cards = cardsParentNode.querySelectorAll(".card");
     cards.forEach(card => {
         // exclude upload button
-        if(card.id !== uploadBtnNode.id) {
+        if(card.id !== uploadBtnNode.id && card.id !== addModelBtnNode.id) {
             cardsParentNode.removeChild(card);
         }
     })
 
     if (model_list.length  === 0) {
-        uploadBtnNode.style.display = 'block';
+        addModelBtnNode.style.display = 'block';
     } else {
-        uploadBtnNode.style.display = 'none';
+        addModelBtnNode.style.display = 'none';
     }
 
     // add new child

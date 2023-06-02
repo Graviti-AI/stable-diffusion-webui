@@ -272,7 +272,8 @@ class ExtraNetworksPage:
             model_size=model_size,
             plus_sign_elem_id=plus_sign_elem_id,
             loading_sign_elem_id=loading_sign_elem_id,
-            name=f'Upload {self.title} Models'
+            name=f'Upload {self.title} Models',
+            add_model_button_id=f"{tabname}_{self_name_id}_add_model-to-workspace",
         )
 
         res = f"""
@@ -309,42 +310,6 @@ class ExtraNetworksPage:
 
     def allowed_directories_for_previews(self):
         return []
-
-    def create_html_for_item(self, item, tabname):
-        preview = item.get("preview", None)
-
-        onclick = item.get("onclick", None)
-        if onclick is None:
-            onclick = '"' + html.escape(
-                f"""return cardClicked({json.dumps(tabname)}, {item["prompt"]}, {"true" if self.allow_negative_prompt else "false"})""") + '"'
-
-        height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
-        width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
-        background_image = f"background-image: url(\"{html.escape(preview)}\");" if preview else ''
-        metadata_button = ""
-        metadata = item.get("metadata")
-        if metadata:
-            metadata_button = f"<div class='metadata-button' title='Show metadata' onclick='extraNetworksRequestMetadata(event, {json.dumps(self.name)}, {json.dumps(item['name'])})'></div>"
-
-        model_type = self.name.replace(" ", "_")
-        preview_filename = os.path.join(model_type, os.path.basename(item["local_preview"]))
-
-        args = {
-            "style": f"'{height}{width}{background_image}'",
-            "filename": item["name"],
-            "prompt": item.get("prompt", None),
-            "tabname": json.dumps(tabname),
-            "local_preview": json.dumps(preview_filename),
-            "name": item["name"],
-            "description": (item.get("description") or ""),
-            "card_clicked": onclick,
-            "save_card_preview": '"' + html.escape(
-                f"""return saveCardPreview(event, {json.dumps(tabname)}, {json.dumps(preview_filename)})""") + '"',
-            "search_term": item.get("search_term", ""),
-            "metadata_button": metadata_button,
-        }
-
-        return self.card_page.format(**args)
 
     def find_preview(self, path):
         """

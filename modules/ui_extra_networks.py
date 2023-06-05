@@ -404,9 +404,9 @@ def create_ui(container, button, tabname):
                 tab.select(fn=None, _js=f"modelTabClick", inputs=[tab_click_params], outputs=[])
                 ui.pages.append(page_elem)
                 with gr.Row(elem_id=f"{ui.tabname}_{self_name_id}_pagination", elem_classes="pagination"):
-                     with gr.Column(scale=7):
-                         gr.Button("hide", visible=False)
-                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=320):
+                    with gr.Column(scale=7):
+                        gr.Button("hide", visible=False)
+                    with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=320):
                         upload_btn = gr.Button(f"Add {page.title} Model to Workspace", variant="primary")
                         upload_btn.click(
                             fn=None,
@@ -421,7 +421,7 @@ def create_ui(container, button, tabname):
                     #             else {{document.querySelector("#{button_id}").click();}}
                     #         }}'''
                     #     )
-                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",  min_width=220):
+                    with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",  min_width=220):
                         gr.HTML(
                             value="<div class='pageniation-info'>"
                                   f"<div class='page-prev' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'previous')\">< Prev </div>"

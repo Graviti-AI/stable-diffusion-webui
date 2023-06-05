@@ -291,7 +291,7 @@ async function handleData({response, tabname, page_name }) {
 
         const nameNode = document.createElement('span');
         nameNode.className = "name";
-        nameNode.innerHTML = item.name;
+        nameNode.innerHTML = item.name_for_extra;
 
         const descriptionNode = document.createElement('span');
         descriptionNode.className = "description";

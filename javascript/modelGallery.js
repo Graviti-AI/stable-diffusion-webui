@@ -1,10 +1,11 @@
-function openWorkSpaceDialog() {
+function openWorkSpaceDialog(model_type) {
+    console.log(model_type, 'model_type');
     popup(initDomPage(), 'gallery');
-    initalTab();
-    initLoadMore();
+    initalTab(model_type);
+    initLoadMore(model_type);
     // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: false, model_workspace: 'private'});
-    getPersonalModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'personal'});
-    getPublicModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
+    getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
+    getPublicModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
 }
 
 function getPrivateModelList({ model_type, page, loading, model_workspace, switchPage }) {
@@ -140,10 +141,10 @@ function initDomPage() {
             </div>
             <div class="personal-workspace-model-list">
                 <ul personal-data-tabs>
-                    <li><a data-tabby-default href="#personal-checkpoints">Checkpoints</a></li>
-                    <li><a href="#personal-textual_inversion">Textual Inversion</a></li>
-                    <li><a href="#personal-hypernetworks">Hypernetworks</a></li>
-                    <li><a href="#personal-lora">Lora</a></li>
+                    <li><a checkpoints href="#personal-checkpoints">Checkpoints</a></li>
+                    <li><a textual_inversion  href="#personal-textual_inversion">Textual Inversion</a></li>
+                    <li><a hypernetworks href="#personal-hypernetworks">Hypernetworks</a></li>
+                    <li><a lora href="#personal-lora">Lora</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <ul id="personal-checkpoints" class="extra-network-cards" id="personal-checkpoints-cards"><li class="card"></li></ul>
@@ -160,10 +161,10 @@ function initDomPage() {
             </div>
             <div class="public-workspace-model-list">
                 <ul public-data-tabs>
-                    <li><a data-tabby-default href="#public-checkpoints">Checkpoints</a></li>
-                    <li><a href="#public-textual_inversion">Textual Inversion</a></li>
-                    <li><a href="#public-hypernetworks">Hypernetworks</a></li>
-                    <li><a href="#public-lora">Lora</a></li>
+                    <li><a checkpoints href="#public-checkpoints">Checkpoints</a></li>
+                    <li><a textual_inversion  href="#public-textual_inversion">Textual Inversion</a></li>
+                    <li><a hypernetworks href="#public-hypernetworks">Hypernetworks</a></li>
+                    <li><a lora href="#public-lora">Lora</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <p>Public Models</p>
@@ -209,7 +210,7 @@ async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
     let msgType = 'Add';
     if (model_workspace === 'personal') {
         promise = fetchDelete(`/internal/favorite_models/${model_id}`);
-        msgType = 'Delete'
+        msgType = 'Remove'
     } else {
         promise = fetchPost({ data: {model_id: model_id}, url: `/internal/favorite_models` });
     }
@@ -271,13 +272,13 @@ function debounceSearchModels(func, wait=1000, immediate) {
 
 const debounceSearchModelGallery = debounceSearchModels(searchPublicModels);
 
-function initalTab () {
+function initalTab (model_type) {
     new Tabby('[personal-data-tabs]', {
-        default: '[data-tabby-default]' // The selector to use for the default tab
+        default: `[${model_type}]` // The selector to use for the default tab
     });
 
     new Tabby('[public-data-tabs]', {
-        default: '[data-tabby-default]' // The selector to use for the default tab
+        default: `[${model_type}]` // The selector to use for the default tab
     });
 
     document.addEventListener('tabby', function (event) {
@@ -312,7 +313,7 @@ function refreshModelsGallery() {
     getPersonalModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'personal'});
 }
 
-function initLoadMore() {
+function initLoadMore(model_type) {
     const scrollerContainerList = gradioApp().querySelectorAll('.scrollload-container');
     Array.prototype.slice.call(scrollerContainerList).forEach((container, index) => {
         gallertModelScrollloads.push(
@@ -329,7 +330,7 @@ function initLoadMore() {
                     gallertModelCurrentPage[modelType] += 1;
                     getPublicModelList({model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'public', switchPage: true, sl})
                 },
-                isInitLock: index === 0 ? false : true,
+                isInitLock: index === defaultModelType.findIndex(item => item === model_type) ? false : true,
                 enablePullRefresh: false,
                 window: gradioApp().querySelector('.global-popup'),
                 // threshold: 20,

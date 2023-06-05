@@ -410,7 +410,7 @@ def create_ui(container, button, tabname):
                         upload_btn = gr.Button(f"Add {page.title} Model to Workspace", variant="primary")
                         upload_btn.click(
                             fn=None,
-                            _js='openWorkSpaceDialog'
+                            _js=f"openWorkSpaceDialog('{self_name_id}')"
                         )
                     #  with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=220):
                     #     upload_btn = gr.Button(f"Upload {page.title} Model", variant="primary")

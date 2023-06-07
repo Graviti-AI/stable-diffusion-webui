@@ -303,3 +303,4 @@ class GetTaskCountResponse(BaseModel):
     current_task: str = Field(title="CurrentTask")
     queued_tasks: dict = Field(title="QueuedTasks")
     finished_task_count: int = Field(title="FinishedTaskCount")
+    failed_task_count: int = Field(title="FailedTaskCount")

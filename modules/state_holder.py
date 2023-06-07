@@ -26,7 +26,7 @@ class _RedisBasedSessionStateHolder:
     Hold app session state in redis, then every node can get same state with session_hash
     """
     SESSION_HASH_KEY = 'GRADIO-SESSION'
-    SESSION_HASH_TTL = 3 * 24 * 60 * 60
+    SESSION_HASH_TTL = 3 * 60 * 60
 
     def __init__(self, key_type, redis_client, default_factory=None):
         self._redis_client = redis_client

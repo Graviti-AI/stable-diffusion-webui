@@ -561,17 +561,15 @@ async function browseModels(){
 }
 
 function searchModel({page_name, searchValue}) {
-   return fetch(`/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${pageSize}`, {
-    // return fetch(`/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
-        method: "GET", cache: "no-cache"});
-
+    const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${pageSize}` 
+        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+    return fetchGet(requestUrl);
 }
 
 function searchPublicModel({page_name, searchValue}) {
-   return fetch(`/internal/models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${pageSize}`, {
-    // return fetch(`/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=10&need_refresh=false`, {
-        method: "GET", cache: "no-cache"});
-
+    const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${pageSize}` 
+        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+    return fetchGet(requestUrl);
 }
 
 async function getModelFromUrl() {

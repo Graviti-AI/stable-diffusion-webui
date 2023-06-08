@@ -44,3 +44,15 @@ let gallerySearchBtn = null;
 const defaultModelType = ['checkpoints', 'textual_inversion', 'hypernetworks', 'lora'];
 let searchValue = '';
 let tabSearchValueMap = new Map();
+
+let connectNewModelApi = true;
+function testApi() {
+    const promise = fetchGet(`/internal/favorite_models?model_type='checkpoint'&search_value=&page=1&page_size=1`);
+    promise.then(state=> {
+        if (state.status !== 200) {
+            connectNewModelApi = false;
+        }
+    })
+}
+
+testApi();

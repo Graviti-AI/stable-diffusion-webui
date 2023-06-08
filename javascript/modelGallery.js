@@ -46,12 +46,16 @@ function resetParams() {
 }
 
 function getPrivateModelList({ model_type, page, loading, model_workspace, switchPage }) {
-    const promise = fetchGet(`/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
+    const requestUrl = connectNewModelApi ? `/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
+        : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+    const promise = fetchGet(requestUrl);
     getPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage});
 }
 
 async function  getPublicModelList({ init, model_type, page, loading, model_workspace, switchPage, sl, refreshTabLock }) {
-    const promise = fetchGet(`/internal/models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}`);
+    const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
+        : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+    const promise = fetchGet(requestUrl);
     getPageDataAndUpdateList({ init, model_type, page, loading, model_workspace, promise, switchPage, sl, refreshTabLock});
 }
 

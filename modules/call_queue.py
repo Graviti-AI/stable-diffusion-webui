@@ -23,21 +23,20 @@ logger = logging.getLogger(__name__)
 
 
 def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
-    def call_function_in_gpu_worker(*args, **kwargs):
+    def call_function_in_gpu_wroker(*args, **kwargs):
         if gpu_worker_pool is None:
             raise RuntimeError("GPU worker thread has not been initialized.")
         future_res = gpu_worker_pool.submit(
             func, *args, **kwargs)
         res = future_res.result(timeout=timeout)
         return res
-    return call_function_in_gpu_worker
+    return call_function_in_gpu_wroker
 
 
 def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *args, **kwargs):
     monitor_log_id = None
     status = ''
     log_message = ''
-    task_failed = False
     res = list()
     time_consumption = {}
     try:
@@ -74,19 +73,11 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         status = 'finished'
         log_message = 'done'
     except Exception as e:
-        if not isinstance(e, MonitorException):
-            task_failed = True
         status = 'failed'
         log_message = e.__str__()
         raise e
-    except TimeoutError as e:
-        if not isinstance(e, MonitorException):
-            task_failed = True
-        status = 'timeout'
-        log_message = e.__str__()
-        raise e
     finally:
-        progress.finish_task(id_task, task_failed)
+        progress.finish_task(id_task)
         shared.state.end()
         if monitor_log_id:
             try:

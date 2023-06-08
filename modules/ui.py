@@ -1751,8 +1751,8 @@ def create_ui():
         shared.tab_names.append(label)
 
     with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, title="GRAVITI Diffus") as demo:
-        with gr.Row(elem_id="topbar"):
-            with gr.Column(elem_id="user-setting", min_width=500, scale=2):
+        with gr.Row():
+             with gr.Column(elem_id="user-setting", min_width=500, scale=2):
                 gr.HTML(
                     value="<div class='user-content'>"
                             "<div class='right-content'>"
@@ -1765,6 +1765,7 @@ def create_ui():
                             "/></a><div class='user_info-name'><span></span><a "
                             "href='/api/logout' target='_self'>Log out</a></div></div></div>",
                     show_label=False)
+        with gr.Row(elem_id="topbar"):
             with gr.Column(scale=6, min_width=850):
                 with gr.Row(elem_id="quicksettings"):
                     for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):

@@ -79,6 +79,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         status = 'failed'
         log_message = e.__str__()
         raise e
+    except TimeoutError as e:
+        if not isinstance(e, MonitorException):
+            task_failed = True
+        status = 'timeout'
+        log_message = e.__str__()
+        raise e
     finally:
         progress.finish_task(id_task, task_failed)
         shared.state.end()

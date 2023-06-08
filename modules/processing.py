@@ -2,6 +2,7 @@ import json
 import math
 import os
 import sys
+import time
 import warnings
 import hashlib
 
@@ -623,7 +624,12 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             state.job_count = p.n_iter
 
         extra_network_data = None
+
+        start_at = time.time()
         for n in range(p.n_iter):
+            if time.time() - start_at > cmd_opts.predict_timeout:
+                raise TimeoutError(f'predict timeout: {cmd_opts.predict_timeout}s')
+
             p.iteration = n
 
             if state.skipped:

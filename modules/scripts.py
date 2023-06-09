@@ -76,6 +76,15 @@ class Script:
 
         pass
 
+    def preprocess(self, p, *args):
+        """
+        This function is called at the very beginning of process function for AlwaysVisible scripts.
+        You can modify the processing object (p) here, inject hooks, etc.
+        args contains all values returned by components from ui()
+        """
+
+        pass
+
     def process(self, p, *args):
         """
         This function is called before processing begins for AlwaysVisible scripts.
@@ -409,6 +418,15 @@ class ScriptRunner:
         shared.total_tqdm.clear()
 
         return processed
+
+    def preprocess(self, p):
+        for script in self.alwayson_scripts:
+            try:
+                script_args = p.script_args[script.args_from:script.args_to]
+                script.preprocess(p, *script_args)
+            except Exception:
+                print(f"Error running preprocess: {script.filename}", file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
 
     def process(self, p):
         for script in self.alwayson_scripts:

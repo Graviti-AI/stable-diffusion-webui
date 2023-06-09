@@ -507,7 +507,11 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
 
 
 def process_images(p: StableDiffusionProcessing) -> Processed:
-    stored_opts = {k: opts.data[k] for k in p.override_settings.keys()}
+    # Run preprocess before everything else
+    if p.scripts is not None:
+        p.scripts.preprocess(p)
+
+    stored_opts = {k: getattr(opts, k) for k in p.override_settings.keys()}
 
     try:
         # if no checkpoint override or the override checkpoint can't be found, remove override entry and load opts checkpoint

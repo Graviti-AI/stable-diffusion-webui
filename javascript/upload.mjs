@@ -13,6 +13,18 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
         return refresh_model_list_when_upload_complete;
     }
 
+    function add_model_to_favorite_wrapper(tabname, model_type) {
+        function add_model_to_favorite(file, response) {
+            getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
+            fetchPageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
+            if (model_type === 'checkpoints') {
+                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
+                refeshCheckpointBtn.click();
+            }
+        }
+        return add_model_to_favorite;
+    }
+
     function register_button(elem_node){
         if (uppy_object_map.has(elem_node.id))
         {
@@ -22,12 +34,20 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
             uppy_object_map.delete(elem_node.id);
 
             uppy = setup_uppy_for_upload_button(
-                elem_node, tus_endpoint, model_verification_endpoint, refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")));
+                elem_node,
+                tus_endpoint,
+                model_verification_endpoint,
+                refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")),
+                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
             uppy_object_map.set(elem_node.id, uppy);
 
         } else {
             const uppy = setup_uppy_for_upload_button(
-                elem_node, tus_endpoint, model_verification_endpoint, refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")));
+                elem_node,
+                tus_endpoint,
+                model_verification_endpoint,
+                refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")),
+                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
 
             uppy_object_map.set(elem_node.id, uppy);
         }

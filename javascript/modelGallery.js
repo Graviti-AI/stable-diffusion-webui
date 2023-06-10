@@ -49,19 +49,19 @@ function getPrivateModelList({ model_type, page, loading, model_workspace, switc
     const requestUrl = connectNewModelApi ? `/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
         : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
     const promise = fetchGet(requestUrl);
-    getPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage});
+    getModelGalleryPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage});
 }
 
 async function  getPublicModelList({ init, model_type, page, loading, model_workspace, switchPage, sl, refreshTabLock }) {
     const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
         : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
     const promise = fetchGet(requestUrl);
-    getPageDataAndUpdateList({ init, model_type, page, loading, model_workspace, promise, switchPage, sl, refreshTabLock});
+    getModelGalleryPageDataAndUpdateList({ init, model_type, page, loading, model_workspace, promise, switchPage, sl, refreshTabLock});
 }
 
 function getPersonalModelList({ model_type, page, loading, model_workspace }) {
     const promise = fetchGet(`/internal/favorite_models?model_type=${model_type_mapper[model_type]}&page=${page}&page_size=100000`);
-    getPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise});
+    getModelGalleryPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise});
 }
 
 function judgeLevel(globalLevel, pictureLevel) {
@@ -151,7 +151,7 @@ function updateLockStatus(modelType) {
     })
 }
 
-async function getPageDataAndUpdateList({ init, model_type, loading=true, model_workspace, promise, switchPage, sl, refreshTabLock}) {
+async function getModelGalleryPageDataAndUpdateList({ init, model_type, loading=true, model_workspace, promise, switchPage, sl, refreshTabLock}) {
     // loading
     if (loading) {
         notifier.asyncBlock(promise, (response) => {
@@ -174,7 +174,7 @@ function initDomPage() {
             <div class="personal-workspace-top">
                 <span>Personal Workspace</span>
                 <div class="personal-workspace-top-mature">
-                    <span>Mature Level</span>
+                    <span>Mature Content</span>
                     <select onchange="changeMatureLevel(this)" id="model-gallery-meture-level">
                         <option value="None">None</option>
                         <option value="Soft">Soft</option>
@@ -264,7 +264,7 @@ async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
         if (response.status === 200) {
             notifier.success(`${msgType} Success`)
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
-            fetchPageDataAndUpdateList({tabname: currentModelTab, page_name: model_type, page: 1, loading:false})
+            fetchHomePageDataAndUpdateList({tabname: currentModelTab, model_type, page: 1, loading:false})
             if (model_type === 'checkpoints') {
                 const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
                 refeshCheckpointBtn.click();
@@ -282,7 +282,6 @@ function setMatureLevel({modelList, globalLevel}) {
             const bgFilter = card.querySelector('.set-bg-filter');
             bgFilter.style['filter'] = needBlur ? 'blur(10px)' : 'none';
         }
-        
     })
 }
 

@@ -537,7 +537,7 @@ async function browseModels(){
     {
         if (gradioApp().querySelector("div#txt2img_extra_networks").classList.contains("hide"))
         {
-            fetchPageDataAndUpdateList({tabname: 'txt2img', page_name: currentTab.get('txt2img'), page: 1});
+            fetchHomePageDataAndUpdateList({tabname: 'txt2img', model_type: currentTab.get('txt2img'), page: 1});
         }
         txt2img_button.click();
     }
@@ -547,7 +547,7 @@ async function browseModels(){
     {
         if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
         {
-            fetchPageDataAndUpdateList({tabname: 'img2img', page_name: currentTab.get('img2img'), page: 1});
+            fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
         }
         img2img_button.click();
     }

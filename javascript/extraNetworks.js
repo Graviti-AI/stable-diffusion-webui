@@ -5,23 +5,28 @@ function setupExtraNetworksForTab(tabname){
     var tabs = gradioApp().querySelector('#'+tabname+'_extra_tabs > div')
     var search = gradioApp().querySelector('#'+tabname+'_extra_search textarea')
     var refresh = gradioApp().getElementById(tabname+'_extra_refresh')
+    var matureLevel = gradioApp().getElementById(tabname+'_mature_level')
+
 
     search.classList.add('search')
+    matureLevel.classList.add('mature_level');
     tabs.appendChild(search)
     tabs.appendChild(refresh)
+    tabs.appendChild(matureLevel)
 
     search.addEventListener("input", function(evt){
-        const page_name = currentTab.get(tabname);
+        const model_type = currentTab.get(tabname);
         // reset page
-        const currentPageTabsId = `${tabname}_${page_name}_current_page`;
+        const currentPageTabsId = `${tabname}_${model_type}_current_page`;
         currentPageForTabs.set(currentPageTabsId, 1);
 
-        fetchPageDataAndUpdateList({tabname, page_name, page: 1, loading: false});
+        fetchHomePageDataAndUpdateList({tabname, model_type, page: 1, loading: false});
     });
 }
 
-var activePromptTextarea = {};
+const activePromptTextarea = {};
 let pageSize;
+let homePageMatureLevel = "None";
 
 function setupExtraNetworks(){
     setupExtraNetworksForTab('txt2img')
@@ -188,9 +193,9 @@ async function extraNetworksRequestMetadata(event, extraPage, cardName){
   }
 }
 
-async function updatePrivatePreviews(tabname, page_name) {
-    var cards = gradioApp().querySelectorAll(`#${tabname}_${page_name}_cards>div`);
-    const response = await fetch(`/sd_extra_networks/private_previews?page_name=${page_name}`, {
+async function updatePrivatePreviews(tabname, model_type) {
+    var cards = gradioApp().querySelectorAll(`#${tabname}_${model_type}_cards>div`);
+    const response = await fetch(`/sd_extra_networks/private_previews?page_name=${model_type}`, {
         method: "GET", cache: "no-cache"});
     const private_preview_list = await response.json();
     cards.forEach((card) => {
@@ -215,16 +220,16 @@ let currentTab = new Map();
 currentTab.set('txt2img', 'checkpoints');
 currentTab.set('img2img', 'checkpoints');
 
-async function handleData({response, tabname, page_name }) {
-    const cardsParentNode = gradioApp().querySelector(`#${tabname}_${page_name}_cards`);
-    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
-    const currentTotalCountId = `${tabname}_${page_name}_total_count`;
-    const totalPageNode = gradioApp().querySelector(`#${tabname}_${page_name}_pagination_row .total-page`);
-    const currentPageNode = gradioApp().querySelector(`#${tabname}_${page_name}_pagination_row .current-page`);
-    const addModelBtnNode = cardsParentNode.querySelector(`#${tabname}_${page_name}_add_model-to-workspace`);
-    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${page_name}_upload_button-card`);
+async function handleData({response, tabname, model_type }) {
+    const cardsParentNode = gradioApp().querySelector(`#${tabname}_${model_type}_cards`);
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const currentTotalCountId = `${tabname}_${model_type}_total_count`;
+    const totalPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .total-page`);
+    const currentPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .current-page`);
+    const addModelBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_add_model-to-workspace`);
+    const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card`);
 
-    const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt } = await response.json();
+    const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt = false } = await response.json();
 
     // set page
     currentPageForTabs.set(currentPageTabsId, resPage || currentPage);
@@ -256,82 +261,64 @@ async function handleData({response, tabname, page_name }) {
         if (item.onclick) {
             cardNode.setAttribute('onclick', item.onclick.replaceAll(/\"/g, '').replaceAll(/&quot;/g, '"'));
         } else {
-            cardNode.setAttribute('onclick', `return cardClicked('${tabname}', ${item.prompt}), ${allow_negative_prompt}`)
+            cardNode.setAttribute('onclick', `return cardClicked('${tabname}', '${item.prompt}', ${allow_negative_prompt})`)
         }
 
+        cardNode.setAttribute('mature-level', item.preview_mature_level || 'None');
         cardNode.setAttribute('filename', item.name);
+
+        cardNode.innerHTML = `
+            <div class="set-bg-filter"></div>
+            <div class="metadata-button" title="Show metadata" onclick="extraNetworksRequestMetadata(event, '${model_type}', '${item.name}')"></div>
+            <div class="actions">
+                <div class="additional">
+                    <ul>
+                        <a title="replace preview image with currently selected in gallery" onclick="return saveCardPreview(event, '${tabname}', '${model_type}/${item.name}.png')" target="_blank">
+                            set private preview
+                        </a>
+                    </ul>
+                    <span class="search_term" style="display: none;">${item.search_term || ''}</span>
+                </div>
+                <span class="name">${item.name}</span>
+                <span class="description"></span>
+            </div>
+
+        `
+        const bgFilter = cardNode.querySelector('.set-bg-filter');
         if (item.preview) {
-            cardNode.style.backgroundImage = `url(${item.preview.replace(/\s/g, encodeURIComponent(' '))})`;
+            bgFilter.style.backgroundImage = `url(${item.preview.replace(/\s/g, encodeURIComponent(' '))})`;
         }
 
-        const metaDataButtonNode = document.createElement('div');
-        metaDataButtonNode.className = 'metadata-button';
-        metaDataButtonNode.title = "Show metadata";
-        metaDataButtonNode.setAttribute('onclick', `extraNetworksRequestMetadata(event, "${page_name}", "${item.name}")`);
-
-        const actionsNode = document.createElement('div');
-        actionsNode.className = 'actions';
-
-        const additionalNode = document.createElement('div');
-        additionalNode.className = "additional";
-
-        const ulNode = document.createElement('ul');
-        const aNode = document.createElement('a');
-        aNode.title = "replace preview image with currently selected in gallery";
-        aNode.setAttribute('onclick', `return saveCardPreview(event, "${tabname}", "${page_name}/${item.name}.png")`);
-        aNode.target = "_blank";
-        aNode.innerHTML = "set private preview";
-
-        ulNode.appendChild(aNode);
-
-        const searchTermNode = document.createElement('span');
-        searchTermNode.className = "search_term";
-        searchTermNode.style.display = "none";
-        searchTermNode.innerHTML = item.search_term;
-
-        const nameNode = document.createElement('span');
-        nameNode.className = "name";
-        nameNode.innerHTML = item.name_for_extra;
-
-        const descriptionNode = document.createElement('span');
-        descriptionNode.className = "description";
-
-        additionalNode.appendChild(ulNode);
-        additionalNode.appendChild(searchTermNode);
-
-        actionsNode.appendChild(additionalNode);
-        actionsNode.appendChild(nameNode);
-        actionsNode.appendChild(descriptionNode);
-
-        cardNode.appendChild(metaDataButtonNode);
-        cardNode.appendChild(actionsNode);
+        if (judgeLevel(homePageMatureLevel, cardNode.getAttribute('mature-level'))) {
+            bgFilter.style['filter'] = 'blur(10px)';
+        }
         cardsParentNode.insertBefore(cardNode, uploadBtnNode);
     })
 }
 
-async function fetchPageDataAndUpdateList({tabname, page_name, page, loading=true}) {
+async function fetchHomePageDataAndUpdateList({tabname, model_type, page, loading=true}) {
    const searchValue = gradioApp().querySelector('#'+tabname+'_extra_tabs textarea').value.toLowerCase();
-   const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
-        : `/sd_extra_networks/models?page_name=${page_name}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`
+   const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
+        : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`
    const promise = fetchGet(requestUrl);
     
    // loading
     if (loading) {
         notifier.asyncBlock(promise, (response) => {
-            handleData({response, tabname, page_name })
+            handleData({response, tabname, model_type })
         });
     } else {
         const response = await promise;
-        handleData({ response, tabname, page_name })
+        handleData({ response, tabname, model_type })
     }
 }
 
-function updatePage(tabname, page_name, page_type) {
+function updatePage(tabname, model_type, page_type) {
     let currentPage = 1;
     let totalCount;
 
-    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
-    const currentTotalCountId = `${tabname}_${page_name}_total_count`;
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
+    const currentTotalCountId = `${tabname}_${model_type}_total_count`;
 
     currentPage = currentPageForTabs.get(currentPageTabsId);
     totalCount = totalCountForTabs.get(currentTotalCountId);
@@ -343,7 +330,7 @@ function updatePage(tabname, page_name, page_type) {
         return
      }
     const page = page_type === 'previous' ? currentPage - 1 : currentPage + 1;
-    fetchPageDataAndUpdateList({ tabname, page_name, page });
+    fetchHomePageDataAndUpdateList({ tabname, model_type, page });
 }
 
 function setPageSize() {
@@ -352,24 +339,37 @@ function setPageSize() {
 }
 
 async function refreshModelList({tabname}) {
-    const page_name = currentTab.get(tabname);
-    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
+    const model_type = currentTab.get(tabname);
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
     const currentPage = currentPageForTabs.get(currentPageTabsId) || 1;
-    fetchPageDataAndUpdateList({tabname, page_name, page: currentPage, need_refresh: true});
+    fetchHomePageDataAndUpdateList({tabname, model_type, page: currentPage, need_refresh: true});
 }
 
-function modelTabClick({tabname, page_name}) {
+function modelTabClick({tabname, model_type}) {
     let currentPage = 1;
-    const currentPageTabsId = `${tabname}_${page_name}_current_page`;
+    const currentPageTabsId = `${tabname}_${model_type}_current_page`;
     if (currentPageForTabs.has(currentPageTabsId)) {
         currentPage = currentPageForTabs.get(currentPageTabsId);
     } else {
         currentPageForTabs.set(currentPageTabsId, 1);
     }
 
-    currentTab.set(tabname, page_name);
+    currentTab.set(tabname, model_type);
 
-    fetchPageDataAndUpdateList({tabname, page_name, page: currentPage});
+    fetchHomePageDataAndUpdateList({tabname, model_type, page: currentPage});
+}
+
+function changeHomeMatureLevel(selectedLevel, {tabname}) {
+    const modelType = currentTab.get(tabname);
+    homePageMatureLevel = selectedLevel;
+    const cardList = gradioApp().querySelector(`#${tabname}_${modelType}_cards`).querySelectorAll('.card');
+    cardList.forEach(card => {
+        if (card.id !== `${tabname}_${modelType}_upload_button-card` && card.id !== `${tabname}_${modelType}_add_model-to-workspace`) {
+            const needBlur = judgeLevel(selectedLevel, card.getAttribute('mature-level'));
+            const bgFilter = card.querySelector('.set-bg-filter');
+            bgFilter.style['filter'] = needBlur ? 'blur(10px)' : 'none';
+        }
+    })
 }
 
 onUiLoaded(function() {

@@ -809,12 +809,26 @@ footer {
 .extra-network-subdirs button{
     margin: 0 0.15em;
 }
-.extra-networks .tab-nav .search{
+.extra-networks .tab-nav .search, .extra-networks .tab-nav .gradio-dropdown{
     display: inline-block;
     max-width: 16em;
     margin: 0.3em;
     align-self: center;
     width: 16em;
+}
+
+.extra-networks .tab-nav .mature_level {
+    position: absolute;
+    right: 0;
+}
+
+.extra-networks .tab-nav .mature_level label {
+    display: flex;
+    align-items: center;
+}
+
+.extra-networks .tab-nav .mature_level label > span {
+    margin-right: 10px;
 }
 
 #txt2img_extra_view, #img2img_extra_view {

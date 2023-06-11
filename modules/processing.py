@@ -527,7 +527,9 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
                 sd_models.reload_model_weights()
 
             if k == 'sd_vae':
-                sd_vae.reload_vae_weights(vae_file=os.path.join(sd_vae.vae_path, v))
+                vae_file_path = os.path.join(sd_vae.vae_path, v)
+                if os.path.exists(vae_file_path):
+                    sd_vae.reload_vae_weights(vae_file=vae_file_path)
 
         res = process_images_inner(p)
 
@@ -538,7 +540,11 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
                 setattr(opts, k, v)
 
                 if k == 'sd_vae':
-                    sd_vae.reload_vae_weights(vae_file=os.path.join(sd_vae.vae_path, v))
+                    vae_file_path = os.path.join(sd_vae.vae_path, v)
+                    if os.path.exists(vae_file_path):
+                        sd_vae.reload_vae_weights(vae_file=vae_file_path)
+                    else:
+                        sd_vae.reload_vae_weights()
 
     return res
 

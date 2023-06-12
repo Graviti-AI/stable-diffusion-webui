@@ -261,7 +261,7 @@ async function handleData({response, tabname, model_type }) {
         if (item.onclick) {
             cardNode.setAttribute('onclick', item.onclick.replaceAll(/\"/g, '').replaceAll(/&quot;/g, '"'));
         } else {
-            cardNode.setAttribute('onclick', `return cardClicked('${tabname}', '${item.prompt}', ${allow_negative_prompt})`)
+            cardNode.setAttribute('onclick', `return cardClicked('${tabname}', ${item.prompt}, ${allow_negative_prompt})`)
         }
 
         cardNode.setAttribute('mature-level', item.preview_mature_level || 'None');

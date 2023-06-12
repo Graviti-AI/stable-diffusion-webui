@@ -1599,7 +1599,7 @@ def create_ui():
             return opts.dumpjson(), f'{len(changed)} settings changed without save: {", ".join(changed)}.'
         return opts.dumpjson(), f'{len(changed)} settings changed{": " if len(changed) > 0 else ""}{", ".join(changed)}.'
 
-    def run_settings_single(value, key):
+    def run_settings_single(request: gr.Request, value, key):
         if not opts.same_type(value, opts.data_labels[key].default):
             return gr.update(visible=True), opts.dumpjson()
 
@@ -1610,7 +1610,7 @@ def create_ui():
         opts.save(shared.config_filename)
 
         # the returned extra two values are used to tell img2img/txt2img current loaded model
-        return get_value_for_setting(key), opts.dumpjson(), value, value
+        return get_value_for_setting(key, request), opts.dumpjson(), value, value
 
     with gr.Blocks(analytics_enabled=False) as settings_interface:
         with gr.Row():
@@ -1807,6 +1807,11 @@ def create_ui():
             outputs=[text_settings, result],
         )
 
+        def make_run_settings_single(key):
+            def f(request: gr.Request, value, _=None):
+                return run_settings_single(request, value, key)
+            return f
+
         for i, k, item in quicksettings_list:
             component = component_dict[k]
             info = opts.data_labels[k]
@@ -1819,7 +1824,7 @@ def create_ui():
 
             change_handler = component.release if hasattr(component, 'release') else component.change
             change_handler(
-                fn=lambda value, k=k: run_settings_single(value, key=k),
+                fn=make_run_settings_single(k),
                 inputs=[component],
                 outputs=outputs,
                 show_progress=info.refresh is not None,
@@ -1833,7 +1838,7 @@ def create_ui():
 
         button_set_checkpoint = gr.Button('Change checkpoint', elem_id='change_checkpoint', visible=False)
         button_set_checkpoint.click(
-            fn=lambda value, _: run_settings_single(value, key='sd_model_checkpoint'),
+            fn=make_run_settings_single('sd_model_checkpoint'),
             _js="function(v){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || v, null]; }",
             inputs=[component_dict['sd_model_checkpoint'], dummy_component],
             outputs=[component_dict['sd_model_checkpoint'], text_settings, txt2img_model_title, img2img_model_title],

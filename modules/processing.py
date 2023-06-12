@@ -635,11 +635,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
         extra_network_data = None
 
-        start_at = time.time()
         for n in range(p.n_iter):
-            if time.time() - start_at > cmd_opts.predict_timeout:
-                raise TimeoutError(f'predict timeout: {cmd_opts.predict_timeout}s')
-
             p.iteration = n
 
             if state.skipped:

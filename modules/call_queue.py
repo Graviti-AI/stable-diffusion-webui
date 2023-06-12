@@ -2,7 +2,7 @@ import html
 import logging
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import traceback
 import time
 import functools
@@ -112,6 +112,12 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             if add_monitor_state:
                 return extra_outputs_array + [str(e)], e.status_code == 402
             return extra_outputs_array + [str(e)]
+        except TimeoutError as e:
+            shared.state.interrupt()
+            extra_outputs_array = extra_outputs
+            if extra_outputs_array is None:
+                extra_outputs_array = [None, '', '']
+            return extra_outputs_array + [f'Timeout: {shared.cmd_opts.predict_timeout}s'], False
 
         if add_monitor_state:
             return res, False
@@ -154,8 +160,6 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
             res = extra_outputs_array + [f"<div class='error'>{html.escape(type(e).__name__+': '+str(e))}</div>"]
 
-        shared.state.skipped = False
-        shared.state.interrupted = False
         shared.state.job_count = 0
 
         if not add_stats:

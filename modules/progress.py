@@ -204,6 +204,10 @@ def progressapi(req: ProgressRequest):
     else:
         live_preview = None
 
+    # stop progress requests after prediction was interrupted
+    if shared.state.interrupted:
+        completed = True
+
     return ProgressResponse(active=active, queued=queued, completed=completed, progress=progress, eta=eta,
                             live_preview=live_preview, id_live_preview=id_live_preview, textinfo=shared.state.textinfo)
 

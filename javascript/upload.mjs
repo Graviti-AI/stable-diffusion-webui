@@ -16,13 +16,25 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
     function add_model_to_favorite_wrapper(tabname, model_type) {
         function add_model_to_favorite(file, response) {
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
-            fetchPageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
+            fetchHomePageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
             if (model_type === 'checkpoints') {
                 const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
                 refeshCheckpointBtn.click();
             }
         }
         return add_model_to_favorite;
+    }
+
+    function add_model_to_favorite_if_exists_wrapper(tabname, model_type) {
+        function add_model_to_favorite_if_exists(fileID, sha256) {
+            getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
+            fetchHomePageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
+            if (model_type === 'checkpoints') {
+                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
+                refeshCheckpointBtn.click();
+            }
+        }
+        return add_model_to_favorite_if_exists;
     }
 
     function register_button(elem_node){
@@ -38,7 +50,8 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 tus_endpoint,
                 model_verification_endpoint,
                 refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")),
-                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
+                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")),
+                add_model_to_favorite_if_exists_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
             uppy_object_map.set(elem_node.id, uppy);
 
         } else {
@@ -47,7 +60,8 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 tus_endpoint,
                 model_verification_endpoint,
                 refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")),
-                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
+                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")),
+                add_model_to_favorite_if_exists_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
 
             uppy_object_map.set(elem_node.id, uppy);
         }

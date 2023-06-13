@@ -152,8 +152,6 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
             print(traceback.format_exc(), file=sys.stderr)
 
-            shared.state.skipped = False
-            shared.state.interrupted = False
             shared.state.job = ""
             shared.state.job_count = 0
 

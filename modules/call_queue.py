@@ -89,7 +89,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
 
 def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
     def f(request: gradio.routes.Request, *args, **kwargs):
-
+        predict_timeout = request.headers.get('X-Predict-Timeout', shared.cmd_opts.predict_timeout)
         # if the first argument is a string that says "task(...)", it is treated as a job id
         if len(args) > 0 and type(args[0]) == str and args[0][0:5] == "task(" and args[0][-1] == ")":
             id_task = args[0]
@@ -103,7 +103,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
         try:
             res = submit_to_gpu_worker(
                 functools.partial(wrap_gpu_call, request, func, func_name, id_task),
-                timeout=shared.cmd_opts.predict_timeout
+                timeout=int(predict_timeout)
             )(*args, **kwargs)
         except MonitorException as e:
             extra_outputs_array = extra_outputs
@@ -117,7 +117,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             extra_outputs_array = extra_outputs
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
-            return extra_outputs_array + [f'Timeout: {shared.cmd_opts.predict_timeout}s'], False
+            return extra_outputs_array + [f'predict timeout: {predict_timeout}s'], False
 
         if add_monitor_state:
             return res, False
@@ -152,6 +152,8 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
             print(traceback.format_exc(), file=sys.stderr)
 
+            shared.state.skipped = False
+            shared.state.interrupted = False
             shared.state.job = ""
             shared.state.job_count = 0
 

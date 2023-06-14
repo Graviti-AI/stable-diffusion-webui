@@ -18,6 +18,7 @@ finished_tasks = []
 recorded_results = []
 recorded_results_limit = 2
 finished_task_count = 0
+failed_task_count = 0
 
 # this queue is just used for telling user where he/she is in the queue
 # do not use it for any other purposes
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_task_queue_info():
-    return current_task, pending_tasks, finished_tasks, finished_task_count, 0
+    return current_task, pending_tasks, finished_tasks, finished_task_count, failed_task_count
 
 
 def start_task(id_task):
@@ -50,10 +51,11 @@ def set_current_task_step(step):
     logger.info(f'set_current_task_step, current_task: {current_task}, current_task_step: {current_task_step}')
 
 
-def finish_task(id_task):
+def finish_task(id_task, task_failed=False):
     global current_task
     global current_task_step
     global finished_task_count
+    global failed_task_count
     logger.info(
         f'finish_task, id_task: {id_task}, current_task: {current_task}, current_task_step: {current_task_step}')
 
@@ -64,11 +66,15 @@ def finish_task(id_task):
         current_task = None
         current_task_step = ''
 
-    finished_tasks.append(id_task)
+    if id_task not in finished_tasks:
+        finished_tasks.append(id_task)
+        if task_failed:
+            failed_task_count += 1
+        else:
+            finished_task_count += 1
+
     if len(finished_tasks) > 600:
         finished_tasks.pop(0)
-
-    finished_task_count += 1
 
 
 def record_results(id_task, res):

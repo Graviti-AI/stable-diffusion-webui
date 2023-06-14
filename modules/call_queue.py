@@ -36,6 +36,7 @@ def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
 def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *args, **kwargs):
     monitor_log_id = None
     status = ''
+    task_failed = True
     log_message = ''
     res = list()
     time_consumption = {}
@@ -72,12 +73,15 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         progress.record_results(id_task, res)
         status = 'finished'
         log_message = 'done'
+        task_failed = False
     except Exception as e:
+        if isinstance(e, MonitorException):
+            task_failed = False
         status = 'failed'
         log_message = e.__str__()
-        raise e
+        raise
     finally:
-        progress.finish_task(id_task)
+        progress.finish_task(id_task, task_failed)
         shared.state.end()
         if monitor_log_id:
             try:
@@ -117,7 +121,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             extra_outputs_array = extra_outputs
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
-            return extra_outputs_array + [f'predict timeout: {predict_timeout}s'], False
+            return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], False
 
         if add_monitor_state:
             return res, False

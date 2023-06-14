@@ -20,7 +20,8 @@ function resetParams() {
         'checkpoints': 1,
         'lora': 1,
         'hypernetworks': 1,
-        'textual_inversion': 1
+        'textual_inversion': 1,
+        'lycoris': 1
     };
 
     galleryModelTotalPage = {
@@ -28,19 +29,22 @@ function resetParams() {
             'checkpoints': 1,
             'lora': 1,
             'hypernetworks': 1,
-            'textual_inversion': 1
+            'textual_inversion': 1,
+            'lycoris': 1
         },
         public: {
             'checkpoints': 1,
             'lora': 1,
             'hypernetworks': 1,
-            'textual_inversion': 1
+            'textual_inversion': 1,
+            'lycoris': 1
         },
         private: {
             'checkpoints': 1,
             'lora': 1,
             'hypernetworks': 1,
-            'textual_inversion': 1
+            'textual_inversion': 1,
+            'lycoris': 1
         }
     }
 }
@@ -188,12 +192,14 @@ function initDomPage() {
                     <li><a textual_inversion  href="#personal-textual_inversion">Textual Inversion</a></li>
                     <li><a hypernetworks href="#personal-hypernetworks">Hypernetworks</a></li>
                     <li><a lora href="#personal-lora">Lora</a></li>
+                    <li><a lycoris href="#personal-lycoris">LyCORIS/LoCon</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <ul id="personal-checkpoints" class="extra-network-cards" id="personal-checkpoints-cards"></li></ul>
                     <ul id="personal-textual_inversion" class="extra-network-cards" id="personal-textual_inversion-cards"></li></ul>
                     <ul id="personal-hypernetworks" class="extra-network-cards" id="personal-hypernetworks-cards"></li></ul>
                     <ul id="personal-lora" class="extra-network-cards" id="personal-lora-cards"></li></ul>
+                    <ul id="personal-lycoris" class="extra-network-cards" id="personal-lycoris-cards"></li></ul>
                 </div>
             </div>
         </div>
@@ -211,6 +217,7 @@ function initDomPage() {
                     <li><a textual_inversion  href="#public-textual_inversion">Textual Inversion</a></li>
                     <li><a hypernetworks href="#public-hypernetworks">Hypernetworks</a></li>
                     <li><a lora href="#public-lora">Lora</a></li>
+                    <li><a lycoris href="#public-lycoris">LyCORIS/LoCon</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <p>Public Models</p>
@@ -239,6 +246,12 @@ function initDomPage() {
                         <div class="scrollload-container" model-type="lora" workspace="public">
                             <ul id="public-lora-cards" class="extra-network-cards scrollload-content">
                                
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="public-lycoris">
+                        <div class="scrollload-container" model-type="lycoris" workspace="public">
+                            <ul id="public-lycoris-cards" class="extra-network-cards scrollload-content">
                             </ul>
                         </div>
                     </div>

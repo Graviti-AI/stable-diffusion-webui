@@ -17,6 +17,9 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
         function add_model_to_favorite(file, response) {
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
             fetchHomePageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
+            if(gallertModelCurrentPage[model_type] === 1) {
+                getPublicModelList({ model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
+            }
             if (model_type === 'checkpoints') {
                 const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
                 refeshCheckpointBtn.click();

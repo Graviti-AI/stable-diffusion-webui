@@ -248,7 +248,7 @@ async function handleData({response, tabname, model_type }) {
         }
     })
 
-    if (model_list.length  === 0) {
+    if (model_list && model_list.length === 0) {
         addModelBtnNode.style.display = 'block';
     } else {
         addModelBtnNode.style.display = 'none';
@@ -279,7 +279,7 @@ async function handleData({response, tabname, model_type }) {
                     </ul>
                     <span class="search_term" style="display: none;">${item.search_term || ''}</span>
                 </div>
-                <span class="name">${item.name}</span>
+                <span class="name">${item.name_for_extra}</span>
                 <span class="description"></span>
             </div>
 

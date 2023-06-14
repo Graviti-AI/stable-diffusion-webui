@@ -90,7 +90,7 @@ async function handleModelData({init, response, model_type, model_workspace, swi
         cards.forEach(card => {
             cardsParentNode.removeChild(card);
         })
-        if (model_list.length  === 0) {
+        if (model_list && model_list.length  === 0) {
             const cardNode = document.createElement('li');
             cardsParentNode.appendChild(cardNode);
             cardNode.outerHTML = `
@@ -98,7 +98,7 @@ async function handleModelData({init, response, model_type, model_workspace, swi
                 id="${model_workspace}_${model_type}_upload_button-card" 
                 style="display: block; white-space: nowrap; text-align: center; background-image: none; background-color: rgba(171, 176, 177, 0.4);" 
                 onclick="uploadModel()" 
-                model_type="textual_inversion" 
+                model_type="${model_type}" 
                 uppy_dashboard_title="${model_type} files only. ( < 5 MB)" 
                 max_model_size_mb="5">
                 <span class="helper" style="display: inline-block; height: 100%; vertical-align: middle;"></span>
@@ -128,7 +128,7 @@ async function handleModelData({init, response, model_type, model_workspace, swi
             <div class="metadata-button" title="Show metadata" onclick="extraNetworksRequestMetadata(event, '${model_type}', '${item.name}')"></div>
             <div class="operation-button" onclick="handleModelAddOrRemoved('${item.id}', '${model_type}', '${model_workspace}')">${operateButtonName}</div>
             <div class="actions">
-                <span class="name">${item.name}</span>
+                <span class="name">${item.name_for_extra}</span>
                 <span class="description"></span>
             </div>
 

@@ -600,7 +600,7 @@ async function getModelFromUrl() {
                     const publicModelResponse = await searchPublicModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
                     if (publicModelResponse && publicModelResponse.status === 200) {
                         const { model_list } = await publicModelResponse.json();
-                        if (model_list.length) {
+                        if (model_list && model_list.length) {
                             // add to personal workspace
                             const res = await fetchPost({ data: {model_id: model_list[0].id}, url: `/internal/favorite_models` });
                             if(res.status === 200) {
@@ -641,7 +641,7 @@ async function getModelFromUrl() {
     notifier.asyncBlock(allPromise, async (promisesRes) => {
         promisesRes.forEach(async (response, index) => {
             const { model_list, allow_negative_prompt } = await response.json()
-            if (model_list.length === 0) {
+            if (model_list && model_list.length === 0) {
                 notifier.alert(`${keyMapModelType[urlKeys[index]]} ${urlValues[index]} not found`, {
                     labels: {
                         alert: 'Model not Found'

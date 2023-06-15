@@ -583,7 +583,8 @@ async function getModelFromUrl() {
         "checkpoint": "checkpoints",
         "lora": "lora",
         "ti": "textual_inversion",
-        "hn": "hypernetworks"
+        "hn": "hypernetworks",
+        "lycoris": "lycoris"
     }
 
     const promiseList = [];

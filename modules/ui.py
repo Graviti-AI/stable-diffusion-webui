@@ -2010,6 +2010,7 @@ def javascript_html(request: gr.Request):
     head = f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
 
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
+    head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'

@@ -287,7 +287,7 @@ async function calcuCreditTimes(width, height, batch_count, batch_size, steps, b
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                type: 'txt2img',
+                type: buttonId.split('_')[0],
                 image_sizes: [
                     {
                         width,

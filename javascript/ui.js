@@ -726,9 +726,9 @@ onUiLoaded(function(){
                     }
 
                     if (result.tier === 'Basic') {
-                        if (localStorage.getItem('show-data-survey') !== 'true') {
+                        if (localStorage.getItem('show-data-survey-info') !== 'true') {
                             notifier.info('Help us improve our product and get a 20% discount coupon. <a href="/user#/billing"> Start Survey</a>');
-                            localStorage.setItem('show-data-survey', 'true');
+                            localStorage.setItem('show-data-survey-info', 'true');
                         }
                     }
                 }

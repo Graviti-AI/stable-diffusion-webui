@@ -250,10 +250,14 @@ def load_scripts():
 
     def orderby(basedir):
         # 1st webui, 2nd extensions-builtin, 3rd extensions
-        priority = {os.path.join(paths.script_path, "extensions-builtin"):1, paths.script_path:0}
-        for key in priority:
-            if basedir.startswith(key):
-                return priority[key]
+        priority = [
+            os.path.join(paths.script_path, "extensions"),
+            os.path.join(paths.script_path, "extensions-builtin"),
+            paths.script_path
+        ]
+        for i in range(len(priority)):
+            if basedir.startswith(priority[i]):
+                return len(priority) - i
         return 9999
 
     for scriptfile in sorted(scripts_list, key=lambda x: [orderby(x.basedir), x]):

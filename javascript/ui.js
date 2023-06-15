@@ -595,68 +595,55 @@ async function getModelFromUrl() {
 
     for (const [key, value] of urlList) {
         if (keyMapModelType[key]) {
-             if(key === 'checkpoint') {
-                if (!checkpoint) {
-                    // query is in public models
-                    const publicModelResponse = await searchPublicModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
-                    if (publicModelResponse && publicModelResponse.status === 200) {
-                        const { model_list } = await publicModelResponse.json();
-                        if (model_list && model_list.length) {
-                            // add to personal workspace
-                            const res = await fetchPost({ data: {model_id: model_list[0].id}, url: `/internal/favorite_models` });
-                            if(res.status === 200) {
-                                notifier.success(`Added model ${model_list[0].name} to your workspace successfully.`)
-                            } else {
-                                notifier.alert(`Added model ${model_list[0].name} to your workspace Failed`)
-                            }
-
-                            checkpoint = value;
-                            const response = searchModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
-                            promiseList.push(response);
-                            urlKeys.push(key);
-                            urlValues.push(value);
-                        } else {
-                            notifier.alert(`${keyMapModelType[key]} ${value}} not found`, {
-                                labels: {
-                                    alert: 'Model not Found'
-                                }
-                            })
-                        }
-                    }
-                } else {
-                    notifier.alert('There are multiple checkpoint in the url, we will use the first one and discard the rest')
-                }
-             } else {
-                const response = searchModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
-                promiseList.push(response);
-                urlKeys.push(key);
-                urlValues.push(value);
-             }
+            if (checkpoint) {
+                notifier.alert('There are multiple checkpoint in the url, we will use the first one and discard the rest')
+                break;
+            }
+            if (key === 'checkpoint') {
+                checkpoint = value;
+            }
+            // query is in public models
+            const publicModelResponse = searchPublicModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
+            promiseList.push(publicModelResponse);
+            urlKeys.push(key);
+            urlValues.push(value);
         }
     }
 
     if(promiseList.length === 0) return;
-
     const allPromise = Promise.all(promiseList);
 
     notifier.asyncBlock(allPromise, async (promisesRes) => {
-        promisesRes.forEach(async (response, index) => {
-            const { model_list, allow_negative_prompt } = await response.json()
-            if (model_list && model_list.length === 0) {
-                notifier.alert(`${keyMapModelType[urlKeys[index]]} ${urlValues[index]} not found`, {
+        promisesRes.forEach(async (publicModelResponse, index) => {
+            if (publicModelResponse && publicModelResponse.status === 200) {
+                const { model_list, allow_negative_prompt } = await publicModelResponse.json();
+                if (model_list && model_list.length > 0) {
+                        // add to personal workspace
+                        const res = await fetchPost({ data: {model_id: model_list[0].id}, url: `/internal/favorite_models` });
+                        if(res.status === 200) {
+                            notifier.success(`Added model ${model_list[0].name} to your workspace successfully.`)
+                        } else if (res.status === 409) {
+                            const { detail } = await res.json();
+                            notifier.alert(detail);
+                        } else {
+                            notifier.alert(`Added model ${model_list[0].name} to your workspace Failed`)
+                        }
+                        if(urlKeys[index] === 'checkpoint') {
+                            // checkpoint dont need to replace text
+                            selectCheckpoint(model_list[0].name);
+                        } else {
+                            if (model_list[0].prompt) {
+                                cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);
+                            }
+                        }
+                }
+             } else {
+                notifier.alert(`${keyMapModelType[urlKeys[index]]} ${urlValues[index]}} not found`, {
                     labels: {
                         alert: 'Model not Found'
                     }
                 })
-            } else {
-                if(urlKeys[index] === 'checkpoint') {
-                    selectCheckpoint(model_list[0].name)
-                }
-                // checkpoint dont need to replace text
-                if (model_list[0].prompt) {
-                    cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);
-                }
-            }
+             }
         })
     });
     

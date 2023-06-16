@@ -93,7 +93,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
 
 def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
     def f(request: gradio.routes.Request, *args, **kwargs):
-        predict_timeout = request.headers.get('X-Predict-Timeout', shared.cmd_opts.predict_timeout)
+        predict_timeout = dict(request.headers).get('X-Predict-Timeout', shared.cmd_opts.predict_timeout)
         # if the first argument is a string that says "task(...)", it is treated as a job id
         if len(args) > 0 and type(args[0]) == str and args[0][0:5] == "task(" and args[0][-1] == ")":
             id_task = args[0]

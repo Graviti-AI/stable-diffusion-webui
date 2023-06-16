@@ -170,6 +170,9 @@ class Paths:
     def outdir(self):
         return self._check_dir(self._output_dir)
 
+    def private_outdir(self):
+        return self._check_dir(self._private_output_dir)
+
     # 'Output directory for txt2img images
     def outdir_txt2img_samples(self):
         return self._check_dir(self._output_dir.joinpath("txt2img", 'samples'))

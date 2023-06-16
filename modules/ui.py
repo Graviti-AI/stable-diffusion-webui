@@ -2009,7 +2009,7 @@ def webpath(fn):
 def javascript_html(request: gr.Request):
     script_js = os.path.join(script_path, "script.js")
     head = f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
-
+    head += '<script src="https://cdn.jsdelivr.net/npm/js-base64@3.7.5/base64.min.js"></script>'
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'

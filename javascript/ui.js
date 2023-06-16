@@ -713,6 +713,15 @@ onUiLoaded(function(){
                         }
                     }
 
+                    if (result.tier === 'Basic') {
+                        const packageIcon = gradioApp().querySelector('#package');
+                        if (packageIcon) {
+                            packageIcon.style.display = 'flex';
+                            const aLink = packageIcon.querySelector('a');
+                            aLink.href = `https://buy.stripe.com/00g7sF1K90IXa0UeV5?prefilled_email=${result.email}&client_reference_id=${result.user_id}`;
+                        }
+                    }
+
                     // set after reload
                     if (Cookies && Cookies.get(languageCookieKey)) {
                         if (result.tier === 'Basic') {

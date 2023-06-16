@@ -77,11 +77,12 @@ def run_postprocessing(request: gr.Request, id_task, extras_mode, image, image_f
             pp.image.info["postprocessing"] = infotext
 
         if save_output:
+            from modules.processing import get_fixed_seed
             # we make a StableDiffusionProcessing here to let on_image_saved script can get request from it
             from modules.processing import StableDiffusionProcessing
             p = StableDiffusionProcessing()
             p.set_request(request)
-            images.save_image(pp.image, path=outpath, basename=basename, seed=None, prompt=None, extension=opts.samples_format, info=infotext, short_filename=True, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=None, p=p, save_to_dirs=True)
+            images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), prompt=None, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=None, p=p, save_to_dirs=True)
 
         if extras_mode != 2 or show_extras_results:
             outputs.append(pp.image)

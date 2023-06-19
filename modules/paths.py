@@ -172,25 +172,28 @@ class Paths:
     def private_outdir(self):
         return self._check_dir(self._private_output_dir)
 
+    def _get_output_dir(self, force_to_private):
+        return self._private_output_dir if force_to_private else self._output_dir
+
     # 'Output directory for txt2img images
-    def outdir_txt2img_samples(self):
-        return self._check_dir(self._output_dir.joinpath("txt2img", 'samples'))
+    def outdir_txt2img_samples(self, force_to_private=False):
+        return self._check_dir(self._get_output_dir(force_to_private).joinpath("txt2img", 'samples'))
 
     # Output directory for img2img images
-    def outdir_img2img_samples(self):
-        return self._check_dir(self._output_dir.joinpath("img2img", 'samples'))
+    def outdir_img2img_samples(self, force_to_private=False):
+        return self._check_dir(self._get_output_dir(force_to_private).joinpath("img2img", 'samples'))
 
     # Output directory for images from extras tab
-    def outdir_extras_samples(self):
-        return self._check_dir(self._output_dir.joinpath("extras", 'samples'))
+    def outdir_extras_samples(self, force_to_private=False):
+        return self._check_dir(self._get_output_dir(force_to_private).joinpath("extras", 'samples'))
 
     # Output directory for txt2img grids
-    def outdir_txt2img_grids(self):
-        return self._check_dir(self._output_dir.joinpath("txt2img", 'grids'))
+    def outdir_txt2img_grids(self, force_to_private=False):
+        return self._check_dir(self._get_output_dir(force_to_private).joinpath("txt2img", 'grids'))
 
     # Output directory for img2img grids
-    def outdir_img2img_grids(self):
-        return self._check_dir(self._output_dir.joinpath("img2img", 'grids'))
+    def outdir_img2img_grids(self, force_to_private=False):
+        return self._check_dir(self._get_output_dir(force_to_private).joinpath("img2img", 'grids'))
 
     # Directory for saving images using the Save button
     def outdir_save(self):

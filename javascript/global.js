@@ -49,6 +49,7 @@ let gallerySearchBtn = null;
 const defaultModelType = ['checkpoints', 'textual_inversion', 'hypernetworks', 'lora', 'lycoris'];
 let searchValue = '';
 let tabSearchValueMap = new Map();
+const isPcScreen = window.innerWidth > 600;
 
 let connectNewModelApi = true;
 function testApi() {

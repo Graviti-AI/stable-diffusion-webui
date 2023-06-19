@@ -718,10 +718,12 @@ onUiLoaded(function(){
                         if (packageIcon) {
                             packageIcon.style.display = 'flex';
                             const aLink = packageIcon.querySelector('a');
+                            const spanNode = aLink.querySelector('span');
                             const resultInfo = {"user_id": result.user_id};
                             const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
                             const host = judgeEnvironment() === 'prod' ? 'https://buy.stripe.com/00g7sF1K90IXa0UeV5' : 'https://buy.stripe.com/test_9AQ15Uewh6kEb2o9AF';
                             aLink.href = `${host}?prefilled_email=${result.email}&client_reference_id=${referenceId}`;
+                            spanNode.textContent = isPcScreen ? 'Credits Package' : '';
                         }
                     }
                 }

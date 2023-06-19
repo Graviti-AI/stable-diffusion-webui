@@ -21,7 +21,6 @@ class SignForCredits {
         const linkNode = signNode.querySelector('a');
         const imgNode = signNode.querySelector('img');
         const spanNode = signNode.querySelector('span');
-        const isPcScreen = window.innerWidth > 600;
         const upgradeBtnNode = gradioApp().querySelector("#upgrade span");
         try {
             if (!isPcScreen) {

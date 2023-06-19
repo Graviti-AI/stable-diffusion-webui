@@ -1758,7 +1758,7 @@ def create_ui():
                             "<div class='right-content'>"
                             "<div id='discord' class='discord-icon'><a title='Join Discord' href='https://discord.gg/QfBbBYqQ7z'><img src='/public/image/discord.png' /></a></div>"
                             "<div id='sign' title='' class='upgrade-content' style='display: none'><a><img /><span></span></a></div>"
-                            "<div id='package' title='Credits Package' class='upgrade-content' style='display: none'><a><img src='/public/image/package.png' /><span>Credits Package</span></a></div>"
+                            "<div id='package' title='Credits Package' class='upgrade-content' style='display: none'><a><img src='/public/image/package.png' /><span></span></a></div>"
                             "<div id='upgrade' title='Unlock more credits' class='upgrade-content' style='display: none'><a href='/user#/subscription?type=subscription'><img src='/public/image/lightning.png'/><span>Upgrade</span></a></div>"
                             "</div>"
                             "<div style='display: none;justify-content: flex-end;' class='user_info'><a href='/user'><img "

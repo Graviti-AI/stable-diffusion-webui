@@ -1,4 +1,5 @@
 import os
+import tempfile
 import time
 import uuid
 import logging
@@ -60,36 +61,40 @@ def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
     elif func_name in ('modules.postprocessing.run_postprocessing',):
         result['type'] = 'extras'
 
-        scale_type = args[3]  # 0: scale by, 1: scale to
         extras_mode = named_args.get('extras_mode', 0)
-
+        image_folder = named_args.get('image_folder', [])
+        source_img_size = named_args.get('image', {}).get('size', (512, 512))
+        scale_type = args[4]  # 0: scale by, 1: scale to
+        scale_by = args[5]
+        scale_to = {
+            'width': args[6],
+            'height': args[7],
+        }
         if extras_mode == 0:  # single image
             if scale_type == 0:  # scale by, resultSize is srcSize * scaleBy
-                result['scale'] = args[4]
-                source_img_size = named_args.get('image', {}).get('size', (512, 512))
+                result['scale'] = scale_by
                 result['image_sizes'].append({
                     'width': source_img_size[0],
                     'height': source_img_size[1],
                 })
             else:  # scale to, resultSize is provided in request
                 result['image_sizes'].append({
-                    'width': args[5],
-                    'height': args[6],
+                    'width': scale_to['width'],
+                    'height': scale_to['height'],
                 })
         elif extras_mode == 1:  # batch process
             from PIL import Image
-            image_folder = args[2]
             image_count = len(image_folder)
             if scale_type == 0:  # scale by, need calculate resultSize for every image particularly
-                result['scale'] = args[4]
+                result['scale'] = scale_by
                 for img in image_folder:
-                    source_img = Image.open(img)
+                    source_img = Image.open(os.path.abspath(img['name']))
                     result['image_sizes'].append({
                         'width': source_img.width,
                         'height': source_img.height,
                     })
             else:  # scale to, every image will be scaled to same size
-                result['image_sizes'] = [{'width': args[5], 'height': args[6]} for _ in range(image_count)]
+                result['image_sizes'] = [{'width': scale_to['width'], 'height': scale_to['height']} for _ in range(image_count)]
 
     return result
 
@@ -135,6 +140,11 @@ def _serialize_object(obj):
     elif obj_type is Image.Image:
         return {
             'size': obj.size
+        }
+    elif obj_type is tempfile._TemporaryFileWrapper:
+        return {
+            'name': obj.name,
+            'orig_name': obj.orig_name
         }
     else:
         return str(obj)

@@ -36,6 +36,13 @@ class SignForCredits {
                 signNode.style.display = 'flex';
                 linkNode.href = PRICING_URL;
             } else {
+                // set after reload
+                if (Cookies && Cookies.get(languageCookieKey)) {
+                    if (localStorage.getItem('show-data-survey-info') !== 'true') {
+                        notifier.info('Help us improve our product and get a 20% discount coupon. <a href="/user#/billing"> Start Survey</a>',  {durations: {info: 0}});
+                        localStorage.setItem('show-data-survey-info', 'true');
+                    }
+                }
                 if (!has_signed_today) {
                     signNode.title = 'Unlock up to 900 free credits per month';
                     imgNode.src = '/public/image/calendar.png';

@@ -724,16 +724,6 @@ onUiLoaded(function(){
                             aLink.href = `${host}?prefilled_email=${result.email}&client_reference_id=${referenceId}`;
                         }
                     }
-
-                    // set after reload
-                    if (Cookies && Cookies.get(languageCookieKey)) {
-                        if (result.tier === 'Basic') {
-                            if (localStorage.getItem('show-data-survey-info') !== 'true') {
-                                notifier.info('Help us improve our product and get a 20% discount coupon. <a href="/user#/billing"> Start Survey</a>',  {durations: {info: 0}});
-                                localStorage.setItem('show-data-survey-info', 'true');
-                            }
-                        }
-                    }
                 }
         }
     })

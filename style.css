@@ -96,6 +96,7 @@
 
 .block.padded:not(.gradio-accordion) {
     padding: 0 !important;
+    margin-bottom: 0;
 }
 
 div.gradio-container{
@@ -459,13 +460,17 @@ div#extras_scale_to_tab div.form{
     margin-right: 10px;
 }
 
-.pagination {
+.gradio-row.pagination {
     border-top: 1px solid var(--border-color-primary);
     padding-top: 10px;
 }
 
 .pagination_row {
     justify-content: center;
+}
+
+.gradio-container ul {
+    display: block !important;
 }
 
 .page-next:hover, .page-prev:hover {

@@ -195,7 +195,7 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 setTimeout(() => {
                     // reset dateStart to prevent progress is removed due to timeout
                     dateStart = new Date()
-                    fun(id_task, res.id_live_preview)
+                    fun(id_task, id_live_preview)
                 }, Math.min(Math.max(failedElapsed, 1), 15)*1000)
             } else {
                 console.log("remove progress bar: progress request is failed")

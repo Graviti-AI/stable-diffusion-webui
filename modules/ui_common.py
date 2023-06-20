@@ -351,7 +351,7 @@ def create_upload_button(
     return button
 
 
-def create_browse_model_button(label, elem_id, button_style="", js_function='browseModels', visible=True, ):
+def create_browse_model_button(label, elem_id, button_style="", js_function='browseWorkspaceModels', visible=True, ):
     button = gr.Button(label, elem_id=elem_id, variant="secondary", visible=visible)
     button.click(None, list(), list(), _js=js_function)
     if button_style:

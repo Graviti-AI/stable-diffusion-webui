@@ -1790,7 +1790,7 @@ def create_ui():
                         'Show workspace models',
                         'browse_models_in_workspace',
                         button_style="width: 200px !important; flex-grow: 0.3 !important; align-self: flex-end;",
-                        js_function="browseModels")
+                        js_function="browseWorkspaceModels")
                     create_browse_model_button(
                         'Browse All Models',
                         'browse_all_models',

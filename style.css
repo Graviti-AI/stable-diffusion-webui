@@ -1397,3 +1397,8 @@ textarea {
     cursor: pointer;
     color: var(--primary-500);
 }
+
+.tabs {
+    white-space: normal !important;
+}
+

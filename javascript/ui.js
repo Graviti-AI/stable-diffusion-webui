@@ -548,36 +548,17 @@ function switchWidthHeight(tabname) {
     return [];
 }
 
-async function browseModels(){
+function browseWorkspaceModels() {
     var txt2img_tab = gradioApp().querySelector("#tab_txt2img");
     var img2img_tab = gradioApp().querySelector("#tab_img2img");
-    var txt2img_model_refresh_button = gradioApp().querySelector('#txt2img_extra_refresh');
-    var img2img_model_refresh_button = gradioApp().querySelector('#img2img_extra_refresh');
-
-    if (txt2img_tab.style.display == "none" && img2img_tab.style.display == "none")
-    {
-        var txt2img_tab_button = document.querySelector("#tabs > div.tab-nav > button:nth-child(1)");
-        txt2img_tab_button.click();
-        await new Promise(r => setTimeout(r, 100));
-    }
-
     var txt2img_button = gradioApp().querySelector("#txt2img_extra_networks");
-    if (txt2img_tab.style.display == "block")
-    {
-        if (gradioApp().querySelector("div#txt2img_extra_networks").classList.contains("hide"))
-        {
-            fetchHomePageDataAndUpdateList({tabname: 'txt2img', model_type: currentTab.get('txt2img'), page: 1});
-        }
+    var img2img_button = gradioApp().querySelector("#img2img_extra_networks");
+
+    if (txt2img_tab.style.display === "block") {
         txt2img_button.click();
     }
 
-    var img2img_button = gradioApp().querySelector("#img2img_extra_networks");
-    if (img2img_tab.style.display == "block")
-    {
-        if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
-        {
-            fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
-        }
+    if (img2img_tab.style.display === "block") {
         img2img_button.click();
     }
 
@@ -586,6 +567,38 @@ async function browseModels(){
         browseModelsBtn.textContent = 'Hide workspace models';
     } else {
         browseModelsBtn.textContent = 'Show workspace models';
+    }
+    
+}
+
+async function browseModels(){
+    var txt2img_tab = gradioApp().querySelector("#tab_txt2img");
+    var img2img_tab = gradioApp().querySelector("#tab_img2img");
+    var txt2img_model_refresh_button = gradioApp().querySelector('#txt2img_extra_refresh');
+    var img2img_model_refresh_button = gradioApp().querySelector('#img2img_extra_refresh');
+    // if (txt2img_tab.style.display == "none" && img2img_tab.style.display == "none")
+    // {
+    //     var txt2img_tab_button = document.querySelector("#tabs > div.tab-nav > button:nth-child(1)");
+    //     txt2img_tab_button.click();
+    //     await new Promise(r => setTimeout(r, 100));
+    // }
+
+    if (txt2img_tab.style.display == "block")
+    {
+        if (gradioApp().querySelector("div#txt2img_extra_networks").classList.contains("hide"))
+        {
+            fetchHomePageDataAndUpdateList({tabname: 'txt2img', model_type: currentTab.get('txt2img'), page: 1});
+        }
+        
+    }
+
+    
+    if (img2img_tab.style.display == "block")
+    {
+        if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
+        {
+            fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
+        }
     }
 }
 

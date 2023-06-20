@@ -305,21 +305,30 @@ def create_toprow(is_img2img):
 
         with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
             with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box"):
+                tab_name = gr.Textbox(elem_id=f"{id_part}_tab_name", value=id_part, visible=False)
+                id_task = gr.Textbox(elem_id=f"{id_part}_id_task", value='', visible=False)
                 interrupt = gr.Button('Interrupt', elem_id=f"{id_part}_interrupt", elem_classes="generate-box-interrupt")
                 skip = gr.Button('Skip', elem_id=f"{id_part}_skip", elem_classes="generate-box-skip")
                 submit = gr.Button('Generate', elem_id=f"{id_part}_generate", variant='primary')
                 model_title = gr.Textbox(elem_id=f"{id_part}_model_title", value=get_sd_model_title_from_setting(), visible=False)
                 vae_model_title = gr.Textbox(elem_id=f"{id_part}_vae_model_title", value=get_sd_vae_title_from_setting(), visible=False)
 
+                def _make_interrupt_cb(cb):
+                    def f(request: gr.Request, task_id: str, task_type: str):
+                        if task_id == progress.current_task:
+                            cb()
+                    return f
                 skip.click(
-                    fn=lambda: shared.state.skip(),
-                    inputs=[],
+                    fn=_make_interrupt_cb(shared.state.skip),
+                    _js='getImageGenerationTaskId',
+                    inputs=[id_task, tab_name],
                     outputs=[],
                 )
 
                 interrupt.click(
-                    fn=lambda: shared.state.interrupt(),
-                    inputs=[],
+                    fn=_make_interrupt_cb(shared.state.interrupt),
+                    _js='getImageGenerationTaskId',
+                    inputs=[id_task, tab_name],
                     outputs=[],
                 )
 

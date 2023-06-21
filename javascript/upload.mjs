@@ -16,7 +16,7 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
     function add_model_to_favorite_wrapper(tabname, model_type) {
         function add_model_to_favorite(file, response) {
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
-            fetchHomePageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
+            fetchHomePageDataAndUpdateList({tabname: tabname, model_type: model_type, page: 1, loading:false});
             if(gallertModelCurrentPage[model_type] === 1) {
                 getPublicModelList({ model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
             }
@@ -28,19 +28,40 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
         return add_model_to_favorite;
     }
 
+    function click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type) {
+        if (req_model_type != res_model_type && model_type_mapper[req_model_type] != res_model_type)
+        {
+            notifier.warning(`${fileName} is a ${res_model_type} but not ${model_type_mapper[req_model_type]}`);
+            const model_type_from_backend = Object.keys(model_type_mapper).find(key => model_type_mapper[key] === res_model_type);
+            const tab = gradioApp().querySelector(`#tabby-toggle_personal-${model_type_from_backend}`);
+            tab.click();
+        }
+    }
+
     function add_model_to_favorite_if_exists_wrapper(tabname, model_type) {
-        function add_model_to_favorite_if_exists(fileID, sha256) {
+        function add_model_to_favorite_if_exists(fileName, sha256, req_model_type, res_model_type) {
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
-            fetchHomePageDataAndUpdateList({tabname: tabname, page_name: model_type, page: 1, loading:false});
+            fetchHomePageDataAndUpdateList({tabname: tabname, model_type: model_type, page: 1, loading:false});
             if (model_type === 'checkpoints') {
                 const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
                 refeshCheckpointBtn.click();
             }
+            click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type);
         }
         return add_model_to_favorite_if_exists;
     }
 
+    function model_type_check_callback_wrapper(tabname, model_type) {
+        function model_type_check_callback(fileName, sha256, req_model_type, res_model_type) {
+            click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type);
+        }
+        return model_type_check_callback;
+    }
+
     function register_button(elem_node){
+        const tabname = elem_node.getAttribute("tabname");
+        const model_type = elem_node.getAttribute("model_type");
+
         if (uppy_object_map.has(elem_node.id))
         {
             var uppy = uppy_object_map.get(elem_node.id);
@@ -52,9 +73,11 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 elem_node,
                 tus_endpoint,
                 model_verification_endpoint,
-                refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")),
-                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")),
-                add_model_to_favorite_if_exists_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
+                refresh_model_list_when_upload_complete_wrapper(tabname),
+                add_model_to_favorite_wrapper(tabname, model_type),
+                add_model_to_favorite_if_exists_wrapper(tabname, model_type),
+                model_type_check_callback_wrapper(tabname, model_type)
+            );
             uppy_object_map.set(elem_node.id, uppy);
 
         } else {
@@ -62,9 +85,11 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 elem_node,
                 tus_endpoint,
                 model_verification_endpoint,
-                refresh_model_list_when_upload_complete_wrapper(elem_node.getAttribute("tabname")),
-                add_model_to_favorite_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")),
-                add_model_to_favorite_if_exists_wrapper(elem_node.getAttribute("tabname"), elem_node.getAttribute("model_type")));
+                refresh_model_list_when_upload_complete_wrapper(tabname),
+                add_model_to_favorite_wrapper(tabname, model_type),
+                add_model_to_favorite_if_exists_wrapper(tabname, model_type),
+                model_type_check_callback_wrapper(tabname, model_type)
+            );
 
             uppy_object_map.set(elem_node.id, uppy);
         }

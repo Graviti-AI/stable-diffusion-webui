@@ -91,10 +91,10 @@ def add_paste_fields(tabname, init_img, fields, override_settings_component=None
         modules.ui.img2img_paste_fields = fields
 
 
-def create_buttons(tabs_list):
+def create_buttons(tabs_list, visible=True, suffix=""):
     buttons = {}
     for tab in tabs_list:
-        buttons[tab] = gr.Button(f"Send to {tab}", elem_id=f"{tab}_tab")
+        buttons[tab] = gr.Button(f"Send to {tab}", elem_id=f"{tab}_tab{suffix}", visible=visible)
     return buttons
 
 

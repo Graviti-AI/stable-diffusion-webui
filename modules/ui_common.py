@@ -234,7 +234,7 @@ Requested path was: {f}
             return result_gallery, generation_info if tabname != "extras" else html_info_x, html_info, html_log
 
 
-def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id):
+def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id, visible=True, interactive=True):
     def refresh(request: gr.Request):
         inputs = modules.call_utils.special_args(refresh_method, [], request)
         if inputs:
@@ -258,7 +258,7 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
 
         return gr.update(**(args or {}))
 
-    refresh_button = ToolButton(value=refresh_symbol, elem_id=elem_id)
+    refresh_button = ToolButton(value=refresh_symbol, elem_id=elem_id, visible=visible, interactive=interactive)
     refresh_button.click(
         fn=refresh,
         inputs=[],

@@ -1584,9 +1584,69 @@ def create_ui():
         with gr.Row(elem_id="topbar"):
             with gr.Column(scale=6, min_width=850):
                 with gr.Row(elem_id="quicksettings"):
+                    # Quicksetting is not used here, but keep it so the program will not throw any error
                     for i, k, item in sorted(settings.quicksettings_list, key=lambda x: settings.quicksettings_names.get(x[1], x[0])):
-                        component = create_setting_component(k, is_quicksettings=True)
+                        component = create_setting_component(k, is_quicksettings=True, visible=False, interactive=False)
                         settings.component_dict[k] = component
+
+                    # This is the reall place to set sd checkpoint
+                    sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
+
+                    default_sd_checkpoint_container = {"sd_model_checkpoint": shared.opts.sd_model_checkpoint}
+
+                    def update_sd_model_selection_args(request: gr.Request = None):
+                        sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
+                        default_sd_checkpoint = default_sd_checkpoint_container["sd_model_checkpoint"]
+                        if ("choices" in sd_checkpoint_component_args
+                                and len(sd_checkpoint_component_args["choices"]) > 0):
+                            default_sd_checkpoint = sd_checkpoint_component_args["choices"][0]
+                        default_sd_checkpoint_container["sd_model_checkpoint"] = (
+                            default_sd_checkpoint if default_sd_checkpoint else "")
+                        sd_checkpoint_component_args["value"] = default_sd_checkpoint_container["sd_model_checkpoint"]
+                        return sd_checkpoint_component_args
+
+                    sd_model_selection = sd_checkpoint_options.component(
+                        label=sd_checkpoint_options.label,
+                        elem_id="sd_model_checkpoint_dropdown",
+                        elem_classes=["quicksettings"],
+                        visible=True,
+                        **update_sd_model_selection_args())
+                    create_refresh_button(
+                        sd_model_selection,
+                        sd_checkpoint_options.refresh,
+                        sd_checkpoint_options.component_args,
+                        "refresh_sd_model_checkpoint_dropdown")
+
+                    def get_model_title_from_params(params):
+                        if "Model hash" not in params and "Model" not in params:
+                            return default_sd_checkpoint_container["sd_model_checkpoint"]
+                        ckpt_info = sd_models.get_closet_checkpoint_match(params["Model hash"])
+
+                        if ckpt_info is not None:
+                            return ckpt_info.title
+
+                        ckpt_info = sd_models.get_closet_checkpoint_match(params["Model"])
+
+                        if ckpt_info is not None:
+                            return ckpt_info.title
+                        return default_sd_checkpoint_container["sd_model_checkpoint"]
+                    txt2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
+                    img2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
+
+                    def select_checkpoint(request: gr.Request, sd_model_title):
+                        return [sd_model_title, sd_model_title]
+
+                    sd_model_selection.change(
+                        fn=select_checkpoint,
+                        inputs=sd_model_selection,
+                        outputs=[txt2img_model_title, img2img_model_title]
+                    )
+
+                    sd_model_selection.select(
+                        fn=select_checkpoint,
+                        inputs=sd_model_selection,
+                        outputs=[txt2img_model_title, img2img_model_title]
+                    )
                     create_browse_model_button(
                         'Show workspace models',
                         'browse_models_in_workspace',
@@ -1628,11 +1688,16 @@ def create_ui():
         languages.sort()
         footer = footer.format(versions=versions_html(), language_list=['None'] + languages)
         gr.HTML(footer, elem_id="footer")
-        settings.add_functionality(demo)
+        settings.add_functionality(demo, sd_model_selection)
 
         update_image_cfg_scale_visibility = lambda: gr.update(visible=shared.sd_model and shared.sd_model.cond_stage_key == "edit")
         settings.text_settings.change(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
         demo.load(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
+
+        def update_sd_model_selection(request: gr.Request):
+            return gr.update(**update_sd_model_selection_args(request))
+        demo.load(
+            fn=update_sd_model_selection, inputs=None, outputs=sd_model_selection)
 
 
         def modelmerger(request: gradio.routes.Request, *args):

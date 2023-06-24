@@ -25,7 +25,7 @@ def get_value_for_setting(key, request: gr.Request = None):
     return gr.update(value=value, **args)
 
 
-def create_setting_component(key, is_quicksettings=False):
+def create_setting_component(key, is_quicksettings=False, visible=True, interactive=True):
     def fun():
         return opts.data[key] if key in opts.data else opts.data_labels[key].default
 
@@ -33,6 +33,9 @@ def create_setting_component(key, is_quicksettings=False):
     t = type(info.default)
 
     args = info.component_args() if callable(info.component_args) else info.component_args
+    args = args if args else {}
+    args["visible"] = visible
+    args["interactive"] = interactive
 
     if info.component is not None:
         comp = info.component
@@ -50,11 +53,13 @@ def create_setting_component(key, is_quicksettings=False):
     if info.refresh is not None:
         if is_quicksettings:
             res = comp(label=info.label, value=fun(), elem_id=elem_id, elem_classes="quicksettings", **(args or {}))
-            ui_common.create_refresh_button(res, info.refresh, info.component_args, f"refresh_{key}")
+            ui_common.create_refresh_button(
+                res, info.refresh, info.component_args, f"refresh_{key}", visible=visible, interactive=interactive)
         else:
             with FormRow():
                 res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
-                ui_common.create_refresh_button(res, info.refresh, info.component_args, f"refresh_{key}")
+                ui_common.create_refresh_button(
+                    res, info.refresh, info.component_args, f"refresh_{key}", visible=visible, interactive=interactive)
     else:
         res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
 
@@ -274,7 +279,7 @@ class UiSettings:
                 component = create_setting_component(k, is_quicksettings=True)
                 self.component_dict[k] = component
 
-    def add_functionality(self, demo):
+    def add_functionality(self, demo, sd_model_selection):
         self.submit.click(
             fn=wrap_gradio_call(lambda *args: self.run_settings(*args), extra_outputs=[gr.update()]),
             inputs=self.components,
@@ -305,12 +310,19 @@ class UiSettings:
             )
 
         button_set_checkpoint = gr.Button('Change checkpoint', elem_id='change_checkpoint', visible=False)
+
+        def set_checkpoint_when_click_on_card(request: gr.Request, checkpoint_id, current_checkpoint):
+            ckpt_info = sd_models.get_closet_checkpoint_match(checkpoint_id)
+
+            if ckpt_info is not None:
+                return ckpt_info.title, ckpt_info.title, ckpt_info.title
+            return current_checkpoint, current_checkpoint, current_checkpoint
+
         button_set_checkpoint.click(
-            fn=make_run_settings_single('sd_model_checkpoint'),
-            _js="function(v){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || v, null]; }",
-            inputs=[self.component_dict['sd_model_checkpoint'], self.dummy_component],
-            outputs=[self.component_dict['sd_model_checkpoint'],
-                     self.text_settings,
+            fn=set_checkpoint_when_click_on_card,
+            _js="function(current, dummy){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || current, current]; }",
+            inputs=[sd_model_selection, self.dummy_component],
+            outputs=[sd_model_selection,
                      self.txt2img_model_title,
                      self.img2img_model_title],
         )

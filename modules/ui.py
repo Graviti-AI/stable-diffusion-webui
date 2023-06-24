@@ -1957,7 +1957,7 @@ def javascript_html(request: gr.Request):
 
     script_js = os.path.join(script_path, "script.js")
     head += f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
-    head += '<script type="text/javascript" src="https://unpkg.com/vue@2"></script>\n'
+    head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue@2.7.14"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/npm/js-base64@3.7.5/base64.min.js"></script>'
     head += '<script type="text/javascript" src="https://unpkg.com/buefy/dist/buefy.min.js"></script>\n'
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'

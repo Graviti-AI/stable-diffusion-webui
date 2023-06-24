@@ -403,7 +403,7 @@ def apply_setting(key, value):
     return getattr(opts, key)
 
 
-def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id):
+def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id, visible=True, interactive=True):
     def refresh(request: gr.Request):
         inputs = modules.call_utils.special_args(refresh_method, [], request)
         if inputs:
@@ -427,7 +427,7 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
 
         return gr.update(**(args or {}))
 
-    refresh_button = ToolButton(value=refresh_symbol, elem_id=elem_id)
+    refresh_button = ToolButton(value=refresh_symbol, elem_id=elem_id, visible=visible, interactive=interactive)
     refresh_button.click(
         fn=refresh,
         inputs=[],
@@ -1558,7 +1558,7 @@ def create_ui():
             outputs=[],
         )
 
-    def create_setting_component(key, is_quicksettings=False):
+    def create_setting_component(key, is_quicksettings=False, visible=True, interactive=True):
         def fun():
             return opts.data[key] if key in opts.data else opts.data_labels[key].default
 
@@ -1566,6 +1566,9 @@ def create_ui():
         t = type(info.default)
 
         args = info.component_args() if callable(info.component_args) else info.component_args
+        args = args if args else {}
+        args["visible"] = visible
+        args["interactive"] = interactive
 
         if info.component is not None:
             comp = info.component
@@ -1584,11 +1587,11 @@ def create_ui():
             if is_quicksettings:
                 res = comp(
                     label=info.label, value=fun(), elem_id=elem_id, elem_classes="quicksettings", **(args or {}))
-                create_refresh_button(res, info.refresh, info.component_args, f"refresh_{key}")
+                create_refresh_button(res, info.refresh, info.component_args, f"refresh_{key}", visible=visible, interactive=interactive)
             else:
                 with FormRow():
                     res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
-                    create_refresh_button(res, info.refresh, info.component_args, f"refresh_{key}")
+                    create_refresh_button(res, info.refresh, info.component_args, f"refresh_{key}", visible=visible, interactive=interactive)
         else:
             res = comp(label=info.label, value=fun(), elem_id=elem_id, **(args or {}))
 
@@ -1792,9 +1795,68 @@ def create_ui():
         with gr.Row(elem_id="topbar"):
             with gr.Column(scale=6, min_width=850):
                 with gr.Row(elem_id="quicksettings"):
+                    # Quicksetting is not used here, but keep it so the program will not throw any error
                     for i, k, item in sorted(quicksettings_list, key=lambda x: quicksettings_names.get(x[1], x[0])):
-                        component = create_setting_component(k, is_quicksettings=True)
+                        component = create_setting_component(k, is_quicksettings=True, visible=False, interactive=False)
                         component_dict[k] = component
+
+                    # This is the reall place to set sd checkpoint
+                    sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
+
+                    default_sd_checkpoint_container = {"sd_model_checkpoint": shared.opts.sd_model_checkpoint}
+
+                    def update_sd_model_selection_args(request: gr.Request = None):
+                        sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
+                        default_sd_checkpoint = default_sd_checkpoint_container["sd_model_checkpoint"]
+                        if ("choices" in sd_checkpoint_component_args
+                                and len(sd_checkpoint_component_args["choices"]) > 0):
+                            default_sd_checkpoint = sd_checkpoint_component_args["choices"][0]
+                        default_sd_checkpoint_container["sd_model_checkpoint"] = (
+                            default_sd_checkpoint if default_sd_checkpoint else "")
+                        sd_checkpoint_component_args["value"] = default_sd_checkpoint_container["sd_model_checkpoint"]
+                        return sd_checkpoint_component_args
+                    sd_model_selection = sd_checkpoint_options.component(
+                        label=sd_checkpoint_options.label,
+                        elem_id="sd_model_checkpoint_dropdown",
+                        elem_classes=["quicksettings"],
+                        visible=True,
+                        **update_sd_model_selection_args())
+                    create_refresh_button(
+                        sd_model_selection,
+                        sd_checkpoint_options.refresh,
+                        sd_checkpoint_options.component_args,
+                        "refresh_sd_model_checkpoint_dropdown")
+
+                    def get_model_title_from_params(params):
+                        if "Model hash" not in params and "Model" not in params:
+                            return default_sd_checkpoint_container["sd_model_checkpoint"]
+                        ckpt_info = sd_models.get_closet_checkpoint_match(params["Model hash"])
+
+                        if ckpt_info is not None:
+                            return ckpt_info.title
+
+                        ckpt_info = sd_models.get_closet_checkpoint_match(params["Model"])
+
+                        if ckpt_info is not None:
+                            return ckpt_info.title
+                        return default_sd_checkpoint_container["sd_model_checkpoint"]
+                    txt2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
+                    img2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
+
+                    def select_checkpoint(request: gr.Request, sd_model_title):
+                        return [sd_model_title, sd_model_title]
+
+                    sd_model_selection.change(
+                        fn=select_checkpoint,
+                        inputs=sd_model_selection,
+                        outputs=[txt2img_model_title, img2img_model_title]
+                    )
+
+                    sd_model_selection.select(
+                        fn=select_checkpoint,
+                        inputs=sd_model_selection,
+                        outputs=[txt2img_model_title, img2img_model_title]
+                    )
                     create_browse_model_button(
                         'Show workspace models',
                         'browse_models_in_workspace',
@@ -1870,6 +1932,11 @@ def create_ui():
         update_image_cfg_scale_visibility = lambda: gr.update(visible=shared.sd_model and shared.sd_model.cond_stage_key == "edit")
         text_settings.change(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
         demo.load(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
+
+        def update_sd_model_selection(request: gr.Request):
+            return gr.update(**update_sd_model_selection_args(request))
+        demo.load(
+            fn=update_sd_model_selection, inputs=None, outputs=sd_model_selection)
 
         button_set_checkpoint = gr.Button('Change checkpoint', elem_id='change_checkpoint', visible=False)
         button_set_checkpoint.click(
@@ -1993,7 +2060,7 @@ def css_html():
     head += '<link rel="stylesheet" href="https://unpkg.com/buefy/dist/buefy.min.css">'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">'
     head += '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">'
-    
+
     def stylesheet(fn):
         return f'<link rel="stylesheet" property="stylesheet" href="{webpath(fn)}">'
 

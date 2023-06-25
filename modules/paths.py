@@ -82,89 +82,15 @@ class Paths:
         else:
             # other users use their own dir
             self._output_dir = self._private_output_dir
-        self._fix_legacy_workdir(base_dir, user.uid)
-
-        splits = user.uid.split('|')
-        if len(splits) > 1:
-            self._fix_legacy2_workdir(base_dir, splits[1])
-
-    def _fix_legacy_workdir(self, base_dir: pathlib.Path, uid: str):
-        splits = uid.split('|')
-        if len(splits) > 1:
-            legacy_uid = splits[1]
-        else:
-            legacy_uid = uid
-        legacy_workdir = base_dir.joinpath('workdir', legacy_uid)
-        if legacy_workdir.exists():
-            self._move_files(legacy_workdir, self._work_dir)
-
-        legacy_model_dir = base_dir.joinpath('models', legacy_uid)
-        if legacy_model_dir.exists():
-            self._move_files(legacy_model_dir, self._model_dir)
-
-        legacy_output_dir = base_dir.joinpath('workdir', legacy_uid, 'outputs')
-        if legacy_output_dir.exists():
-            self._move_files(legacy_output_dir, self._output_dir)
-
-    def _fix_legacy2_workdir(self, base_dir: pathlib.Path, legacy_uid: str):
-        import hashlib
-        # legacy_uid = uid
-        # encode uid to avoid uid has path invalid character
-        h = hashlib.sha256()
-        h.update(legacy_uid.encode('utf-8'))
-        encoded_user_path = h.hexdigest()
-        # same user data in 4 level folders, to prevent a folder has too many subdir
-        parents_path = (encoded_user_path[:2],
-                        encoded_user_path[2:4],
-                        encoded_user_path[4:6],
-                        encoded_user_path)
-
-        # work dir save user output files
-        legacy_workdir = base_dir.joinpath('workdir', *parents_path)
-        if legacy_workdir.exists():
-            self._move_files(legacy_workdir, self._work_dir)
-
-        # model dir save user uploaded models
-        legacy_model_dir = base_dir.joinpath('models', *parents_path)
-        if legacy_model_dir.exists():
-            self._move_files(legacy_model_dir, self._model_dir)
-
-        # other users use their own dir
-        legacy_output_dir = base_dir.joinpath('workdir', *parents_path, 'outputs')
-        if legacy_output_dir.exists():
-            self._move_files(legacy_output_dir, self._output_dir)
-
-    @staticmethod
-    def _move_files(from_dir: pathlib.Path, to_dir: pathlib.Path):
-        try:
-            import shutil
-            if from_dir.__str__() == to_dir.__str__():
-                return
-            if not from_dir.exists() or not to_dir.exists():
-                return
-
-            for item in from_dir.iterdir():
-                item_name = item.name
-                dst = to_dir.joinpath(item_name)
-                if item.is_dir():
-                    dst.mkdir(exist_ok=True)
-                    Paths._move_files(item, dst)
-                else:
-                    if not dst.exists():
-                        shutil.move(item, dst)
-                    else:
-                        item.unlink()
-
-            from_dir.rmdir()
-        except Exception as e:
-            logging.error(f'paths: move_files failed: {e.__str__()}')
-            pass
 
     @staticmethod
     def _check_dir(path):
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
         return path
+
+    def workdir(self):
+        return self._check_dir(self._work_dir)
 
     def outdir(self):
         return self._check_dir(self._output_dir)

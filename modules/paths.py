@@ -75,7 +75,7 @@ class Paths:
             self._model_dir.mkdir(parents=True, exist_ok=True)
 
         # output dir save user generated files
-        self._private_output_dir = base_dir.joinpath('workdir', *parents_path, 'outputs')
+        self._private_output_dir = self._work_dir.joinpath('outputs')
         if not user.tire or user.tire.lower() == 'free':
             # free users use same output dir
             self._output_dir = base_dir.joinpath('workdir', 'public', 'outputs')
@@ -83,19 +83,25 @@ class Paths:
             # other users use their own dir
             self._output_dir = self._private_output_dir
 
+        # favorite dir
+        self._favorite_dir = self._work_dir.joinpath('favorites')
+
     @staticmethod
-    def _check_dir(path):
+    def _check_dir(path: pathlib.Path):
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def workdir(self):
+    def workdir(self) -> pathlib.Path:
         return self._check_dir(self._work_dir)
 
-    def outdir(self):
-        return self._check_dir(self._output_dir)
+    def outdir(self, force_to_private=False) -> pathlib.Path:
+        return self._get_output_dir(force_to_private)
 
-    def private_outdir(self):
+    def favorites_dir(self) -> pathlib.Path:
+        return self._check_dir(self._favorite_dir)
+
+    def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)
 
     def _get_output_dir(self, force_to_private):
@@ -113,16 +119,28 @@ class Paths:
     def outdir_extras_samples(self, force_to_private=False):
         return self._check_dir(self._get_output_dir(force_to_private).joinpath("extras", 'samples'))
 
+    # 'Output directory for txt2img images
+    def favorite_dir_txt2img_samples(self) -> pathlib.Path:
+        return self._check_dir(self._favorite_dir.joinpath("txt2img", 'samples'))
+
+    # Output directory for img2img images
+    def favorite_dir_img2img_samples(self) -> pathlib.Path:
+        return self._check_dir(self._favorite_dir.joinpath("img2img", 'samples'))
+
+    # Output directory for images from extras tab
+    def favorite_dir_extras_samples(self) -> pathlib.Path:
+        return self._check_dir(self._favorite_dir.joinpath("extras", 'samples'))
+
     # Output directory for txt2img grids
-    def outdir_txt2img_grids(self, force_to_private=False):
+    def outdir_txt2img_grids(self, force_to_private=False) -> pathlib.Path:
         return self._check_dir(self._get_output_dir(force_to_private).joinpath("txt2img", 'grids'))
 
     # Output directory for img2img grids
-    def outdir_img2img_grids(self, force_to_private=False):
+    def outdir_img2img_grids(self, force_to_private=False) -> pathlib.Path:
         return self._check_dir(self._get_output_dir(force_to_private).joinpath("img2img", 'grids'))
 
     # Directory for saving images using the Save button
-    def outdir_save(self):
+    def outdir_save(self) -> pathlib.Path:
         return self._check_dir(self._work_dir.joinpath('save'))
 
     # filename to store user prompt styles
@@ -130,16 +148,16 @@ class Paths:
         return str(self._work_dir.joinpath('styles.csv'))
 
     # dir to store logs and saved images and zips
-    def save_dir(self):
+    def save_dir(self) -> pathlib.Path:
         save_dir = self._work_dir.joinpath('log', 'images')
         return self._check_dir(save_dir)
 
     # dir to store user models
-    def models_dir(self):
+    def models_dir(self) -> pathlib.Path:
         return self._check_dir(self._model_dir)
 
     # dir to store user model previews
-    def model_previews_dir(self):
+    def model_previews_dir(self) -> pathlib.Path:
         return self._check_dir(self._work_dir.joinpath("model_previews"))
 
     def save_image(self, filename: str):

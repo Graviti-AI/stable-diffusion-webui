@@ -1939,11 +1939,18 @@ def create_ui():
             fn=update_sd_model_selection, inputs=None, outputs=sd_model_selection)
 
         button_set_checkpoint = gr.Button('Change checkpoint', elem_id='change_checkpoint', visible=False)
+
+        def set_checkpoint_when_click_on_card(request: gr.Request, checkpoint_id, current_checkpoint):
+            ckpt_info = sd_models.get_closet_checkpoint_match(checkpoint_id)
+
+            if ckpt_info is not None:
+                return ckpt_info.title, ckpt_info.title, ckpt_info.title
+            return current_checkpoint, current_checkpoint, current_checkpoint
         button_set_checkpoint.click(
-            fn=make_run_settings_single('sd_model_checkpoint'),
-            _js="function(v){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || v, null]; }",
-            inputs=[component_dict['sd_model_checkpoint'], dummy_component],
-            outputs=[component_dict['sd_model_checkpoint'], text_settings, txt2img_model_title, img2img_model_title],
+            fn=set_checkpoint_when_click_on_card,
+            _js="function(current, dummy){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || current, current]; }",
+            inputs=[sd_model_selection, dummy_component],
+            outputs=[sd_model_selection, txt2img_model_title, img2img_model_title],
         )
 
         component_keys = [k for k in opts.data_labels.keys() if k in component_dict]

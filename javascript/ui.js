@@ -675,7 +675,7 @@ async function getModelFromUrl() {
                         }
                         if(urlKeys[index] === 'checkpoint') {
                             // checkpoint dont need to replace text
-                            selectCheckpoint(model_list[0].name);
+                            selectCheckpoint(model_list[0].sha256 || model_list[0].shorthash || model_list[0].name);
                         } else {
                             if (model_list[0].prompt) {
                                 cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);

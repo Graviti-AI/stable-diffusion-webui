@@ -279,7 +279,7 @@ async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
             fetchHomePageDataAndUpdateList({tabname: currentModelTab, model_type, page: 1, loading:false})
             if (model_type === 'checkpoints') {
-                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
+                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
                 refeshCheckpointBtn.click();
             }
         } else if (res.status === 409) {

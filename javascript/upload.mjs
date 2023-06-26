@@ -21,7 +21,7 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 getPublicModelList({ model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
             }
             if (model_type === 'checkpoints') {
-                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
+                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
                 refeshCheckpointBtn.click();
             }
         }
@@ -43,7 +43,7 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
             getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
             fetchHomePageDataAndUpdateList({tabname: tabname, model_type: model_type, page: 1, loading:false});
             if (model_type === 'checkpoints') {
-                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint');
+                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
                 refeshCheckpointBtn.click();
             }
             click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type);

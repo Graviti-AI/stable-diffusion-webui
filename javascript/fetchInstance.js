@@ -13,11 +13,15 @@ const fetchPost = ({ data, url}) => {
     }
 }
 
-const fetchDelete = (url) => {
+const fetchDelete = (url, data = {}) => {
     try {
         return fetch(url, {
             method: 'DELETE', 
             credentials: "include",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
         })
     } catch(e) {
         return new Promise.reject(e);

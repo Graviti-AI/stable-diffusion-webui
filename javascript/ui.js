@@ -263,7 +263,7 @@ const debounceCalcute = {
 };
 
 
-async function calcuCreditTimes(width, height, batch_count, batch_size, steps, buttonId, hr_scale = 1) {
+async function calcuCreditTimes(width, height, batch_count, batch_size, steps, buttonId, hr_scale = 1, hr_second_pass_steps = 0, enable_hr = false) {
     try {
         const response = await fetch(`/api/calculateConsume`, {
             method: "POST", 
@@ -282,7 +282,10 @@ async function calcuCreditTimes(width, height, batch_count, batch_size, steps, b
                 batch_count,
                 batch_size,
                 steps,
-                scale: hr_scale
+                scale: hr_scale,
+                hr_second_pass_steps,
+                hr_scale,
+                enable_hr
             })
         });
         const { inference } = await response.json();
@@ -294,13 +297,8 @@ async function calcuCreditTimes(width, height, batch_count, batch_size, steps, b
     
 }
 
-function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20, hr_scale = 1, enable_hr) {
-    if (enable_hr) {
-        debounceCalcute['txt2img_generate'](width, height, batch_count, batch_size, steps, 'txt2img_generate', hr_scale);
-    } else {
-        debounceCalcute['txt2img_generate'](width, height, batch_count, batch_size, steps, 'txt2img_generate');
-    }
-    
+function updateGenerateBtn_txt2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20, hr_scale = 1, enable_hr = false, hr_second_pass_steps = 0) {
+    debounceCalcute['txt2img_generate'](width, height, batch_count, batch_size, steps, 'txt2img_generate', hr_scale, hr_second_pass_steps, enable_hr);
 }
 
 function updateGenerateBtn_img2img(width = 512, height = 512, batch_count = 1, batch_size = 1, steps = 20) {

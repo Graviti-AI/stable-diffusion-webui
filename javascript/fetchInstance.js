@@ -39,3 +39,14 @@ const fetchGet = (url) => {
         return new Promise.reject(e);
     }
 }
+
+const fetchPut = (url) => {
+    try {
+        return fetch(url, {
+            method: 'PUT', 
+            credentials: "include",
+        })
+    } catch(e) {
+        return new Promise.reject(e);
+    }
+}

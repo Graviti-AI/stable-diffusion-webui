@@ -864,11 +864,19 @@ footer {
     margin: 0.3em;
     align-self: center;
     width: 16em;
+    max-width: 16em;
+}
+
+.extra-networks .tab-nav .sort{
+    width: 12em;
+    max-width: 12em;
 }
 
 .extra-networks .tab-nav .mature_level {
     position: absolute;
     right: 0;
+    width: 12em;
+    max-width: 12em;
 }
 
 .extra-networks .tab-nav .mature_level label {

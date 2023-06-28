@@ -631,7 +631,7 @@ async function getModelFromUrl() {
     }
 
     const promiseList = [];
-    const urlList = urlParam.entries();
+    const urlList = Array.from(urlParam.entries());
     const urlKeys =  [];
     const urlValues =  [];
     let checkpoint = null;
@@ -679,13 +679,19 @@ async function getModelFromUrl() {
                                 cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);
                             }
                         }
+                } else {
+                    fetchPost({
+                        data: {"sha256": urlValues[index]},
+                        url: "/download-civitai-model"
+                    })
+                    notifier.warning(`We could not find model (${urlValues[index]}) in our library. Trying to download it from Civitai, it could take up to 5 minutes. Meanwhile, feel free to check out thousands of models already in our library.`, {
+                        labels: {
+                            warning: 'DOWNLOADIND MODEL'
+                        }
+                    })
                 }
              } else {
-                notifier.alert(`${keyMapModelType[urlKeys[index]]} ${urlValues[index]}} not found`, {
-                    labels: {
-                        alert: 'Model not Found'
-                    }
-                })
+                notifier.alert(`Query Failed`);
              }
         })
     });

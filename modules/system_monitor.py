@@ -41,6 +41,9 @@ def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
         'batch_size': 0,
         'steps': 0,
         'scale': 1,
+        'enable_hr': False,
+        'hr_scale': 1,
+        'hr_second_pass_steps': 0,
         'image_sizes': [],
     }
 
@@ -55,15 +58,24 @@ def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
         result['steps'] = named_args.get('steps', 20)
 
         # enable_hr is a str, not bool
-        enable_hr = named_args.get('enable_hr', 'False')
-        if str(enable_hr).lower() == 'true':
+        enable_hr = named_args.get('enable_hr', False)
+        if enable_hr:
+            result['enable_hr'] = True
             result['scale'] = named_args.get('hr_scale', 2)
+            result['hr_scale'] = named_args.get('hr_scale', 2)
+            result['hr_second_pass_steps'] = named_args.get('hr_second_pass_steps', 30)
+            if result['hr_second_pass_steps'] == 0:
+                result['hr_second_pass_steps'] = result['steps']
     elif func_name in ('modules.postprocessing.run_postprocessing',):
         result['type'] = 'extras'
 
         extras_mode = named_args.get('extras_mode', 0)
-        image_folder = named_args.get('image_folder', [])
-        source_img_size = named_args.get('image', {}).get('size', (512, 512))
+        source_image_folder = named_args.get('image_folder', [])
+        source_image = named_args.get('image', {})
+        if source_image:
+            source_img_size = source_image.get('size', (512, 512))
+        else:
+            source_img_size = (1, 1)
         scale_type = args[4]  # 0: scale by, 1: scale to
         scale_by = args[5]
         scale_to = {
@@ -84,10 +96,10 @@ def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
                 })
         elif extras_mode == 1:  # batch process
             from PIL import Image
-            image_count = len(image_folder)
+            image_count = len(source_image_folder)
             if scale_type == 0:  # scale by, need calculate resultSize for every image particularly
                 result['scale'] = scale_by
-                for img in image_folder:
+                for img in source_image_folder:
                     source_img = Image.open(os.path.abspath(img['name']))
                     result['image_sizes'].append({
                         'width': source_img.width,
@@ -124,8 +136,9 @@ def _serialize_object(obj):
     +-------------------+---------------+
     """
     from PIL import Image
+    import types
     obj_type = type(obj)
-    if obj_type in (str, int, float, True, False, None):
+    if obj_type in (str, int, float, bool, types.NoneType):
         return obj
     elif obj_type in (list, tuple):
         result = []

@@ -503,4 +503,5 @@ available_lora_hash_lookup = {}
 forbidden_lora_aliases = {}
 loaded_loras = []
 
-list_available_loras()
+if not shared.cmd_opts.skip_load_default_model:
+    list_available_loras()

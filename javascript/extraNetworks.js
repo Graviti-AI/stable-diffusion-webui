@@ -312,7 +312,7 @@ async function handleData({response, tabname, model_type }) {
         `
         const bgFilter = cardNode.querySelector('.set-bg-filter');
         if (item.preview) {
-            bgFilter.style.backgroundImage = `url(${item.preview.replace(/\s/g, encodeURIComponent(' '))})`;
+            bgFilter.style.backgroundImage = `url('${item.preview.replace(/\s/g, encodeURIComponent(' '))}')`;
         }
 
         if (judgeLevel(homePageMatureLevel, cardNode.getAttribute('mature-level'))) {

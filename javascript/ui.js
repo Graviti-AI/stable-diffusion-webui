@@ -605,7 +605,7 @@ async function browseModels(){
 
 let uiPageSize;
 
-function setPageSize() {
+function setUiPageSize() {
     const contentWidth = document.body.clientWidth - 84;
     uiPageSize = Math.floor(contentWidth / 238) * 2;
 }
@@ -718,7 +718,7 @@ function imgExists(url, imgNode, name){
 
 // get user info
 onUiLoaded(function(){
-    setPageSize();
+    setUiPageSize();
     // update generate button text
     updateGenerateBtn_txt2img();
     updateGenerateBtn_img2img();

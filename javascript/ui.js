@@ -603,15 +603,22 @@ async function browseModels(){
     }
 }
 
+let uiPageSize;
+
+function setPageSize() {
+    const contentWidth = document.body.clientWidth - 84;
+    uiPageSize = Math.floor(contentWidth / 238) * 2;
+}
+
 function searchModel({page_name, searchValue}) {
-    const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${pageSize}` 
-        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+    const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${uiPageSize}` 
+        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${uiPageSize}&need_refresh=false`;
     return fetchGet(requestUrl);
 }
 
 function searchPublicModel({page_name, searchValue}) {
-    const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${pageSize}` 
-        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+    const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${uiPageSize}` 
+        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${uiPageSize}&need_refresh=false`;
     return fetchGet(requestUrl);
 }
 
@@ -711,6 +718,7 @@ function imgExists(url, imgNode, name){
 
 // get user info
 onUiLoaded(function(){
+    setPageSize();
     // update generate button text
     updateGenerateBtn_txt2img();
     updateGenerateBtn_img2img();

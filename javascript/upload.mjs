@@ -13,47 +13,43 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
         return refresh_model_list_when_upload_complete;
     }
 
-    function add_model_to_favorite_wrapper(tabname, model_type) {
-        function add_model_to_favorite(file, response) {
-            getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
-            fetchHomePageDataAndUpdateList({tabname: tabname, model_type: model_type, page: 1, loading:false});
-            if(gallertModelCurrentPage[model_type] === 1) {
-                getPublicModelList({ model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
-            }
-            if (model_type === 'checkpoints') {
-                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
-                refeshCheckpointBtn.click();
-            }
-        }
-        return add_model_to_favorite;
-    }
-
-    function click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type) {
-        if (req_model_type != res_model_type && model_type_mapper[req_model_type] != res_model_type)
-        {
-            notifier.warning(`${fileName} is a ${res_model_type} but not ${model_type_mapper[req_model_type]}`);
-            const model_type_from_backend = Object.keys(model_type_mapper).find(key => model_type_mapper[key] === res_model_type);
-            const tab = gradioApp().querySelector(`#tabby-toggle_personal-${model_type_from_backend}`);
+    function clickCorrectTabForModelType(fileName, sha256, model_type, real_model_type) {
+        if (model_type != real_model_type) {
+            notifier.warning(`${fileName} is a ${real_model_type} but not ${model_type}`);
+            const tab = gradioApp().querySelector(`#tabby-toggle_personal-${real_model_type}`);
             tab.click();
         }
     }
 
     function add_model_to_favorite_if_exists_wrapper(tabname, model_type) {
         function add_model_to_favorite_if_exists(fileName, sha256, req_model_type, res_model_type) {
-            getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
-            fetchHomePageDataAndUpdateList({tabname: tabname, model_type: model_type, page: 1, loading:false});
-            if (model_type === 'checkpoints') {
+            const real_model_type = Object.keys(model_type_mapper).find(key => model_type_mapper[key] === res_model_type);
+
+            clickCorrectTabForModelType(fileName, sha256, req_model_type, real_model_type);
+            getPersonalModelList({model_type: real_model_type, page: 1, loading: true, model_workspace: 'personal'});
+            fetchHomePageDataAndUpdateList({tabname: tabname, model_type: real_model_type, page: 1, loading: false});
+            if (real_model_type === 'checkpoints') {
                 const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
                 refeshCheckpointBtn.click();
             }
-            click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type);
         }
         return add_model_to_favorite_if_exists;
     }
 
     function model_type_check_callback_wrapper(tabname, model_type) {
         function model_type_check_callback(fileName, sha256, req_model_type, res_model_type) {
-            click_correct_tab_for_model_type(fileName, sha256, req_model_type, res_model_type);
+            const real_model_type = Object.keys(model_type_mapper).find(key => model_type_mapper[key] === res_model_type);
+
+            clickCorrectTabForModelType(fileName, sha256, req_model_type, real_model_type);
+            getPersonalModelList({model_type: real_model_type, page: 1, loading: true, model_workspace: 'personal'});
+            fetchHomePageDataAndUpdateList({tabname: tabname, model_type: real_model_type, page: 1, loading: false});
+            if(gallertModelCurrentPage[real_model_type] === 1) {
+                getPublicModelList({model_type: real_model_type, page: 1, loading: true, model_workspace: 'public'});
+            }
+            if (real_model_type === 'checkpoints') {
+                const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
+                refeshCheckpointBtn.click();
+            }
         }
         return model_type_check_callback;
     }
@@ -74,7 +70,7 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 tus_endpoint,
                 model_verification_endpoint,
                 refresh_model_list_when_upload_complete_wrapper(tabname),
-                add_model_to_favorite_wrapper(tabname, model_type),
+                null,
                 add_model_to_favorite_if_exists_wrapper(tabname, model_type),
                 model_type_check_callback_wrapper(tabname, model_type)
             );
@@ -86,7 +82,7 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
                 tus_endpoint,
                 model_verification_endpoint,
                 refresh_model_list_when_upload_complete_wrapper(tabname),
-                add_model_to_favorite_wrapper(tabname, model_type),
+                null,
                 add_model_to_favorite_if_exists_wrapper(tabname, model_type),
                 model_type_check_callback_wrapper(tabname, model_type)
             );

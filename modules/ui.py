@@ -1666,6 +1666,8 @@ def create_ui():
 
             for interface, label, ifid in sorted_interfaces:
                 if label in shared.opts.hidden_tabs:
+                    if label in ('Settings', 'Setting'):
+                        gr.Textbox(elem_id="settings_json", value=lambda: opts.dumpjson(), visible=False)
                     continue
                 with gr.TabItem(label, id=ifid, elem_id=f"tab_{ifid}"):
                     interface.render()

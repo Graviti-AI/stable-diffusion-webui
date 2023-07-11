@@ -93,7 +93,7 @@ class Timer:
         return {'total': self.total, 'records': self.records}
 
     def reset(self):
-        self.__init__()
+        self.__init__(self._name, *self._args)
 
 
 startup_timer = Timer('main')

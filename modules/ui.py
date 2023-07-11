@@ -1543,7 +1543,11 @@ def create_ui():
 
     loadsave = ui_loadsave.UiLoadsave(cmd_opts.ui_config_file)
 
-    settings = ui_settings.UiSettings(txt2img_model_title, img2img_model_title, txt2img_vae_title, img2img_vae_title)
+    if any([(tab_name in shared.opts.hidden_tabs) for tab_name in ("Settings", "Setting")]):
+        shared.cmd_opts.settings_not_interactive = True
+    settings = ui_settings.UiSettings(
+        txt2img_model_title, img2img_model_title, txt2img_vae_title, img2img_vae_title,
+        interactive=not shared.cmd_opts.settings_not_interactive)
     settings.create_ui(loadsave, dummy_component)
 
     interfaces = [
@@ -1667,7 +1671,8 @@ def create_ui():
             for interface, label, ifid in sorted_interfaces:
                 if label in shared.opts.hidden_tabs:
                     if label in ('Settings', 'Setting'):
-                        gr.Textbox(elem_id="settings_json", value=lambda: opts.dumpjson(), visible=False)
+                        with gr.TabItem(label, id=ifid, elem_id=f"tab_{ifid}", elem_classes=["hidden"]):
+                            interface.render()
                     continue
                 with gr.TabItem(label, id=ifid, elem_id=f"tab_{ifid}"):
                     interface.render()

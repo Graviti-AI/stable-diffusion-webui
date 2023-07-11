@@ -226,6 +226,19 @@ onUiLoaded(function() {
     showRestoreProgressButton('img2img', localStorage.getItem("img2img_task_id"));
 });
 
+onUiLoaded(function() {
+    let gr_tabs = document.querySelector("#tabs");
+    let tab_items = gr_tabs.querySelectorAll(":scope>.tabitem");
+    let tab_buttons = gr_tabs.querySelector(".tab-nav").querySelectorAll(":scope>button");
+    if (tab_items.length === tab_buttons.length) {
+        tab_items.forEach(function(tab_item, index) {
+            if (tab_item.classList.contains("hidden")) {
+                tab_buttons[index].classList.add("hidden");
+            }
+        });
+    }
+});
+
 
 function modelmerger() {
     var id = randomId();

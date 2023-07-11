@@ -80,12 +80,14 @@ class UiSettings:
     img2img_model_title = None
     txt2img_vae_title = None
     img2img_vae_title = None
+    interactive = True
 
-    def __init__(self, txt2img_model_title, img2img_model_title, txt2img_vae_title, img2img_vae_title):
+    def __init__(self, txt2img_model_title, img2img_model_title, txt2img_vae_title, img2img_vae_title, interactive=True):
         self.txt2img_model_title = txt2img_model_title
         self.img2img_model_title = img2img_model_title
         self.txt2img_vae_title = txt2img_vae_title
         self.img2img_vae_title = img2img_vae_title
+        self.interactive = interactive
 
     def run_settings(self, request: gr.Request, *args):
         import modules.call_utils
@@ -137,9 +139,17 @@ class UiSettings:
         with gr.Blocks(analytics_enabled=False) as settings_interface:
             with gr.Row():
                 with gr.Column(scale=6):
-                    self.submit = gr.Button(value="Apply settings", variant='primary', elem_id="settings_submit")
+                    self.submit = gr.Button(
+                        value="Apply settings",
+                        variant='primary',
+                        elem_id="settings_submit",
+                        interactive=self.interactive)
                 with gr.Column():
-                    restart_gradio = gr.Button(value='Reload UI', variant='primary', elem_id="settings_restart_gradio")
+                    restart_gradio = gr.Button(
+                        value='Reload UI',
+                        variant='primary',
+                        elem_id="settings_restart_gradio",
+                        interactive=self.interactive)
 
             self.result = gr.HTML(elem_id="settings_result")
 
@@ -176,7 +186,7 @@ class UiSettings:
                     elif section_must_be_skipped:
                         self.components.append(dummy_component)
                     else:
-                        component = create_setting_component(k)
+                        component = create_setting_component(k, interactive=self.interactive)
                         self.component_dict[k] = component
                         self.components.append(component)
 
@@ -192,24 +202,25 @@ class UiSettings:
 
                     with gr.Row():
                         with gr.Column(scale=1):
-                            sysinfo_check_file = gr.File(label="Check system info for validity", type='binary')
+                            sysinfo_check_file = gr.File(
+                                label="Check system info for validity", type='binary', interactive=self.interactive)
                         with gr.Column(scale=1):
                             sysinfo_check_output = gr.HTML("", elem_id="sysinfo_validity")
                         with gr.Column(scale=100):
                             pass
 
                 with gr.TabItem("Actions", id="actions", elem_id="settings_tab_actions"):
-                    request_notifications = gr.Button(value='Request browser notifications', elem_id="request_notifications")
-                    download_localization = gr.Button(value='Download localization template', elem_id="download_localization")
-                    reload_script_bodies = gr.Button(value='Reload custom script bodies (No ui updates, No restart)', variant='secondary', elem_id="settings_reload_script_bodies")
+                    request_notifications = gr.Button(value='Request browser notifications', elem_id="request_notifications", interactive=self.interactive)
+                    download_localization = gr.Button(value='Download localization template', elem_id="download_localization", interactive=self.interactive)
+                    reload_script_bodies = gr.Button(value='Reload custom script bodies (No ui updates, No restart)', variant='secondary', elem_id="settings_reload_script_bodies", interactive=self.interactive)
                     with gr.Row():
-                        unload_sd_model = gr.Button(value='Unload SD checkpoint to free VRAM', elem_id="sett_unload_sd_model")
-                        reload_sd_model = gr.Button(value='Reload the last SD checkpoint back into VRAM', elem_id="sett_reload_sd_model")
+                        unload_sd_model = gr.Button(value='Unload SD checkpoint to free VRAM', elem_id="sett_unload_sd_model", interactive=self.interactive)
+                        reload_sd_model = gr.Button(value='Reload the last SD checkpoint back into VRAM', elem_id="sett_reload_sd_model", interactive=self.interactive)
 
                 with gr.TabItem("Licenses", id="licenses", elem_id="settings_tab_licenses"):
                     gr.HTML(shared.html("licenses.html"), elem_id="licenses")
 
-                gr.Button(value="Show all pages", elem_id="settings_show_all_pages")
+                gr.Button(value="Show all pages", elem_id="settings_show_all_pages", interactive=self.interactive)
 
                 self.text_settings = gr.Textbox(elem_id="settings_json", value=lambda: opts.dumpjson(), visible=False)
 
@@ -276,7 +287,7 @@ class UiSettings:
     def add_quicksettings(self):
         with gr.Row(elem_id="quicksettings", variant="compact"):
             for _i, k, _item in sorted(self.quicksettings_list, key=lambda x: self.quicksettings_names.get(x[1], x[0])):
-                component = create_setting_component(k, is_quicksettings=True)
+                component = create_setting_component(k, is_quicksettings=True, interactive=self.interactive)
                 self.component_dict[k] = component
 
     def add_functionality(self, demo, sd_model_selection):

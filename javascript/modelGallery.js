@@ -283,8 +283,8 @@ async function handleModelAddOrRemoved(model_id, model_type, model_workspace) {
                 const refeshCheckpointBtn = gradioApp().querySelector('#refresh_sd_model_checkpoint_dropdown');
                 refeshCheckpointBtn.click();
             }
-        } else if (res.status === 409) {
-            const { detail } = await res.json();
+        } else if (response.status === 409) {
+            const { detail } = await response.json();
             notifier.alert(detail);
         } else {
             notifier.alert(`${msgType} Failed`)

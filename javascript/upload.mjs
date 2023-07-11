@@ -99,10 +99,11 @@ if (typeof setup_uppy_for_upload_button != "undefined") {
         buttons.forEach(register_button);
         var observeUploadButtonChange = new MutationObserver((mutationList, observer) => {
             mutationList.forEach((item) => {
-                var button = item.target.querySelector(".model-upload-button");
-                if (button){
-                    register_button(button);
-                }
+                item.addedNodes.forEach((node) => {
+                    if (node.nodeName.toLowerCase() == "div" && node.classList.contains("model-upload-button")) {
+                        register_button(button);
+                    }
+                });
             });
         });
         observeUploadButtonChange.observe( gradioApp().querySelector('#txt2img_extra_tabs'), { childList:true, subtree:true });

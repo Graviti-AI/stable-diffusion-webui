@@ -27,6 +27,7 @@ def javascript_html(request: gr.Request):
     # head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
+    head += '<script type="text/javascript" src="/components/js/share/shareon.iife.js" defer init></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
     head += "<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='//www.googletagmanager​.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NJBVS8D');</script>\n"
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
@@ -49,6 +50,7 @@ def css_html():
 
     head += '<link href="https://releases.transloadit.com/uppy/v3.7.0/uppy.min.css" rel="stylesheet" />\n'
     head += '<link href="/components/style/notification/style.css" rel="stylesheet" />\n'
+    head += '<link href="/components/style/share/shareon.min.css" rel="stylesheet" />\n'
     head += '<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/css/tabby-ui.min.css">\n'
 
     head += '<link rel="stylesheet" href="https://unpkg.com/buefy/dist/buefy.min.css">\n'

@@ -100,6 +100,9 @@ class Paths:
     def favorites_dir(self) -> pathlib.Path:
         return self._check_dir(self._favorite_dir)
 
+    def public_outdir(self) -> pathlib.Path:
+        return self._check_dir(pathlib.Path(data_path).joinpath('workdir', 'public', 'outputs'))
+
     def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)
 

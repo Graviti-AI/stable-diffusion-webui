@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import traceback
 import time
 import functools
+import json
+import psutil
 
 import gradio.routes
 
@@ -135,12 +137,26 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
 
 
 def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
-    def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
+    async def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
         monitor_state = False
         run_memmon = shared.opts.memmon_poll_rate > 0 and not shared.mem_mon.disabled and add_stats
         if run_memmon:
             shared.mem_mon.monitor()
         t = time.perf_counter()
+        request_body = await request.json()
+        task_id = None
+        for item in request_body["data"]:
+            if isinstance(item, str) and  item.startswith("task("):
+                task_id = item.removeprefix("task(").removesuffix(")")
+        logger.info(f"Begin of task({task_id}) request")
+        logger.info(f"url path: {request.url.path}")
+        logger.info(f"headers: {json.dumps(dict(request.headers), ensure_ascii=False, sort_keys=True)}")
+        logger.info(f"query params: {request.query_params}")
+        logger.info(f"path params: {request.path_params}")
+        logger.info(f"body: {json.dumps(request_body, ensure_ascii=False, sort_keys=True)}")
+        logger.info(f"End of task({task_id}) request")
+        task_start_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
+        logger.info(f"task({task_id}) begin memory: {task_start_system_memory:.2f} GB")
 
         try:
             if add_monitor_state:
@@ -198,6 +214,10 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
         # last item is always HTML
         res[-1] += f"<div class='performance'><p class='time'>Time taken: <wbr>{elapsed_text}</p>{vram_html}</div>"
+
+        task_end_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
+        logger.info(f"task({task_id}) end memory: {task_end_system_memory:.2f} GB")
+        logger.info(f"task({task_id}) task memory delta: {task_end_system_memory - task_start_system_memory:.2f} GB")
 
         if add_monitor_state:
             return tuple(res + [monitor_state])

@@ -115,7 +115,10 @@ def api_middleware(app: FastAPI):
     @app.middleware("http")
     async def log_and_time(req: Request, call_next):
         ts = time.time()
-        res: Response = await call_next(req)
+        try:
+            res: Response = await call_next(req)
+        except Exception as e:
+            return handle_exception(request, e)
         duration = str(round(time.time() - ts, 4))
         res.headers["X-Process-Time"] = duration
         endpoint = req.scope.get('path', 'err')

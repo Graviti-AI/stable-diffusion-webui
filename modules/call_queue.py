@@ -11,7 +11,8 @@ import gradio.routes
 
 import modules.system_monitor
 from modules.system_monitor import MonitorException
-from modules import shared, progress, errors
+from modules import shared, progress, errors, script_callbacks
+
 from modules import sd_vae
 from modules.timer import Timer
 
@@ -56,6 +57,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         # reload model if necessary
         if func_name in ('txt2img', 'img2img'):
             progress.set_current_task_step('reload_model_weights')
+            script_callbacks.state_updated_callback(shared.state)
             _check_sd_model(model_title=args[-2], vae_title=args[-1])
         timer.record('load_models')
 

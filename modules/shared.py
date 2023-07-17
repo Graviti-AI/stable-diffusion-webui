@@ -16,7 +16,7 @@ import modules.interrogate
 import modules.memmon
 import modules.styles
 import modules.devices as devices
-from modules import localization, script_loading, errors, ui_components, shared_items, cmd_args
+from modules import localization, script_loading, errors, ui_components, shared_items, cmd_args, script_callbacks
 from modules.paths_internal import models_path, script_path, data_path, sd_configs_path, sd_default_config, sd_model_file, default_sd_model_file, extensions_dir, extensions_builtin_dir  # noqa: F401
 from modules.paths import Paths
 import modules.system_monitor
@@ -97,12 +97,12 @@ class State:
     skipped = False
     interrupted = False
     job = ""
-    job_no = 0
-    job_count = 0
+    _job_no = 0
+    _job_count = 0
     processing_has_refined_job_count = False
     job_timestamp = '0'
-    sampling_step = 0
-    sampling_steps = 0
+    _sampling_step = 0
+    _sampling_steps = 0
     current_latent = None
     current_image = None
     current_image_sampling_step = 0
@@ -128,6 +128,42 @@ class State:
     @property
     def server_command(self):
         return self._server_command
+
+    @property
+    def job_count(self):
+        return self._job_count
+
+    @job_count.setter
+    def job_count(self, value):
+        self._job_count = value
+        script_callbacks.state_updated_callback(self)
+
+    @property
+    def job_no(self):
+        return self._job_no
+
+    @job_no.setter
+    def job_no(self, value):
+        self._job_no = value
+        script_callbacks.state_updated_callback(self)
+
+    @property
+    def sampling_steps(self):
+        return self._sampling_steps
+
+    @sampling_steps.setter
+    def sampling_steps(self, value):
+        self._sampling_steps = value
+        script_callbacks.state_updated_callback(self)
+
+    @property
+    def sampling_step(self):
+        return self._sampling_step
+
+    @sampling_step.setter
+    def sampling_step(self, value):
+        self._sampling_step = value
+        script_callbacks.state_updated_callback(self)
 
     @server_command.setter
     def server_command(self, value: Optional[str]) -> None:
@@ -156,9 +192,11 @@ class State:
 
     def skip(self):
         self.skipped = True
+        script_callbacks.state_updated_callback(self)
 
     def interrupt(self):
         self.interrupted = True
+        script_callbacks.state_updated_callback(self)
 
     def nextjob(self):
         if opts.live_previews_enable and opts.show_progress_every_n_steps == -1:
@@ -167,6 +205,7 @@ class State:
         self.job_no += 1
         self.sampling_step = 0
         self.current_image_sampling_step = 0
+        script_callbacks.state_updated_callback(self)
 
     def dict(self):
         obj = {
@@ -228,6 +267,7 @@ class State:
     def assign_current_image(self, image):
         self.current_image = image
         self.id_live_preview += 1
+        script_callbacks.state_updated_callback(self)
 
 
 state = State()

@@ -112,6 +112,7 @@ callback_map = dict(
     callbacks_on_reload=[],
     callbacks_list_optimizers=[],
     callbacks_list_unets=[],
+    callbacks_state_updated=[],
 )
 
 
@@ -286,6 +287,14 @@ def list_unets_callback():
     return res
 
 
+def state_updated_callback(state):
+    for c in callback_map['callbacks_state_updated']:
+        try:
+            c.callback(state)
+        except Exception:
+            report_exception(c, 'list_unets')
+
+
 def add_callback(callbacks, fun):
     stack = [x for x in inspect.stack() if x.filename != __file__]
     filename = stack[0].filename if stack else 'unknown file'
@@ -452,3 +461,12 @@ def on_list_unets(callback):
     The function will be called with one argument, a list, and shall add objects of type modules.sd_unet.SdUnetOption to it."""
 
     add_callback(callback_map['callbacks_list_unets'], callback)
+
+
+def on_state_updated(callback):
+    """register a function to be called when shared.state is updated.
+    The callback is called with one argument:
+      - shared.state.
+    """
+
+    add_callback(callback_map['callbacks_state_updated'], callback)

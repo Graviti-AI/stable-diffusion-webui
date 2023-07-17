@@ -1,14 +1,7 @@
-import pathlib
-import time
 import logging
-from modules.shared import cmd_opts
-
-_handler = logging.FileHandler(pathlib.Path(cmd_opts.logging_file_dir).joinpath('metrics.log'), mode='a')
-_handler.setLevel(logging.DEBUG)
-_handler.setFormatter(logging.Formatter("%(asctime)s,%(message)s"))
+import time
 
 _logger = logging.getLogger('metrics')
-_logger.addHandler(_handler)
 
 
 class TimerSubcategory:

@@ -103,7 +103,7 @@ class State:
     job_timestamp = '0'
     _sampling_step = 0
     _sampling_steps = 0
-    current_latent = None
+    _current_latent = None
     current_image = None
     current_image_sampling_step = 0
     id_live_preview = 0
@@ -113,6 +113,15 @@ class State:
     server_port = 0
     _server_command_signal = threading.Event()
     _server_command: Optional[str] = None
+
+    @property
+    def current_latent(self):
+        return self._current_latent
+
+    @current_latent.setter
+    def current_latent(self, value):
+        self._current_latent = value
+        script_callbacks.state_updated_callback(self)
 
     @property
     def need_restart(self) -> bool:
@@ -267,7 +276,6 @@ class State:
     def assign_current_image(self, image):
         self.current_image = image
         self.id_live_preview += 1
-        script_callbacks.state_updated_callback(self)
 
 
 state = State()

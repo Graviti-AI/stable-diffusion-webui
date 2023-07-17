@@ -162,8 +162,8 @@ def progressapi(req: ProgressRequest):
     if req.id_task in pending_tasks:
         pending_tasks[req.id_task]['last_accessed_at'] = time.time()
 
-    if not active:
-        count_ahead = 1
+    if not active or shared.state.time_start is None:
+        count_ahead = 0
         if queued:
             for task in _queued_tasks.queue:
                 if task == req.id_task:

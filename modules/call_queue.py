@@ -43,6 +43,15 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     log_message = ''
     res = list()
     time_consumption = {}
+    add_monitor_state = False
+    if "add_monitor_state" in kwargs:
+        add_monitor_state = kwargs.pop("add_monitor_state")
+    extra_outputs = None
+    if "extra_outputs" in kwargs:
+        extra_outputs = kwargs.pop("extra_outputs")
+    extra_outputs_array = extra_outputs
+    if extra_outputs_array is None:
+        extra_outputs_array = [None, '', '']
     try:
         timer = Timer('gpu_call', func_name)
 
@@ -78,12 +87,19 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         status = 'finished'
         log_message = 'done'
         task_failed = False
+    except MonitorException as e:
+        if add_monitor_state:
+            return extra_outputs_array + [str(e)], e.status_code == 402
+        return extra_outputs_array + [str(e)]
     except Exception as e:
         if isinstance(e, MonitorException):
             task_failed = False
         status = 'failed'
-        log_message = e.__str__()
-        raise
+        log_message = str(e)
+        traceback.print_tb(e.__traceback__, file=sys.stderr)
+        print(e, file=sys.stderr)
+        error_message = f'{type(e).__name__}: {e}'
+        res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
     finally:
         progress.finish_task(id_task, task_failed)
         shared.state.end()
@@ -91,7 +107,10 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
             try:
                 modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message, time_consumption)
             except Exception as e:
-                logging.warning(f'send task finished event to monitor failed: {e.__str__()}')
+                logging.warning(f'send task finished event to monitor failed: {str(e)}')
+
+    if add_monitor_state:
+        return res, False
     return res
 
 
@@ -114,25 +133,26 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
 
         try:
             res = submit_to_gpu_worker(
-                functools.partial(wrap_gpu_call, request, func, func_name, id_task),
+                functools.partial(
+                    wrap_gpu_call,
+                    request,
+                    func,
+                    func_name,
+                    id_task,
+                    add_monitor_state=add_monitor_state,
+                    extra_outputs=extra_outputs,
+                ),
                 timeout=int(predict_timeout)
             )(*args, **kwargs)
-        except MonitorException as e:
-            extra_outputs_array = extra_outputs
-            if extra_outputs_array is None:
-                extra_outputs_array = [None, '', '']
-            if add_monitor_state:
-                return extra_outputs_array + [str(e)], e.status_code == 402
-            return extra_outputs_array + [str(e)]
-        except TimeoutError as e:
+        except TimeoutError:
             shared.state.interrupt()
             extra_outputs_array = extra_outputs
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
-            return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], False
+            if add_monitor_state:
+                return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], False
+            return extra_outputs_array + [f'Predict timeout: {predict_timeout}s']
 
-        if add_monitor_state:
-            return res, False
         return res
 
     return wrap_gradio_call(f, extra_outputs=extra_outputs, add_stats=True, add_monitor_state=add_monitor_state)

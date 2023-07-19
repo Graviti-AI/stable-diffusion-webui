@@ -40,11 +40,15 @@ const fetchGet = (url) => {
     }
 }
 
-const fetchPut = (url) => {
+const fetchPut = (url, data = {}) => {
     try {
         return fetch(url, {
             method: 'PUT', 
             credentials: "include",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
         })
     } catch(e) {
         return new Promise.reject(e);

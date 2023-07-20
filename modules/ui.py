@@ -1624,10 +1624,11 @@ def create_ui():
                     def get_model_title_from_params(params):
                         if "Model hash" not in params and "Model" not in params:
                             return default_sd_checkpoint_container["sd_model_checkpoint"]
-                        ckpt_info = sd_models.get_closet_checkpoint_match(params["Model hash"])
+                        if "Model hash" in params:
+                            ckpt_info = sd_models.get_closet_checkpoint_match(params["Model hash"])
 
-                        if ckpt_info is not None:
-                            return ckpt_info.title
+                            if ckpt_info is not None:
+                                return ckpt_info.title
 
                         ckpt_info = sd_models.get_closet_checkpoint_match(params["Model"])
 

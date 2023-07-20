@@ -1,14 +1,25 @@
 class AutoFillSearchParams {
     searchParams = new URLSearchParams(location.search);
     result = '__prompt__ __negative_prompt__';
-    paramsKeys = ['prompt', 'negative_prompt', 'width', 'height', 'seed', 'steps', 'sampler', 'cfg', 'clip_skip', 'batch_size', 'ensd']
+    paramsKeys = ['prompt', 'negative_prompt', 'width', 'height', 'seed', 'steps', 'sampler', 'cfg', 'clip_skip', 'batch_size', 'ensd'];
+    excludeKeys = ['utm_source', 'utm_medium', 'utm_content', 'utm_campaign', '__theme', 'lora', 'l', 'ti', 't', 'hn', 'h', 'lycoris', 'y'];
     defaultWidth = 512;
     defaultHeight = 512;
     hasWidthOrHeightParam = false;
 
     joinParams(key, value) {
+        if (key === 'checkpoint' || key === 'c') {
+            this.result += `Model hash:${value},`;
+            return;
+        }
+
         if (key === 'ensd') {
-            this.result += `${key.toUpperCase()}:${value}`;
+            this.result += `${key.toUpperCase()}:${value},`;
+            return;
+        }
+
+        if (key === 'cfg') {
+            this.result += `CFG scale:${value},`;
             return;
         }
 
@@ -40,12 +51,12 @@ class AutoFillSearchParams {
 
     initSearchParams() {
         for (const [key, value] of this.searchParams.entries()) {
-            if (this.paramsKeys.includes(key.toLowerCase())) {
+            if (!this.excludeKeys.includes(key.toLowerCase())) {
                 this.joinParams(key.toLowerCase(), value);
             }
         }
         if (this.hasWidthOrHeightParam) {
-            this.result += `,Size: ${this.defaultWidth}x${this.defaultHeight}`;
+            this.result += `Size: ${this.defaultWidth}x${this.defaultHeight},`;
         }
         this.result = this.result.replace('__prompt__', '').replace('__negative_prompt__', '');
         return this.result;

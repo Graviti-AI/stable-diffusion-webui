@@ -575,10 +575,15 @@ async function getModelFromUrl() {
     // document.cookie = `selected_checkpoint_model=${checkpointModelValueFromUrl}`;
     const keyMapModelType = {
         "checkpoint": "checkpoints",
+        "c": "checkpoints",
         "lora": "lora",
+        "l": "lora",
         "ti": "textual_inversion",
+        "t": "textual_inversion",
         "hn": "hypernetworks",
-        "lycoris": "lycoris"
+        "h": "hypernetworks",
+        "lycoris": "lycoris",
+        "y": "lycoris",
     }
 
     const promiseList = [];

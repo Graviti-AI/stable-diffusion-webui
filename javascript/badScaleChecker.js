@@ -1,4 +1,4 @@
-(function() {
+function checkBadScale() {
     var ignore = localStorage.getItem("bad-scale-ignore-it") == "ignore-it";
 
     function getScale() {
@@ -105,4 +105,4 @@
     } else {
         check();
     }
-})();
+}

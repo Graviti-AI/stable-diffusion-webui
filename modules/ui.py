@@ -467,6 +467,7 @@ def build_function_signature(
         start_from: int = 0):
     signature_args = inspect.getfullargspec(func)[0][start_from:]  # remove the first 'request'
     default_length = len(signature_args)
+    default_values = list()
     for extension_script in alwayson_scripts + selectable_scripts:
         extension_name = extension_script.name
         if extension_name is None:
@@ -478,14 +479,42 @@ def build_function_signature(
         if index_start is None or index_end is None:
             continue
         if len(signature_args) < default_length + index_end:
-            signature_args += [None for _ in range(default_length + index_end - len(signature_args))]
+            signature_args += ["undefined" for _ in range(default_length + index_end - len(signature_args))]
+        if len(default_values) < default_length + index_end:
+            default_values += ["" for _ in range(default_length + index_end - len(default_values))]
         if extension_script.api_info is not None:
             for idx, each_arg in enumerate(extension_script.api_info.args):
                 each_arg_label = f"{script_name_concat}:{each_arg.label}"
                 signature_args[default_length + index_start + idx] = each_arg_label
+                default_values[default_length + index_start + idx] = each_arg.value
     if extras is not None:
         signature_args += extras
-    return signature_args
+        default_values += ["" for _ in range(len(extras))]
+    return signature_args, default_values
+
+
+def return_signature_str_from_list(args: list) -> str:
+    return f"signature({json.dumps(args)})"
+
+
+def get_default_values_from_components(components: list, args: list[str], default_values: list) -> list:
+    for idx, label in enumerate(args):
+        value = components[idx].value
+        if default_values[idx] and value != default_values[idx]:
+            print(f"{label} default value mistmatch: {default_values[idx]} != {value}")
+        if not default_values[idx]:
+            default_values[idx] = value
+    return default_values
+
+
+txt2img_signature_args: list = list()
+txt2img_suffix_outputs: list = list()
+txt2img_params_default_values: list = list()
+txt2img_function_index: int | None = None
+img2img_signature_args: list = list()
+img2img_suffix_outputs: list = list()
+img2img_params_default_values: list = list()
+img2img_function_index: int | None = None
 
 
 def create_ui():
@@ -621,7 +650,9 @@ def create_ui():
                     _js="updateGenerateBtn_txt2img"
                 )
 
-            txt2img_signature_args = build_function_signature(
+            global txt2img_signature_args
+            global txt2img_params_default_values
+            txt2img_signature_args, txt2img_params_default_values = build_function_signature(
                 modules.txt2img.txt2img,
                 modules.scripts.scripts_txt2img.alwayson_scripts,
                 modules.scripts.scripts_txt2img.selectable_scripts,
@@ -669,9 +700,14 @@ def create_ui():
                 ],
                 show_progress=False,
             )
+            global txt2img_suffix_outputs
+            txt2img_suffix_outputs = [[], "", "", "", False]
+            txt2img_params_default_values = get_default_values_from_components(
+                txt2img_args["inputs"], txt2img_signature_args, txt2img_params_default_values)
 
             txt2img_prompt.submit(**txt2img_args)
             submit.click(**txt2img_args)
+            txt2img_gradio_function = txt2img_interface.fns[-1]
 
             need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment")
             res_switch_btn.click(fn=None, _js="function(){switchWidthHeight('txt2img')}", inputs=None, outputs=None, show_progress=False)
@@ -1015,7 +1051,9 @@ def create_ui():
                 show_progress=False,
             )
 
-            img2img_signature_args = build_function_signature(
+            global img2img_signature_args
+            global img2img_params_default_values
+            img2img_signature_args, img2img_params_default_values = build_function_signature(
                 modules.img2img.img2img,
                 modules.scripts.scripts_img2img.alwayson_scripts,
                 modules.scripts.scripts_img2img.selectable_scripts,
@@ -1077,6 +1115,8 @@ def create_ui():
                 ],
                 show_progress=False,
             )
+            global img2img_suffix_outputs
+            img2img_suffix_outputs = [[], "", "", "", False]
 
             interrogate_args = dict(
                 _js="get_img2img_tab_index",
@@ -1092,9 +1132,12 @@ def create_ui():
                 ],
                 outputs=[img2img_prompt, dummy_component],
             )
+            img2img_params_default_values = get_default_values_from_components(
+                img2img_args["inputs"], img2img_signature_args, img2img_params_default_values)
 
             img2img_prompt.submit(**img2img_args)
             submit.click(**img2img_args)
+            img2img_gradio_function = img2img_interface.fns[-1]
 
             res_switch_btn.click(fn=None, _js="function(){switchWidthHeight('img2img')}", inputs=None, outputs=None, show_progress=False)
 
@@ -1758,9 +1801,17 @@ def create_ui():
             fn=update_sd_model_selection, inputs=None, outputs=sd_model_selection)
 
         demo.load(
-            fn=lambda: f"signature({json.dumps(txt2img_signature_args)})", inputs=None, outputs=txt2img_signature)
+            fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=txt2img_signature)
         demo.load(
-            fn=lambda: f"signature({json.dumps(img2img_signature_args)})", inputs=None, outputs=img2img_signature)
+            fn=lambda: return_signature_str_from_list(img2img_signature_args), inputs=None, outputs=img2img_signature)
+
+        global txt2img_function_index
+        global img2img_function_index
+        for demo_block_function_idx, demo_block_function in enumerate(demo.fns):
+            if demo_block_function == txt2img_gradio_function:
+                txt2img_function_index = demo_block_function_idx
+            if demo_block_function == img2img_gradio_function:
+                img2img_function_index = demo_block_function_idx
 
         def modelmerger(request: gradio.routes.Request, *args):
             import modules.call_utils
@@ -1872,3 +1923,30 @@ def setup_ui_api(app):
     app.add_api_route("/internal/sysinfo", download_sysinfo, methods=["GET"])
     app.add_api_route("/internal/sysinfo-download", lambda: download_sysinfo(attachment=True), methods=["GET"])
 
+    def construct_signature_response(args: list, default_values: list, fn_index: int | None, output_placeholders: list):
+        return {
+            "signature": return_signature_str_from_list(args),
+            "args": args,
+            "default_values": default_values,
+            "fn_index": fn_index,
+            "output_placeholders": output_placeholders,
+        }
+
+    app.add_api_route(
+        "/internal/signature/txt2img",
+        lambda: construct_signature_response(
+            args=txt2img_signature_args,
+            default_values=txt2img_params_default_values,
+            fn_index=txt2img_function_index,
+            output_placeholders=txt2img_suffix_outputs
+        ),
+        methods=["GET"])
+    app.add_api_route(
+        "/internal/signature/img2img",
+        lambda: construct_signature_response(
+            args=img2img_signature_args,
+            default_values=img2img_params_default_values,
+            fn_index=img2img_function_index,
+            output_placeholders=img2img_suffix_outputs
+        ),
+        methods=["GET"])

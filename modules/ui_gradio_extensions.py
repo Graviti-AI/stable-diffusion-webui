@@ -49,7 +49,7 @@ def css_html():
     head = ""
 
     head += '<link href="https://releases.transloadit.com/uppy/v3.7.0/uppy.min.css" rel="stylesheet" />\n'
-    head += '<link href="/components/style/notification/style.css" rel="stylesheet" />\n'
+    head += '<link href="/components/style/notification/style.css?v=0.2" rel="stylesheet" />\n'
     head += '<link href="/components/style/share/shareon.min.css" rel="stylesheet" />\n'
     head += '<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/css/tabby-ui.min.css">\n'
 

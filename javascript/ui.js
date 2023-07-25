@@ -150,6 +150,8 @@ function showRestoreProgressButton(tabname, show) {
 }
 
 function submit() {
+    checkSignatureCompatibility();
+
     showSubmitButtons('txt2img', false);
 
     var id = randomId();
@@ -665,6 +667,73 @@ function imgExists(url, imgNode, name){
     }
 }
 
+async function checkSignatureCompatibility(timeoutId = null)
+{
+    const txt2imgSignaturePromise = fetchGet("/internal/signature/txt2img");
+    const img2imgSignaturePromise = fetchGet("/internal/signature/img2img");
+
+    const currentTxt2imgSignature = gradioApp().querySelector("#txt2img_signature textarea").value;
+    const currentTxt2imgFnIndex = gradioApp().querySelector("#txt2img_function_index textarea").value;
+    const currentImg2imgSignature = gradioApp().querySelector("#img2img_signature textarea").value;
+    const currentImg2imgFnIndex = gradioApp().querySelector("#img2img_function_index textarea").value;
+
+    let needRefresh = false;
+
+    txt2imgSignaturePromise.then(async (response) => {
+        if (response.ok) {
+            const txt2imgSignature = await response.json();
+            if ((txt2imgSignature.signature != currentTxt2imgSignature || txt2imgSignature.fn_index != currentTxt2imgFnIndex) && !needRefresh)
+            {
+                let onRefresh = () => {location.reload();};
+                needRefresh = true;
+                if (timeoutId)
+                {
+                    clearTimeout(timeoutId);
+                }
+                notifier.confirm(
+                    'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+                    onRefresh,
+                    false,
+                    {
+                        labels: {
+                        confirm: 'Page Need Refresh'
+                        }
+                    }
+                );
+            }
+        }
+    });
+    img2imgSignaturePromise.then(async (response) => {
+        if (response.ok) {
+            const img2imgSignature = await response.json();
+            if ((img2imgSignature.signature != currentImg2imgSignature || img2imgSignature.fn_index != currentImg2imgFnIndex) && !needRefresh)
+            {
+                let onRefresh = () => {location.reload();};
+                needRefresh = true;
+                if (timeoutId)
+                {
+                    clearTimeout(timeoutId);
+                }
+                notifier.confirm(
+                    'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+                    onRefresh,
+                    false,
+                    {
+                        labels: {
+                        confirm: 'Page Need Refresh'
+                        }
+                    }
+                );
+            }
+        }
+    });
+}
+
+async function monitorSignatureChange() {
+    const timeoutId = setTimeout(monitorSignatureChange, 30000);
+    checkSignatureCompatibility(timeoutId);
+}
+
 // get user info
 onUiLoaded(function(){
     setUiPageSize();
@@ -683,6 +752,8 @@ onUiLoaded(function(){
             item.style.filter = 'invert(100%)';
         })
     }
+
+    setTimeout(monitorSignatureChange, 30000);
    
 
     fetch(`/api/order_info`, {method: "GET", credentials: "include"}).then(res => {

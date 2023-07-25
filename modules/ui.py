@@ -533,6 +533,7 @@ def create_ui():
         need_upgrade = gr.Checkbox(
             value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
         txt2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_signature")
+        txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
 
         dummy_component = gr.Label(visible=False)
         txt_prompt_img = gr.File(label="", elem_id="txt2img_prompt_image", file_count="single", type="binary", visible=False)
@@ -810,6 +811,7 @@ def create_ui():
         img2img_need_upgrade = gr.Checkbox(
             value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
         img2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_signature")
+        img2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_function_index")
 
         img2img_prompt_img = gr.File(label="", elem_id="img2img_prompt_image", file_count="single", type="binary", visible=False)
 
@@ -1812,6 +1814,11 @@ def create_ui():
                 txt2img_function_index = demo_block_function_idx
             if demo_block_function == img2img_gradio_function:
                 img2img_function_index = demo_block_function_idx
+
+        demo.load(
+            fn=lambda: txt2img_function_index, inputs=None, outputs=txt2img_fn_index_component)
+        demo.load(
+            fn=lambda: img2img_function_index, inputs=None, outputs=img2img_fn_index_component)
 
         def modelmerger(request: gradio.routes.Request, *args):
             import modules.call_utils

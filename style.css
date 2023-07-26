@@ -1544,3 +1544,11 @@ div.block.gradio-box.edit-user-metadata {
 .edit-user-metadata-buttons{
     margin-top: 1.5em;
 }
+
+.notification-sub-email{
+  color: var(--primary-600);
+}
+
+.notification-sub-main {
+  color: #2d4156;
+}

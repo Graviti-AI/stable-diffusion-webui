@@ -667,6 +667,35 @@ function imgExists(url, imgNode, name){
     }
 }
 
+function getSubscribers(interval = 5, timeoutId = null)
+{
+    const latestSubscribers = fetchGet(`/subscriptions/latest?interval=${interval}`);
+    latestSubscribers.then(async (response) => {
+        if (response.ok) {
+            const newSubscribers = await response.json();
+            if (newSubscribers.current_tier != "free") {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            } else {
+                newSubscribers.subscribers.forEach((newSubscriber) => {
+                    const notificationElem = notifier.success(
+                        `<div class="notification-sub-main" style="width: 285px"><b class="notification-sub-email">${newSubscriber.email}</b> just subscribed to our basic plan &#129395 <a class="notification-upgrade-hyperlink" href="/user#/subscription?type=subscription" target="_blank">Click here to upgrade</a> and enjoy 5000 credits monthly!</div>`,
+                        {labels: {success: ""}, animationDuration: 800, durations: {success: 8000}}
+                    );
+                    if (typeof posthog === 'object') {
+                        notificationElem.querySelector(".notification-upgrade-hyperlink").addEventListener("click", () => {
+                            posthog.capture('Notification upgrade link clicked', {
+                                subscriber_email: newSubscriber.email,
+                            });
+                        });
+                    }
+                });
+            }
+        }
+    });
+}
+
 async function checkSignatureCompatibility(timeoutId = null)
 {
     const txt2imgSignaturePromise = fetchGet("/internal/signature/txt2img");
@@ -734,6 +763,12 @@ async function monitorSignatureChange() {
     checkSignatureCompatibility(timeoutId);
 }
 
+async function pullNewSubscribers() {
+    const interval = 5;
+    const timeoutId = setTimeout(pullNewSubscribers, interval * 1000);
+    getSubscribers(interval, timeoutId);
+}
+
 // get user info
 onUiLoaded(function(){
     setUiPageSize();
@@ -754,6 +789,7 @@ onUiLoaded(function(){
     }
 
     setTimeout(monitorSignatureChange, 30000);
+    pullNewSubscribers();
    
 
     fetch(`/api/order_info`, {method: "GET", credentials: "include"}).then(res => {

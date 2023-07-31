@@ -8,6 +8,7 @@ import time
 import functools
 import json
 import psutil
+import asyncio
 from datetime import datetime
 
 import gradio.routes
@@ -160,13 +161,19 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
     return wrap_gradio_call(f, extra_outputs=extra_outputs, add_stats=True, add_monitor_state=add_monitor_state)
 
 
+async def get_body(request: gradio.routes.Request):
+    json_body = await request.json()
+    return json_body
+
+
 def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
     @functools.wraps(func)
-    async def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
+    def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
         task_id = None
-        request_body = await request.json()
+        loop = asyncio.get_event_loop()
+        request_body = loop.run_until_complete(get_body(request))
         for item in request_body["data"]:
-            if isinstance(item, str) and  item.startswith("task("):
+            if isinstance(item, str) and item.startswith("task("):
                 task_id = item.removeprefix("task(").removesuffix(")")
         current_datetime = datetime.now()
         print(f"{current_datetime.strftime('%Y-%m-%d %H:%M:%S')} task({task_id}) begins", file=sys.stderr)

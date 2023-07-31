@@ -660,10 +660,12 @@ function imgExists(url, imgNode, name){
     const img = new Image();
     img.src= url;
     img.onerror = () => {
-        imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=7F8B95&color=fff&length=1&format=svg`
+        imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=random&format=svg`
+        joinShareGroup(name, imgNode.src);
     }
     img.onload = () => {
         imgNode.src = url;
+        joinShareGroup(name, url);
     }
 }
 
@@ -767,6 +769,105 @@ async function pullNewSubscribers() {
     const interval = 5;
     const timeoutId = setTimeout(pullNewSubscribers, interval * 1000);
     getSubscribers(interval, timeoutId);
+}
+
+function getCurrentUserName() {
+    const userName = gradioApp().querySelector(
+        "div.user_info > div > span").textContent;
+    return userName;
+}
+
+function getCurrentUserAvatar() {
+    const userAvatarUrl = gradioApp().querySelector(
+        "div.user_info > a > img").src;
+    return userAvatarUrl;
+}
+
+async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null) {
+    if (!userName) {
+        userName = getCurrentUserName();
+    }
+    if (!userAvatarUrl) {
+        userAvatarUrl = getCurrentUserAvatar();
+    }
+    if (share_id) {
+        fetch('/share/group/join', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                group_info: {
+                    share_id: share_id
+                },
+                avatar: {
+                    avatar_url: userAvatarUrl,
+                    user_name: userName
+                }
+            })
+        })
+        .then(response => {
+            if (response.status === 200) {
+                return response.json();
+            }
+            return Promise.reject(response);
+        })
+        .then(async (data) => {
+            if (data.event_code != 202) {
+                fetch('/share/group/join/html', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_name: userName,
+                        user_avatar_url: userAvatarUrl,
+                        event_code: data.event_code,
+                        share_group: data.share_group
+                    })
+                })
+                .then(response => {
+                    if (response.status === 200) {
+                        return response.text();
+                    }
+                    return Promise.reject(response);
+                })
+                .then((htmlResponse) => {
+                    let doc = document.implementation.createHTMLDocument();
+                    doc.body.innerHTML = htmlResponse;
+                    let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+                        return el;
+                    });
+                    for (const index in arrayScripts) {
+                        doc.body.removeChild(arrayScripts[index]);
+                    }
+                    notifier.modal(doc.body.innerHTML);
+                    for (const index in arrayScripts) {
+                        let new_script = document.createElement("script");
+                        if (arrayScripts[index].src) {
+                            new_script.src = arrayScripts[index].src;
+                        } else {
+                            new_script.innerHTML = arrayScripts[index].innerHTML;
+                        }
+                        document.body.appendChild(new_script);
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+}
+
+async function joinShareGroup(userName=null, avatarUrl=null) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const share_id = urlParams.get('share_id');
+
+    joinShareGroupWithId(share_id, userName, avatarUrl);
 }
 
 // get user info

@@ -214,6 +214,7 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
         'gpu_consumption': _make_gpu_consumption(api_name, func_args, *args, **kwargs),
         'node': os.getenv('HOST_IP', default=''),
         'added_at': task_info.get('added_at', time.time()),
+        'model_title': task_info.get('model_title', ''),
     }
     resp = requests.post(monitor_addr,
                          headers={

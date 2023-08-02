@@ -669,7 +669,7 @@ function imgExists(url, imgNode, name){
     }
 }
 
-function getSubscribers(interval = 5, timeoutId = null)
+function getSubscribers(interval = 10, timeoutId = null)
 {
     const latestSubscribers = fetchGet(`/subscriptions/latest?interval=${interval}`);
     latestSubscribers.then(async (response) => {
@@ -766,7 +766,7 @@ async function monitorSignatureChange() {
 }
 
 async function pullNewSubscribers() {
-    const interval = 5;
+    const interval = 10;
     const timeoutId = setTimeout(pullNewSubscribers, interval * 1000);
     getSubscribers(interval, timeoutId);
 }

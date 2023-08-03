@@ -713,9 +713,15 @@ async function checkSignatureCompatibility(timeoutId = null)
 
     let needRefresh = false;
 
-    txt2imgSignaturePromise.then(async (response) => {
-        if (response.ok) {
-            const txt2imgSignature = await response.json();
+    txt2imgSignaturePromise
+    .then(response => {
+        if (response.status === 200) {
+            return response.json();
+        }
+        return Promise.reject(response);
+    })
+    .then((txt2imgSignature) => {
+        if (txt2imgSignature && txt2imgSignature.signature && txt2imgSignature.fn_index) {
             if ((txt2imgSignature.signature != currentTxt2imgSignature || txt2imgSignature.fn_index != currentTxt2imgFnIndex) && !needRefresh)
             {
                 let onRefresh = () => {location.reload();};
@@ -736,10 +742,20 @@ async function checkSignatureCompatibility(timeoutId = null)
                 );
             }
         }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
     });
-    img2imgSignaturePromise.then(async (response) => {
-        if (response.ok) {
-            const img2imgSignature = await response.json();
+
+    img2imgSignaturePromise
+    .then(response => {
+        if (response.status === 200) {
+            return response.json();
+        }
+        return Promise.reject(response);
+    })
+    .then((img2imgSignature) => {
+        if (img2imgSignature && img2imgSignature.signature && img2imgSignature.fn_index) {
             if ((img2imgSignature.signature != currentImg2imgSignature || img2imgSignature.fn_index != currentImg2imgFnIndex) && !needRefresh)
             {
                 let onRefresh = () => {location.reload();};
@@ -760,6 +776,9 @@ async function checkSignatureCompatibility(timeoutId = null)
                 );
             }
         }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
     });
 }
 
@@ -815,7 +834,7 @@ async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null)
             }
             return Promise.reject(response);
         })
-        .then(async (data) => {
+        .then((data) => {
             if (data.event_code != 202) {
                 fetch('/share/group/join/html', {
                     method: 'POST',

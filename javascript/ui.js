@@ -450,7 +450,6 @@ function currentImg2imgSourceResolution(w, h, scaleBy) {
             sliderDom.max = maxScale;
             inputDom.max = maxScale;
         }
-        
         return [img.naturalWidth, img.naturalHeight, scaleBy]
     }
 
@@ -515,7 +514,6 @@ function browseWorkspaceModels() {
     } else {
         browseModelsBtn.textContent = 'Show workspace models';
     }
-    
 }
 
 async function browseModels(){
@@ -536,10 +534,8 @@ async function browseModels(){
         {
             fetchHomePageDataAndUpdateList({tabname: 'txt2img', model_type: currentTab.get('txt2img'), page: 1});
         }
-        
     }
 
-    
     if (img2img_tab.style.display == "block")
     {
         if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide"))
@@ -653,7 +649,6 @@ async function getModelFromUrl() {
              }
         })
     });
-    
 }
 
 function imgExists(url, imgNode, name){
@@ -867,7 +862,64 @@ async function joinShareGroup(userName=null, avatarUrl=null) {
     const urlParams = new URLSearchParams(window.location.search);
     const share_id = urlParams.get('share_id');
 
-    joinShareGroupWithId(share_id, userName, avatarUrl);
+    if (share_id) {
+      joinShareGroupWithId(share_id, userName, avatarUrl);
+    } else {
+      notifyUserTheShareCampaign(userName, avatarUrl);
+    }
+}
+
+function notifyUserTheShareCampaign(userName, avatarUrl) {
+    const showed = window.Cookies.get("_1000by1000showed");
+    if (!showed) {
+        if (!userName) {
+            userName = getCurrentUserName();
+        }
+        if (!avatarUrl) {
+            avatarUrl = getCurrentUserAvatar();
+        }
+        fetch('/share/group/create/html', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ avatar_url: avatarUrl, user_name: userName })
+        })
+        .then(response => {
+            if (response.status === 200) {
+                return response.text();
+            }
+            return Promise.reject(response);
+        })
+        .then((data) => {
+            let doc = document.implementation.createHTMLDocument();
+            doc.body.innerHTML = data;
+            let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+                return el;
+            });
+            for (const index in arrayScripts) {
+                doc.body.removeChild(arrayScripts[index]);
+            }
+            const shareButton = doc.body.querySelector("button.share-group-share-btn");
+            const checkStatusButton = doc.body.querySelector("button.share-group-status-btn");
+            if (shareButton || checkStatusButton) {
+                notifier.modal(doc.body.innerHTML);
+                for (const index in arrayScripts) {
+                    let new_script = document.createElement("script");
+                    if (arrayScripts[index].src) {
+                        new_script.src = arrayScripts[index].src;
+                    } else {
+                        new_script.innerHTML = arrayScripts[index].innerHTML;
+                    }
+                    document.body.appendChild(new_script);
+                }
+                window.Cookies.set("_1000by1000showed", true);
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
 }
 
 // get user info
@@ -891,7 +943,6 @@ onUiLoaded(function(){
 
     setTimeout(monitorSignatureChange, 30000);
     pullNewSubscribers();
-   
 
     fetch(`/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
         if (res && res.ok && !res.redirected) {

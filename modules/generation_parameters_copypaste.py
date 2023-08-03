@@ -5,6 +5,8 @@ import os
 import re
 
 import gradio as gr
+
+import modules.call_utils
 from modules.paths import data_path
 from modules import shared, ui_tempdir, script_callbacks
 from PIL import Image
@@ -375,7 +377,9 @@ def connect_paste(button, paste_fields, input_comp, override_settings_component,
 
         for output, key in paste_fields:
             if callable(key):
-                v = key(params)
+                # append request to func args if necessary
+                args = modules.call_utils.special_args(key, [params, ], request)
+                v = key(*args)
             else:
                 v = params.get(key, None)
 

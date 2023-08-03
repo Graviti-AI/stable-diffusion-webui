@@ -1688,20 +1688,17 @@ def create_ui():
                         component = create_setting_component(k, is_quicksettings=True, visible=False, interactive=False)
                         settings.component_dict[k] = component
 
-                    # This is the reall place to set sd checkpoint
+                    # This is the real place to set sd checkpoint
                     sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
-
-                    default_sd_checkpoint_container = {"sd_model_checkpoint": shared.opts.sd_model_checkpoint}
 
                     def update_sd_model_selection_args(request: gr.Request = None):
                         sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
-                        default_sd_checkpoint = default_sd_checkpoint_container["sd_model_checkpoint"]
                         if ("choices" in sd_checkpoint_component_args
                                 and len(sd_checkpoint_component_args["choices"]) > 0):
                             default_sd_checkpoint = sd_checkpoint_component_args["choices"][0]
-                        default_sd_checkpoint_container["sd_model_checkpoint"] = (
-                            default_sd_checkpoint if default_sd_checkpoint else "")
-                        sd_checkpoint_component_args["value"] = default_sd_checkpoint_container["sd_model_checkpoint"]
+                        else:
+                            default_sd_checkpoint = shared.opts.data["sd_model_checkpoint"]
+                        sd_checkpoint_component_args["value"] = default_sd_checkpoint
                         return sd_checkpoint_component_args
 
                     sd_model_selection = sd_checkpoint_options.component(
@@ -1716,9 +1713,14 @@ def create_ui():
                         sd_checkpoint_options.component_args,
                         "refresh_sd_model_checkpoint_dropdown")
 
-                    def get_model_title_from_params(params):
+                    def get_model_title_from_params(request: gr.Request, params):
+                        # sd_models.checkpoint_tiles() is guaranteed to return at least one model title
+                        checkpoint_tiles = sd_models.checkpoint_tiles(request)
+                        if not checkpoint_tiles:
+                            checkpoint_tiles = [shared.opts.data["sd_model_checkpoint"], ]
+
                         if "Model hash" not in params and "Model" not in params:
-                            return default_sd_checkpoint_container["sd_model_checkpoint"]
+                            return checkpoint_tiles[0]
                         if "Model hash" in params:
                             ckpt_info = sd_models.get_closet_checkpoint_match(params["Model hash"])
 
@@ -1729,7 +1731,7 @@ def create_ui():
 
                         if ckpt_info is not None:
                             return ckpt_info.title
-                        return default_sd_checkpoint_container["sd_model_checkpoint"]
+                        return checkpoint_tiles[0]
                     txt2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
                     img2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
 

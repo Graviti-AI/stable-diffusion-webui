@@ -1800,9 +1800,11 @@ def create_ui():
         demo.load(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
 
         def update_sd_model_selection(request: gr.Request):
-            return gr.update(**update_sd_model_selection_args(request))
+            sd_checkpoint_component_args = update_sd_model_selection_args(request)
+            default_model_title = sd_checkpoint_component_args["value"]
+            return gr.update(**sd_checkpoint_component_args), default_model_title, default_model_title
         demo.load(
-            fn=update_sd_model_selection, inputs=None, outputs=sd_model_selection)
+            fn=update_sd_model_selection, inputs=None, outputs=[sd_model_selection, txt2img_model_title, img2img_model_title])
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=txt2img_signature)

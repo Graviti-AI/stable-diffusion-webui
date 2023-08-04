@@ -64,14 +64,19 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         task_info = progress.start_task(id_task)
 
         # log all gpu calls with monitor, we should log it before task begin
-        model_title = args[-3]
-        vae_title = args[-2]
+        if func_name in ('txt2img', 'img2img'):
+            model_title = args[-3]
+            vae_title = args[-2]
+        else:
+            model_title = ''
+            vae_title = ''
+
         task_info['model_title'] = model_title
         monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
         time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
 
         # reload model if necessary
-        if func_name in ('txt2img', 'img2img'):
+        if model_title:
             progress.set_current_task_step('reload_model_weights')
             script_callbacks.state_updated_callback(shared.state)
             _check_sd_model(model_title=model_title, vae_title=vae_title)
@@ -93,10 +98,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         log_message = 'done'
         task_failed = False
     except MonitorException as e:
+        logger.error(f'task {id_task} failed: {e.__str__()}')
         if add_monitor_state:
             return extra_outputs_array + [str(e)], e.status_code == 402
         return extra_outputs_array + [str(e)]
     except Exception as e:
+        logger.error(f'task {id_task} failed: {e.__str__()}')
         if isinstance(e, MonitorException):
             task_failed = False
         status = 'failed'

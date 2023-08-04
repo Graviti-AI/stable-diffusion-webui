@@ -805,67 +805,90 @@ function getCurrentUserAvatar() {
     return userAvatarUrl;
 }
 
-function preloadImage(url, onloadCallback)
+function preloadImage(url, onloadCallback, onerrorCallback)
 {
-    var img=new Image();
-    img.src=url;
+    let img = new Image();
+    img.src = url;
     img.onload = onloadCallback;
+    img.onerror = onerrorCallback;
 }
 
-function popupHtmlResponse(htmlResponse) {
+const loadImages = (htmlResponse) => new Promise((resolve, reject) => {
     let doc = document.implementation.createHTMLDocument();
     doc.body.innerHTML = htmlResponse;
+    const imgs = doc.body.querySelectorAll("img");
+    const totalNumImages = imgs.length;
+    let imageCount = 0;
+
+    const imageLoadCallback = () => {
+        imageCount += 1;
+        if (imageCount == totalNumImages) {
+            resolve(doc);
+        }
+    }
+    const onerrorCallback = (error) => {reject(error);}
+    imgs.forEach(elem => {
+        preloadImage(elem.src, imageLoadCallback, onerrorCallback);
+    });
+});
+
+function renderInPopup(doc) {
     let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
         return el;
     });
     for (const index in arrayScripts) {
         doc.body.removeChild(arrayScripts[index]);
     }
-    const imgs = doc.body.querySelectorAll("img");
-    const totalNumImages = imgs.length;
-    let imageCount = 0;
-    const imageLoadCallback = () => {
-        imageCount += 1;
-        if (imageCount == totalNumImages) {
-            notifier.modal(doc.body.innerHTML);
-            for (const index in arrayScripts) {
-                let new_script = document.createElement("script");
-                if (arrayScripts[index].src) {
-                    new_script.src = arrayScripts[index].src;
-                } else {
-                    new_script.innerHTML = arrayScripts[index].innerHTML;
-                }
-                document.body.appendChild(new_script);
-            }
+    notifier.modal(doc.body.innerHTML);
+    for (const index in arrayScripts) {
+        let new_script = document.createElement("script");
+        if (arrayScripts[index].src) {
+            new_script.src = arrayScripts[index].src;
+        } else {
+            new_script.innerHTML = arrayScripts[index].innerHTML;
         }
+        document.body.appendChild(new_script);
     }
-    imgs.forEach(elem => {
-        preloadImage(elem.src, imageLoadCallback);
-    });
+}
+
+function popupHtmlResponse(htmlResponse) {
+    loadImages(htmlResponse)
+    .then((doc) => {renderInPopup(doc);})
+    .catch((error) => {console.error("Error:", error)});
 }
 
 function showInspirationPopup() {
     if (typeof posthog === 'object') {
       posthog.capture('Inspiration button clicked.');
     }
-    fetch('/inspire/html', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-        })
-    })
-    .then(response => {
-        if (response.status === 200) {
-            return response.text();
-        }
-        return Promise.reject(response);
-    })
-    .then(popupHtmlResponse)
-    .catch((error) => {
-        console.error('Error:', error);
+    let loadPromise =new Promise((resolve, reject) => {
+      fetch('/inspire/html', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+          })
+      })
+      .then(response => {
+          if (response.status === 200) {
+              return response.text();
+          }
+          return Promise.reject(response);
+      })
+      .then(htmlResponse => {
+          loadImages(htmlResponse)
+          .then((doc) => {resolve(doc)})
+          .catch((error) => {reject(error)});
+      })
+      .catch((error) => {reject(error)});
     });
+    notifier.async(
+      loadPromise,
+      (doc) => {renderInPopup(doc);},
+      (error) => {console.error('Error:', error);},
+      "Selecting a good piece for you!"
+    );
 }
 
 async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null) {

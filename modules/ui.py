@@ -1712,6 +1712,13 @@ def create_ui():
                         sd_checkpoint_options.refresh,
                         sd_checkpoint_options.component_args,
                         "refresh_sd_model_checkpoint_dropdown")
+                    inspire_button = gr.Button(
+                        "Inspire me", elem_id="gallery_inspire_me_button", variant="primary")
+                    inspire_button.click(
+                        None,
+                        None,
+                        None,
+                        _js="showInspirationPopup")
 
                     def get_model_title_from_params(request: gr.Request, params):
                         # sd_models.checkpoint_tiles() is guaranteed to return at least one model title

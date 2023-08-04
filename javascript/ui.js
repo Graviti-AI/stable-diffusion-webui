@@ -805,6 +805,69 @@ function getCurrentUserAvatar() {
     return userAvatarUrl;
 }
 
+function preloadImage(url, onloadCallback)
+{
+    var img=new Image();
+    img.src=url;
+    img.onload = onloadCallback;
+}
+
+function popupHtmlResponse(htmlResponse) {
+    let doc = document.implementation.createHTMLDocument();
+    doc.body.innerHTML = htmlResponse;
+    let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+        return el;
+    });
+    for (const index in arrayScripts) {
+        doc.body.removeChild(arrayScripts[index]);
+    }
+    const imgs = doc.body.querySelectorAll("img");
+    const totalNumImages = imgs.length;
+    let imageCount = 0;
+    const imageLoadCallback = () => {
+        imageCount += 1;
+        if (imageCount == totalNumImages) {
+            notifier.modal(doc.body.innerHTML);
+            for (const index in arrayScripts) {
+                let new_script = document.createElement("script");
+                if (arrayScripts[index].src) {
+                    new_script.src = arrayScripts[index].src;
+                } else {
+                    new_script.innerHTML = arrayScripts[index].innerHTML;
+                }
+                document.body.appendChild(new_script);
+            }
+        }
+    }
+    imgs.forEach(elem => {
+        preloadImage(elem.src, imageLoadCallback);
+    });
+}
+
+function showInspirationPopup() {
+    if (typeof posthog === 'object') {
+      posthog.capture('Inspiration button clicked.');
+    }
+    fetch('/inspire/html', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+        })
+    })
+    .then(response => {
+        if (response.status === 200) {
+            return response.text();
+        }
+        return Promise.reject(response);
+    })
+    .then(popupHtmlResponse)
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
 async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null) {
     if (!userName) {
         userName = getCurrentUserName();
@@ -854,26 +917,7 @@ async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null)
                     }
                     return Promise.reject(response);
                 })
-                .then((htmlResponse) => {
-                    let doc = document.implementation.createHTMLDocument();
-                    doc.body.innerHTML = htmlResponse;
-                    let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
-                        return el;
-                    });
-                    for (const index in arrayScripts) {
-                        doc.body.removeChild(arrayScripts[index]);
-                    }
-                    notifier.modal(doc.body.innerHTML);
-                    for (const index in arrayScripts) {
-                        let new_script = document.createElement("script");
-                        if (arrayScripts[index].src) {
-                            new_script.src = arrayScripts[index].src;
-                        } else {
-                            new_script.innerHTML = arrayScripts[index].innerHTML;
-                        }
-                        document.body.appendChild(new_script);
-                    }
-                })
+                .then(popupHtmlResponse)
                 .catch((error) => {
                     console.error('Error:', error);
                 });

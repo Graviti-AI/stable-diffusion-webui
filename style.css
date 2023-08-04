@@ -1557,3 +1557,9 @@ div.block.gradio-box.edit-user-metadata {
 .notification-sub-main {
   color: #2d4156;
 }
+
+#gallery_inspire_me_button {
+  align-self: flex-end;
+  width: 200px;
+  flex-grow: 0.3;
+}

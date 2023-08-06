@@ -31,6 +31,18 @@ def javascript_html(request: gr.Request):
     head += '<script type="text/javascript" src="/components/js/share/shareon.iife.js" defer init></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
     head += "<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='//www.googletagmanager​.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NJBVS8D');</script>\n"
+    # These two lines of code are added for the original account, should be removed in the future TODO: EdC
+    head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
+    head += """
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-6SKEYMGQ07');
+        gtag('event', 'conversion', {'send_to': 'AW-347751974/bf1-CL-J5c0YEKaM6aUB'});
+        </script>\n
+    """
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
     head += '<script src="/components/js/scrollload/index.js"></script>\n'
 

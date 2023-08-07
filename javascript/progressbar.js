@@ -144,12 +144,6 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
 
             if (res.active) wasEverActive = true;
 
-            if (!res.active && wasEverActive) {
-                removeProgressBar();
-                console.log("remove progress bar: ! res.active && wasEverActive");
-                return;
-            }
-
             if (elapsedFromStart > inactivityTimeout && !res.queued && !res.active) {
                 console.log("remove progress bar: elapsedFromStart > inactivityTimeout && !res.queued && !res.active");
                 removeProgressBar();

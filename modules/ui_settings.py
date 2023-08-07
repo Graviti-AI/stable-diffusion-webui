@@ -76,17 +76,9 @@ class UiSettings:
     quicksettings_list = None
     quicksettings_names = None
     text_settings = None
-    txt2img_model_title = None
-    img2img_model_title = None
-    txt2img_vae_title = None
-    img2img_vae_title = None
     interactive = True
 
-    def __init__(self, txt2img_model_title, img2img_model_title, txt2img_vae_title, img2img_vae_title, interactive=True):
-        self.txt2img_model_title = txt2img_model_title
-        self.img2img_model_title = img2img_model_title
-        self.txt2img_vae_title = txt2img_vae_title
-        self.img2img_vae_title = img2img_vae_title
+    def __init__(self, interactive=True):
         self.interactive = interactive
 
     def run_settings(self, request: gr.Request, *args):
@@ -113,7 +105,7 @@ class UiSettings:
 
     def run_settings_single(self, request: gr.Request, value, key):
         if not opts.same_type(value, opts.data_labels[key].default):
-            return gr.update(visible=True), opts.dumpjson(), value, value
+            return gr.update(visible=True), opts.dumpjson()
 
         if not opts.set(key, value):
             # the returned extra two values are used to tell img2img/txt2img current loaded model
@@ -305,12 +297,7 @@ class UiSettings:
         for _i, k, _item in self.quicksettings_list:
             component = self.component_dict[k]
             info = opts.data_labels[k]
-            if k == 'sd_model_checkpoint':
-                outputs = [component, self.text_settings, self.txt2img_model_title, self.img2img_model_title]
-            elif k == 'sd_vae':
-                outputs = [component, self.text_settings, self.txt2img_vae_title, self.img2img_vae_title]
-            else:
-                outputs = [component, self.text_settings, self.dummy_component, self.dummy_component]
+            outputs = [component, self.text_settings]
 
             if isinstance(component, gr.Textbox):
                 methods = [component.submit, component.blur]
@@ -340,9 +327,7 @@ class UiSettings:
             fn=set_checkpoint_when_click_on_card,
             _js="function(current, dummy){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || current, current]; }",
             inputs=[sd_model_selection, self.dummy_component],
-            outputs=[sd_model_selection,
-                     self.txt2img_model_title,
-                     self.img2img_model_title],
+            outputs=[sd_model_selection],
         )
 
         component_keys = [k for k in opts.data_labels.keys() if k in self.component_dict]

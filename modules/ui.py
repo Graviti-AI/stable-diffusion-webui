@@ -1640,9 +1640,7 @@ def create_ui():
 
     if any([(tab_name in shared.opts.hidden_tabs) for tab_name in ("Settings", "Setting")]):
         shared.cmd_opts.settings_not_interactive = True
-    settings = ui_settings.UiSettings(
-        txt2img_model_title, img2img_model_title, txt2img_vae_title, img2img_vae_title,
-        interactive=not shared.cmd_opts.settings_not_interactive)
+    settings = ui_settings.UiSettings(interactive=not shared.cmd_opts.settings_not_interactive)
     settings.create_ui(loadsave, dummy_component)
 
     interfaces = [
@@ -1742,17 +1740,16 @@ def create_ui():
                     txt2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
                     img2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
 
-                    def select_checkpoint(request: gr.Request, sd_model_title):
-                        return [sd_model_title, sd_model_title]
-
                     sd_model_selection.change(
-                        fn=select_checkpoint,
+                        _js='on_sd_model_selection_updated',
+                        fn=None,
                         inputs=sd_model_selection,
                         outputs=[txt2img_model_title, img2img_model_title]
                     )
 
                     sd_model_selection.select(
-                        fn=select_checkpoint,
+                        _js='on_sd_model_selection_updated',
+                        fn=None,
                         inputs=sd_model_selection,
                         outputs=[txt2img_model_title, img2img_model_title]
                     )
@@ -1808,10 +1805,9 @@ def create_ui():
 
         def update_sd_model_selection(request: gr.Request):
             sd_checkpoint_component_args = update_sd_model_selection_args(request)
-            default_model_title = sd_checkpoint_component_args["value"]
-            return gr.update(**sd_checkpoint_component_args), default_model_title, default_model_title
+            return gr.update(**sd_checkpoint_component_args)
         demo.load(
-            fn=update_sd_model_selection, inputs=None, outputs=[sd_model_selection, txt2img_model_title, img2img_model_title])
+            fn=update_sd_model_selection, inputs=None, outputs=sd_model_selection)
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=txt2img_signature)

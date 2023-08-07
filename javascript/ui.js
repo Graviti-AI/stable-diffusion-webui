@@ -993,6 +993,10 @@ function notifyUserTheShareCampaign(userName, avatarUrl) {
     }
 }
 
+function on_sd_model_selection_updated(model_title){
+    return [model_title, model_title]
+}
+
 // get user info
 onUiLoaded(function(){
     setUiPageSize();

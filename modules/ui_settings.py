@@ -320,8 +320,8 @@ class UiSettings:
             ckpt_info = sd_models.get_closet_checkpoint_match(checkpoint_id)
 
             if ckpt_info is not None:
-                return ckpt_info.title, ckpt_info.title, ckpt_info.title
-            return current_checkpoint, current_checkpoint, current_checkpoint
+                return ckpt_info.title
+            return current_checkpoint
 
         button_set_checkpoint.click(
             fn=set_checkpoint_when_click_on_card,

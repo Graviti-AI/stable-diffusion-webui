@@ -100,11 +100,10 @@ def add_style(request: gr.Request, name: str, prompt: str, negative_prompt: str)
 
     style = modules.styles.PromptStyle(name, prompt, negative_prompt)
     prompt_styles = shared.prompt_styles(request)
-    prompt_styles.styles[style.name] = style
+    prompt_styles.save_styles(style)
+
     # Save all loaded prompt styles: this allows us to update the storage format in the future more easily, because we
     # reserialize all styles every time we save them
-    prompt_styles.save_styles(Paths(request).styles_filename())
-
     return [gr.Dropdown.update(visible=True, choices=list(prompt_styles.styles)) for _ in range(2)]
 
 
@@ -1802,6 +1801,11 @@ def create_ui():
         update_image_cfg_scale_visibility = lambda: gr.update(visible=shared.sd_model and shared.sd_model.cond_stage_key == "edit")
         settings.text_settings.change(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
         demo.load(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
+
+        def load_styles(request: gr.Request):
+            choices = {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}
+            return gr.update(**choices), gr.update(**choices)
+        demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, img2img_prompt_styles])
 
         def update_sd_model_selection(request: gr.Request):
             sd_checkpoint_component_args = update_sd_model_selection_args(request)

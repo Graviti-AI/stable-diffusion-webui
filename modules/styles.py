@@ -1,9 +1,12 @@
 import csv
 import os
 import os.path
+import pathlib
 import re
 import typing
 import shutil
+
+from modules.paths_internal import data_path
 
 
 class PromptStyle(typing.NamedTuple):
@@ -67,27 +70,43 @@ def extract_style_from_prompts(style: PromptStyle, prompt, negative_prompt):
     return True, extracted_positive, extracted_negative
 
 
+def _load_styles_from_file(filename):
+    p = pathlib.Path(filename)
+    styles = {}
+    if not p.exists() or p.is_dir():
+        return styles
+    with open(p, "r", encoding="utf-8-sig", newline='') as file:
+        reader = csv.DictReader(file, skipinitialspace=True)
+        for row in reader:
+            # Support loading old CSV format with "name, text"-columns
+            prompt = row["prompt"] if "prompt" in row else row["text"]
+            negative_prompt = row.get("negative_prompt", "")
+            styles[row["name"]] = PromptStyle(row["name"], prompt, negative_prompt)
+    return styles
+
+
 class StyleDatabase:
+    built_in_styles = _load_styles_from_file(pathlib.Path(data_path, 'styles.csv'))
+
     def __init__(self, path: str):
         self.no_style = PromptStyle("None", "", "")
-        self.styles = {}
+        self._user_styles = {}
+        self._styles = {}
         self.path = path
 
         self.reload()
 
+    @property
+    def styles(self):
+        if not self._styles:
+            self._styles.update(self._user_styles)
+            for k, v in self.built_in_styles.items():
+                if k not in self._user_styles:
+                    self._styles[k] = v
+        return self._styles
+
     def reload(self):
-        self.styles.clear()
-
-        if not os.path.exists(self.path):
-            return
-
-        with open(self.path, "r", encoding="utf-8-sig", newline='') as file:
-            reader = csv.DictReader(file, skipinitialspace=True)
-            for row in reader:
-                # Support loading old CSV format with "name, text"-columns
-                prompt = row["prompt"] if "prompt" in row else row["text"]
-                negative_prompt = row.get("negative_prompt", "")
-                self.styles[row["name"]] = PromptStyle(row["name"], prompt, negative_prompt)
+        self._user_styles = _load_styles_from_file(self.path)
 
     def get_style_prompts(self, styles):
         return [self.styles.get(x, self.no_style).prompt for x in styles]
@@ -101,18 +120,19 @@ class StyleDatabase:
     def apply_negative_styles_to_prompt(self, prompt, styles):
         return apply_styles_to_prompt(prompt, [self.styles.get(x, self.no_style).negative_prompt for x in styles])
 
-    def save_styles(self, path: str) -> None:
+    def save_styles(self, style: PromptStyle) -> None:
         # Always keep a backup file around
-        if os.path.exists(path):
-            shutil.copy(path, f"{path}.bak")
-
-        fd = os.open(path, os.O_RDWR | os.O_CREAT)
+        if os.path.exists(self.path):
+            shutil.copy(self.path, f"{self.path}.bak")
+        self._user_styles[style.name] = style
+        fd = os.open(self.path, os.O_RDWR | os.O_CREAT)
         with os.fdopen(fd, "w", encoding="utf-8-sig", newline='') as file:
             # _fields is actually part of the public API: typing.NamedTuple is a replacement for collections.NamedTuple,
             # and collections.NamedTuple has explicit documentation for accessing _fields. Same goes for _asdict()
             writer = csv.DictWriter(file, fieldnames=PromptStyle._fields)
             writer.writeheader()
-            writer.writerows(style._asdict() for k, style in self.styles.items())
+            writer.writerows(style._asdict() for k, style in self._user_styles.items())
+        self._styles = {}
 
     def extract_styles_from_prompt(self, prompt, negative_prompt):
         extracted = []

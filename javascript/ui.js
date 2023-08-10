@@ -1077,6 +1077,11 @@ onUiLoaded(function(){
                     }
 
                     if (result.tier === 'Basic') {
+                        gtag('event', 'conversion', {
+                            'send_to': 'AW-347751974/EiR7CPWfu88YEKaM6aUB',
+                            'value': 12.0,
+                            'currency': 'USD'
+                        });
                         const packageIcon = gradioApp().querySelector('#package');
                         if (packageIcon) {
                             packageIcon.style.display = 'flex';

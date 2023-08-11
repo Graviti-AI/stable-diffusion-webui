@@ -1438,7 +1438,7 @@ textarea {
 .personal-workspace-top-mature select {
     width: 100px;
     border-radius: 5px;
-    height: 30px;
+    height: 40px;
     border: var(--input-border-width) solid var(--input-border-color);
     border-radius: var(--input-radius);
     background: var(--input-background-fill);

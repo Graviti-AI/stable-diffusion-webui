@@ -4,7 +4,7 @@ async function openWorkSpaceDialog(model_type = 'checkpoints') {
     hasInitTabs.set(model_type, true);
     popup(initDomPage(), 'gallery');
     initalTab(model_type);
-    // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: false, model_workspace: 'private'});
+    getPrivateModelList({model_type: model_type, page: 1, loading: false, model_workspace: 'private'});
     getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
     getPublicModelList({init:true, model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
 }
@@ -221,18 +221,37 @@ function initDomPage() {
                     <li><a lycoris href="#public-lycoris">LyCORIS/LoCon</a></li>
                 </ul>
                 <div class="gallery-cards">
+                    <p>Private Models</p>
+                    <div id="private-checkpoints" >
+                        <ul id="private-checkpoints-cards" class="extra-network-cards scrollload-content">
+                        </ul>
+                    </div>
+                    <div id="private-textual_inversion" hidden="hidden">
+                        <ul id="private-textual_inversion-cards" class="extra-network-cards scrollload-content">
+                        </ul>
+                    </div>
+                    <div id="private-hypernetworks" hidden="hidden">
+                        <ul id="private-hypernetworks-cards" class="extra-network-cards scrollload-content">
+                        </ul>
+                    </div>
+                    <div id="private-lora" hidden="hidden">
+                        <ul id="private-lora-cards" class="extra-network-cards scrollload-content">
+                        </ul>
+                    </div>
+                    <div id="private-lycoris" hidden="hidden">
+                        <ul id="private-lycoris-cards" class="extra-network-cards scrollload-content">
+                        </ul>
+                    </div>
                     <p>Public Models</p>
                     <div id="public-checkpoints" >
                         <div class="scrollload-container" model-type="checkpoints" workspace="public">
                             <ul id="public-checkpoints-cards" class="extra-network-cards scrollload-content">
-                               
                             </ul>
                         </div>
                     </div>
                     <div id="public-textual_inversion">
                         <div class="scrollload-container" model-type="textual_inversion" workspace="public">
                             <ul id="public-textual_inversion-cards" class="extra-network-cards scrollload-content">
-                               
                             </ul>
                         </div>
                     </div>
@@ -305,8 +324,8 @@ function setMatureLevel({modelList, globalLevel}) {
 function changeMatureLevel(self) {
     const personalCardList = gradioApp().querySelector(`#personal-${currentModelType}`).querySelectorAll('.card');
     setMatureLevel({modelList: personalCardList, globalLevel: self.value});
-    // const privateCardList = gradioApp().querySelector(`#private-${currentModelType}`).querySelectorAll('.card');
-    // setMatureLevel({ modelList: privateCardList, globalLevel: self.value});
+    const privateCardList = gradioApp().querySelector(`#private-${currentModelType}`).querySelectorAll('.card');
+    setMatureLevel({ modelList: privateCardList, globalLevel: self.value});
     const publicCardList = gradioApp().querySelector(`#public-${currentModelType}`).querySelectorAll('.card');
     setMatureLevel({modelList: publicCardList, globalLevel: self.value});
 }
@@ -326,7 +345,7 @@ function searchPublicModels(event) {
     searchValue = event.target.value.toLowerCase();
     gallertModelCurrentPage[currentModelType] = 1;
     tabSearchValueMap.set(currentModelType, searchValue);
-    // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
+    getPrivateModelList({model_type: currentModelType, page: 1, loading: true, model_workspace: 'private'});
     gallertModelScrollloads = [];
     // must remove load more dom to reinitialize
     removeAllTabScrollBottomDom();
@@ -353,17 +372,29 @@ function debounceSearchModels(func, wait=1000, immediate) {
     }
 }
 
+function togglePrivateModelTab(modelType) {
+    defaultModelType.forEach(typeItem => {
+        const modelCard = gradioApp().querySelector(`#private_${modelType}`)
+        if (typeItem === modelType) {
+            modelCard.removeAttribute('hidden');
+        } else {
+            modelCard.setAttribute('hidden', 'hidden');
+        }
+    })
+}
+
 function tabEventListener (event) {
     const content = event.detail.content;
     const [type, modelType] = content.id.split('-');
     currentModelType = modelType;
     const mapValue = tabSearchValueMap.get(modelType) === undefined ? '' : tabSearchValueMap.get(modelType);
+    console.log(modelType, 1111);
     if (type === 'public') {
         // not refresh data while at other page
         
         if (!hasInitTabs.get(modelType) || ( mapValue !== searchValue)) {
             getPublicModelList({model_type: currentModelType, page: 1, model_workspace: type, refreshTabLock: true})
-            // getPrivateModelList({model_type: currentModelType, page: 1, model_workspace: 'private' })
+            getPrivateModelList({model_type: currentModelType, page: 1, model_workspace: 'private' })
         } else {
             updateLockStatus(modelType);
         }
@@ -375,6 +406,7 @@ function tabEventListener (event) {
         }
         publicTabs.toggle(`#public-${modelType}`);
     }
+    togglePrivateModelTab(modelType);
     tabSearchValueMap.set(modelType, searchValue);
     hasInitTabs.set(modelType, true);
 }
@@ -398,7 +430,7 @@ function initalTab (model_type) {
 }
 
 function refreshModelsGallery() {
-    // getPrivateModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
+    getPrivateModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'private'});
     getPublicModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'public'});
     getPersonalModelList({model_type: 'checkpoints', page: 1, loading: true, model_workspace: 'personal'});
 }
@@ -419,7 +451,8 @@ function initLoadMore(model_type) {
                     }
                     // add page
                     gallertModelCurrentPage[modelType] += 1;
-                    getPublicModelList({model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'public', switchPage: true, sl})
+                    getPublicModelList({model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'public', switchPage: true, sl});
+                    getPrivateModelList({model_type: modelType, page:  gallertModelCurrentPage[modelType], loading: false, model_workspace: 'private', switchPage: true})
                 },
                 isInitLock: index === defaultModelType.findIndex(item => item === model_type) ? false : true,
                 enablePullRefresh: false,

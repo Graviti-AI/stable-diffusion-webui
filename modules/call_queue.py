@@ -10,6 +10,7 @@ import json
 import psutil
 import asyncio
 from datetime import datetime
+from PIL import Image
 
 import gradio.routes
 
@@ -116,7 +117,15 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         shared.state.end()
         if monitor_log_id:
             try:
-                log_message = json.dumps(res)
+                if len(res) > 0 and len(res[0]) > 0 and isinstance(res[0][0], Image.Image):
+                    # First element in res is gallery
+                    image_paths = [item.already_saved_as for item in res[0] if isinstance(item, Image.Image)]
+                    log_message = json.dumps([image_paths] + list(res[1:]))
+                else:
+                    log_message = json.dumps(res)
+            except Exception as e:
+                log_message = f'Fail to json serialize results: {str(e)}'
+            try:
                 modules.system_monitor.on_task_finished(request, monitor_log_id, status, log_message, time_consumption)
             except Exception as e:
                 logging.warning(f'send task finished event to monitor failed: {str(e)}')

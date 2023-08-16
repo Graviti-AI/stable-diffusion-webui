@@ -50,6 +50,14 @@ const defaultModelType = ['checkpoints', 'textual_inversion', 'hypernetworks', '
 let searchValue = '';
 let tabSearchValueMap = new Map();
 const isPcScreen = window.innerWidth > 600;
+let userTier = 'Free';
+const tierLevels = {
+    'free': 0,
+    'basic': 1,
+    'plus': 2,
+    'pro': 3,
+    'api': 4
+}
 
 let connectNewModelApi = true;
 function testApi() {

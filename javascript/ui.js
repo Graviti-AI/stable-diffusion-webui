@@ -1051,6 +1051,7 @@ onUiLoaded(function(){
                 const userContent = gradioApp().querySelector(".user-content");
                 const userInfo = userContent.querySelector(".user_info");
                 if (userInfo) {
+                    userTier = result.tier;
                     userInfo.style.display = 'flex';
                     const img = userInfo.querySelector("a > img");
                     if (img) {

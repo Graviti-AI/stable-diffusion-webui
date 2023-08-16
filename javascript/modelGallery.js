@@ -4,9 +4,18 @@ async function openWorkSpaceDialog(model_type = 'checkpoints') {
     hasInitTabs.set(model_type, true);
     popup(initDomPage(), 'gallery');
     initalTab(model_type);
+    // above Plus user can use private models
+    if (!judgeUserTierLevel()) {
+        gradioApp().querySelector('#private-checkpoints').setAttribute('hidden', 'hidden');
+        gradioApp().querySelector('#private-model-title').setAttribute('hidden', 'hidden');
+    }
     getPrivateModelList({model_type: model_type, page: 1, loading: false, model_workspace: 'private'});
     getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
     getPublicModelList({init:true, model_type: model_type, page: 1, loading: true, model_workspace: 'public'});
+}
+
+function judgeUserTierLevel() {
+    return tierLevels[userTier.toLocaleLowerCase()] >= tierLevels['plus']
 }
 
 function resetParams() {
@@ -50,10 +59,13 @@ function resetParams() {
 }
 
 function getPrivateModelList({ model_type, page, loading, model_workspace, switchPage }) {
-    const requestUrl = connectNewModelApi ? `/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
-        : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
-    const promise = fetchGet(requestUrl);
-    getModelGalleryPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage});
+    // above Plus user can use private models
+    if (judgeUserTierLevel()) {
+        const requestUrl = connectNewModelApi ? `/internal/private_models?model_type=${model_type_mapper[model_type]}&search_value=${searchValue}&page=${page}&page_size=${pageSize}` 
+            : `/sd_extra_networks/models?page_name=${model_type}&page=${page}&search_value=${searchValue}&page_size=${pageSize}&need_refresh=false`;
+        const promise = fetchGet(requestUrl);
+        getModelGalleryPageDataAndUpdateList({ model_type, page, loading, model_workspace, promise, switchPage});
+    }
 }
 
 async function  getPublicModelList({ init, model_type, page, loading, model_workspace, switchPage, sl, refreshTabLock }) {
@@ -221,7 +233,7 @@ function initDomPage() {
                     <li><a lycoris href="#public-lycoris">LyCORIS/LoCon</a></li>
                 </ul>
                 <div class="gallery-cards">
-                    <p>Private Models</p>
+                    <p id="private-model-title">Private Models</p>
                     <div id="private-checkpoints" >
                         <ul id="private-checkpoints-cards" class="extra-network-cards scrollload-content">
                         </ul>
@@ -374,11 +386,13 @@ function debounceSearchModels(func, wait=1000, immediate) {
 
 function togglePrivateModelTab(modelType) {
     defaultModelType.forEach(typeItem => {
-        const modelCard = gradioApp().querySelector(`#private_${modelType}`)
-        if (typeItem === modelType) {
-            modelCard.removeAttribute('hidden');
-        } else {
-            modelCard.setAttribute('hidden', 'hidden');
+        const modelCard = gradioApp().querySelector(`#private-${typeItem}`)
+        if (modelCard) {
+            if (typeItem === modelType) {
+                modelCard.removeAttribute('hidden');
+            } else {
+                modelCard.setAttribute('hidden', 'hidden');
+            }
         }
     })
 }
@@ -388,10 +402,8 @@ function tabEventListener (event) {
     const [type, modelType] = content.id.split('-');
     currentModelType = modelType;
     const mapValue = tabSearchValueMap.get(modelType) === undefined ? '' : tabSearchValueMap.get(modelType);
-    console.log(modelType, 1111);
     if (type === 'public') {
         // not refresh data while at other page
-        
         if (!hasInitTabs.get(modelType) || ( mapValue !== searchValue)) {
             getPublicModelList({model_type: currentModelType, page: 1, model_workspace: type, refreshTabLock: true})
             getPrivateModelList({model_type: currentModelType, page: 1, model_workspace: 'private' })
@@ -406,7 +418,11 @@ function tabEventListener (event) {
         }
         publicTabs.toggle(`#public-${modelType}`);
     }
-    togglePrivateModelTab(modelType);
+
+    if (judgeUserTierLevel()) {
+        togglePrivateModelTab(modelType);
+    }
+    
     tabSearchValueMap.set(modelType, searchValue);
     hasInitTabs.set(modelType, true);
 }

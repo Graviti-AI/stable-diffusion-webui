@@ -8,6 +8,7 @@ async function openWorkSpaceDialog(model_type = 'checkpoints') {
     if (!judgeUserTierLevel()) {
         gradioApp().querySelector('#private-checkpoints').setAttribute('hidden', 'hidden');
         gradioApp().querySelector('#private-model-title').setAttribute('hidden', 'hidden');
+        gradioApp().querySelector('#upload-private-model-btn').setAttribute('hidden', 'hidden');
     }
     getPrivateModelList({model_type: model_type, page: 1, loading: false, model_workspace: 'private'});
     getPersonalModelList({model_type: model_type, page: 1, loading: true, model_workspace: 'personal'});
@@ -109,7 +110,7 @@ async function handleModelData({init, response, model_type, model_workspace, swi
             <li class="card"
                 id="${model_workspace}_${model_type}_upload_button-card" 
                 style="display: block; white-space: nowrap; text-align: center; background-image: none; background-color: rgba(171, 176, 177, 0.4);" 
-                onclick="uploadModel()" 
+                onclick="${model_workspace === 'private' ? 'uploadPrivateModel()' : 'uploadModel()'}" 
                 model_type="${model_type}" 
                 uppy_dashboard_title="${model_type} files only. ( < 5 MB)" 
                 max_model_size_mb="5">
@@ -220,6 +221,7 @@ function initDomPage() {
             <div class="public-workspace-top">
                 <input id="gallery-search" class="scroll-hide search" placeholder="Search with model names, hashes, tags, trigger words"></input>
                 <div class="search-btn"><button class="upload-btn" onclick="uploadModel()">Upload Models</button></div>
+                <div class="search-btn"><button id="upload-private-model-btn" class="upload-btn" onclick="uploadPrivateModel()">Upload Private Models</button></div>
             </div>
             <div class="public-workspace-title">
                 <span>Model Gallery</span>
@@ -344,6 +346,9 @@ function changeMatureLevel(self) {
 
 function uploadModel() {
     gradioApp().querySelector(`#${currentModelTab}_${currentModelType}_upload_button-card`).click();
+}
+function uploadPrivateModel() {
+    gradioApp().querySelector(`#${currentModelTab}_${currentModelType}_upload_button-card-private`).click();
 }
 
 function removeAllTabScrollBottomDom() {

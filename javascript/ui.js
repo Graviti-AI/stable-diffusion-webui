@@ -1012,6 +1012,110 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
+function check_tab(tabName, tabContainerId, element) {
+  let switchBackToText2img = () => {
+    Array.from(gradioApp().querySelectorAll("#tabs > div.tab-nav > button"))
+      .find(el => el.textContent.includes("txt2img")).click();
+  };
+  let onOk = () => {
+    switchBackToText2img();
+    element.setAttribute("data-uprade-notifier", "");
+    window.location.href = "/user#/subscription?type=subscription";
+  };
+  let onCancel = () => {
+    switchBackToText2img();
+    element.setAttribute("data-uprade-notifier", "");
+  }
+  return remind_user_friendly(tabName, onOk, onCancel, element);
+}
+
+function check_feature(featureName, featureContainerId, element) {
+  let closeAccordin = () => {
+    let labelWrapper = Array.from(element.querySelectorAll(".gradio-accordion > .label-wrap > span"))
+      .find(el => el.textContent.includes(featureName));
+    if (labelWrapper.nextElementSibling.textContent.includes("▼")) {
+      labelWrapper.click();
+    }
+  };
+  let onOk = () => {
+    closeAccordin();
+    element.setAttribute("data-uprade-notifier", "");
+    window.location.href = "/user#/subscription?type=subscription";
+  };
+  let onCancel = () => {
+    closeAccordin();
+    element.setAttribute("data-uprade-notifier", "");
+  }
+  return remind_user_friendly(featureName, onOk, onCancel, element);
+}
+
+function remind_user_friendly(name, onOk, onCancel, element) {
+  let reminder_function = (event) => {
+    event.stopPropagation();
+    const notified = element.getAttribute("data-uprade-notifier");
+    if (!notified) {
+      notifier.confirm(
+        `${name} is not available in the current plan. Click the button to upgrade to enjoy these features.`,
+        onOk,
+        onCancel,
+        {
+          labels: {
+            confirm: 'Upgrade Now',
+            confirmOk: 'Upgrade'
+          }
+        }
+      );
+      element.setAttribute("data-uprade-notifier", true);
+    }
+  };
+  return reminder_function;
+}
+
+function add_event_listener_to_tabs_and_features(options) {
+  options.not_allowed_tabs.forEach((tabInfo) => {
+    const tabContainer = gradioApp().querySelector(`#${tabInfo.element_id}`);
+    if (tabContainer) {
+      tabContainer.addEventListener("click", check_tab(tabInfo.tab_text, tabInfo.element_id, tabContainer));
+    }
+  });
+  let buttonContainer = gradioApp().querySelector(".tab-nav");
+  buttonContainer.addEventListener("click", (event) => {
+    let target = event.target;
+    options.not_allowed_tabs.forEach((tabInfo) => {
+      if (target.textContent.includes(tabInfo.tab_text)) {
+        let action = check_tab(tabInfo.tab_text, tabInfo.element_id, target);
+        action(event);
+      }
+    });
+  });
+  options.not_allowed_features.forEach((featureInfo) => {
+    let featureContainers;
+    if (featureInfo.element_id == "script_list") {
+      const scriptLists = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
+      scriptLists.forEach((scriptList) => {
+        let onOk = () => {
+          scriptList.setAttribute("data-uprade-notifier", "");
+          window.location.href = "/user#/subscription?type=subscription";
+        };
+        let onCancel = () => {
+          scriptList.setAttribute("data-uprade-notifier", "");
+        }
+        scriptList.addEventListener("click", remind_user_friendly(featureInfo.label_name, onOk, onCancel, scriptList));
+      });
+    } else if (featureInfo.element_id) {
+      featureContainers = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
+    } else {
+      featureContainers = Array.from(gradioApp().querySelectorAll(".gradio-group > .gradio-accordion > .label-wrap > span"))
+        .filter(el => el.textContent.includes(featureInfo.label_name)).map(el => el.parentElement.parentElement);
+    }
+    if (featureContainers) {
+      featureContainers.forEach((featureContainer) => {
+        featureContainer.addEventListener("click", check_feature(featureInfo.label_name, featureInfo.element_id, featureContainer));
+      });
+    }
+  });
+}
+
 // get user info
 onUiLoaded(function(){
     setUiPageSize();
@@ -1087,6 +1191,9 @@ onUiLoaded(function(){
                             spanNode.textContent = isPcScreen ? 'Credits Package' : '';
                         }
                     }
+                }
+                if (result.access) {
+                  add_event_listener_to_tabs_and_features(result.access);
                 }
         }
     })

@@ -360,6 +360,7 @@ async function handleData({response, tabname, model_type }) {
     const currentPageNode = gradioApp().querySelector(`#${tabname}_${model_type}_pagination_row .current-page`);
     const addModelBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_add_model-to-workspace`);
     const uploadBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card`);
+    const uploadPrivateBtnNode = cardsParentNode.querySelector(`#${tabname}_${model_type}_upload_button-card-private`);
     const currentPage = currentPageForTabs.get(currentPageTabsId) || 1;
 
     const { model_list, page: resPage, total_count: totalCount, allow_negative_prompt = false } = await response.json();
@@ -376,7 +377,11 @@ async function handleData({response, tabname, model_type }) {
     const cards = cardsParentNode.querySelectorAll(".card");
     cards.forEach(card => {
         // exclude upload button
-        if(card.id !== uploadBtnNode.id && card.id !== addModelBtnNode.id) {
+        if (
+            card.id !== uploadBtnNode.id &&
+            card.id !== addModelBtnNode.id &&
+            card.id !== uploadPrivateBtnNode.id
+        ) {
             cardsParentNode.removeChild(card);
         }
     })

@@ -1,12 +1,16 @@
 import inspect
 import os
+import logging
 from collections import namedtuple
 from typing import Optional, Dict, Any
 
 from fastapi import FastAPI
 from gradio import Blocks
+import gradio as gr
 
 from modules import errors, timer
+
+logger = logging.getLogger(__name__)
 
 
 def report_exception(c, job):
@@ -114,7 +118,8 @@ callback_map = dict(
     callbacks_list_unets=[],
     callbacks_state_updated=[],
 )
-
+script_interfaces = dict()
+page_load_callbacks = dict()
 
 def clear_callbacks():
     for callback_list in callback_map.values():
@@ -148,11 +153,18 @@ def model_loaded_callback(sd_model):
 
 
 def ui_tabs_callback():
+    global script_interfaces
     res = []
 
     for c in callback_map['callbacks_ui_tabs']:
         try:
-            res += c.callback() or []
+            interfaces = c.callback()
+            for interface in interfaces:
+                if interface:
+                    if interface[-1] in script_interfaces:
+                        logger.warning(f"Interface {interface[-1]} is already registered")
+                    script_interfaces[interface[-1]] = interface
+            res += interfaces or []
         except Exception:
             report_exception(c, 'ui_tabs_callback')
 
@@ -292,7 +304,27 @@ def state_updated_callback(state):
         try:
             c.callback(state)
         except Exception:
-            report_exception(c, 'list_unets')
+            report_exception(c, 'state_updated')
+
+
+def page_load_callback_factory(interface_list: list[tuple[str, int, int, Blocks]]):
+    def page_load_callback(request: gr.Request, *args):
+        output = list(args)
+        for interface_name, start_index, end_index, interface in interface_list:
+            if interface_name in page_load_callbacks:
+                if len(page_load_callbacks[interface_name]) > 1:
+                    raise ValueError(f"Interface {interface_name} has more than one page load callback")
+                try:
+                    interface_outputs: list = page_load_callbacks[interface_name][0].callback(
+                        request, interface, *args[start_index:end_index])
+                    if len(interface_outputs) != (end_index - start_index):
+                        raise ValueError(f"Page load callback of {interface_name} does not have the same number of outputs as input args")
+                    for idx, item in enumerate(interface_outputs):
+                        output[start_index + idx] = item
+                except Exception:
+                    report_exception(page_load_callbacks[interface_name][0], 'page_load')
+        return output
+    return page_load_callback
 
 
 def add_callback(callbacks, fun):
@@ -470,3 +502,20 @@ def on_state_updated(callback):
     """
 
     add_callback(callback_map['callbacks_state_updated'], callback)
+
+
+def on_page_load(interface_name: str, callback):
+    """register a function to be called in "demo.load", which could be used to initialize the components in the interfaces.
+    Each interface can only has only one callback, since it will only be updated once for each page load for a user.
+    The callback is called with:
+        - gr.Request
+        - gr.Blocks
+        - *components
+    The return value should be either the updated components or gr.update
+    """
+    global page_load_callbacks
+
+    if interface_name in page_load_callbacks:
+        raise ValueError(f"Interface {interface_name} already has a page load callback")
+    page_load_callbacks[interface_name] = []
+    add_callback(page_load_callbacks[interface_name], callback)

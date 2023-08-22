@@ -516,6 +516,7 @@ img2img_signature_args: list = list()
 img2img_suffix_outputs: list = list()
 img2img_params_default_values: list = list()
 img2img_function_index: int | None = None
+interface_function_indicies: dict[str, dict] = dict()
 
 
 def create_ui():
@@ -1833,6 +1834,37 @@ def create_ui():
         demo.load(
             fn=lambda: img2img_function_index, inputs=None, outputs=img2img_fn_index_component)
 
+        # build elements for script page load callbback
+        interface_list = []
+        interface_components = []
+        global interface_function_indicies
+        for interface_name in script_callbacks.script_interfaces:
+            interface_arg_start_index = len(interface_components)
+            for component_index in script_callbacks.script_interfaces[interface_name][0].blocks:
+                interface_component = script_callbacks.script_interfaces[interface_name][0].blocks[component_index]
+                if isinstance(interface_component, gr.components.IOComponent):
+                    interface_components.append(interface_component)
+            interfce_arg_end_index = len(interface_components)
+            interface_list.append(
+                (interface_name,
+                 interface_arg_start_index,
+                 interfce_arg_end_index,
+                 script_callbacks.script_interfaces[interface_name][0]))
+            interface_function_indicies[interface_name] = {
+                "interface_title": script_callbacks.script_interfaces[interface_name][1],
+                "interface_name": script_callbacks.script_interfaces[interface_name][2],
+                "interface_fn_indicies": [],
+            }
+            for script_fn in script_callbacks.script_interfaces[interface_name][0].fns:
+                for demo_block_function_idx, demo_block_function in enumerate(demo.fns):
+                    if demo_block_function == script_fn:
+                        interface_function_indicies[interface_name]["interface_fn_indicies"].append(demo_block_function_idx)
+                        break
+
+        demo.load(
+            fn=script_callbacks.page_load_callback_factory(interface_list), inputs=interface_components, outputs=interface_components)
+
+
         def modelmerger(request: gradio.routes.Request, *args):
             import modules.call_utils
             modules.call_utils.check_insecure_calls()
@@ -1969,4 +2001,8 @@ def setup_ui_api(app):
             fn_index=img2img_function_index,
             output_placeholders=img2img_suffix_outputs
         ),
+        methods=["GET"])
+    app.add_api_route(
+        "/internal/scripts/function_index",
+        lambda: interface_function_indicies,
         methods=["GET"])

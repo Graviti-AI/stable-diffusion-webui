@@ -1007,7 +1007,7 @@ function notifyUserTheShareCampaign(userName, avatarUrl) {
                     }
                     document.body.appendChild(new_script);
                 }
-                window.Cookies.set("_1000by1000showed", true);
+                window.Cookies.set("_1000by1000showed", true, { expires: 28 });
             }
         })
         .catch((error) => {

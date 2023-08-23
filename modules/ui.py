@@ -6,6 +6,7 @@ import sys
 from functools import reduce
 import warnings
 import inspect
+from typing import Optional, List, Callable
 
 import gradio as gr
 import gradio.utils
@@ -459,20 +460,21 @@ def create_override_settings_dropdown(tabname, row):
 
 
 def build_function_signature(
-        func: callable,
-        alwayson_scripts: list[modules.scripts.Script],
-        selectable_scripts: list[modules.scripts.Script],
-        extras: list = None,
+        func: Callable,
+        scripts: modules.scripts.ScriptRunner,
+        extras: Optional[list] = None,
         start_from: int = 0):
     signature_args = inspect.getfullargspec(func)[0][start_from:]  # remove the first 'request'
     default_length = len(signature_args)
     default_values = list()
+    alwayson_scripts: list[modules.scripts.Script] = scripts.alwayson_scripts
+    selectable_scripts: list[modules.scripts.Script] = scripts.selectable_scripts
     for extension_script in alwayson_scripts + selectable_scripts:
-        extension_name = extension_script.name
+        extension_name = extension_script.title()
         if extension_name is None:
             script_name_concat = extension_script.filename
         else:
-            script_name_concat = "_".join(extension_script.name.lower().split())
+            script_name_concat = extension_name
         index_start = extension_script.args_from
         index_end = extension_script.args_to
         if index_start is None or index_end is None:
@@ -483,13 +485,18 @@ def build_function_signature(
             default_values += ["" for _ in range(default_length + index_end - len(default_values))]
         if extension_script.api_info is not None:
             for idx, each_arg in enumerate(extension_script.api_info.args):
-                each_arg_label = f"{script_name_concat}:{each_arg.label}"
+                arg_elem_id = ""
+                if isinstance(scripts.inputs[index_start + idx], gr.components.IOComponent):
+                    arg_elem_id = scripts.inputs[index_start + idx].elem_id
+                    if arg_elem_id is None:
+                        arg_elem_id = ""
+                each_arg_label = f"{script_name_concat}:{each_arg.label}:{arg_elem_id}"
                 signature_args[default_length + index_start + idx] = each_arg_label
                 default_values[default_length + index_start + idx] = each_arg.value
-    if extras is not None:
+    if extras:
         signature_args += extras
         default_values += ["" for _ in range(len(extras))]
-    signature_args[default_length] = "Script:script_list"
+    signature_args[default_length] = "Script:script_list:"
     return signature_args, default_values
 
 
@@ -658,8 +665,7 @@ def create_ui():
             global txt2img_params_default_values
             txt2img_signature_args, txt2img_params_default_values = build_function_signature(
                 modules.txt2img.txt2img,
-                modules.scripts.scripts_txt2img.alwayson_scripts,
-                modules.scripts.scripts_txt2img.selectable_scripts,
+                modules.scripts.scripts_txt2img,
                 extras=["model_title", "vae_title"],
                 start_from=1)  # Start from 1 to remove request
             txt2img_args = dict(
@@ -1060,8 +1066,7 @@ def create_ui():
             global img2img_params_default_values
             img2img_signature_args, img2img_params_default_values = build_function_signature(
                 modules.img2img.img2img,
-                modules.scripts.scripts_img2img.alwayson_scripts,
-                modules.scripts.scripts_img2img.selectable_scripts,
+                modules.scripts.scripts_img2img,
                 extras=["model_title", "vae_title"],
                 start_from=1)  # Start from 1 to remove request
             img2img_args = dict(
@@ -1950,7 +1955,6 @@ checkpoint: <a id="sd_checkpoint_hash">N/A</a>
 
 def setup_ui_api(app):
     from pydantic import BaseModel, Field
-    from typing import List
 
     class QuicksettingsHint(BaseModel):
         name: str = Field(title="Name of the quicksettings field")

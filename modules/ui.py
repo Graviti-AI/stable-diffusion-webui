@@ -489,6 +489,7 @@ def build_function_signature(
     if extras is not None:
         signature_args += extras
         default_values += ["" for _ in range(len(extras))]
+    signature_args[default_length] = "Script:script_list"
     return signature_args, default_values
 
 

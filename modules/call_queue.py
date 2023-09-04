@@ -16,7 +16,7 @@ from PIL import Image
 import gradio.routes
 
 import modules.system_monitor
-from modules.system_monitor import MonitorException
+from modules.system_monitor import MonitorException, monitor_call_context, generate_function_name
 from modules import shared, progress, errors, script_callbacks
 
 from modules import sd_vae
@@ -227,11 +227,18 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         logger.info(f"task({task_id}) begin memory: {task_start_system_memory:.2f} GB")
 
         try:
-            if add_monitor_state:
-                res, monitor_state = func(request, *args, **kwargs)
-                res = list(res)
-            else:
-                res = list(func(request, *args, **kwargs))
+            with monitor_call_context(
+                    request,
+                    generate_function_name(func),
+                    generate_function_name(func),
+                    task_id,
+                    is_intermediate=False) as result_encoder:
+                if add_monitor_state:
+                    res, monitor_state = func(request, *args, **kwargs)
+                    res = list(res)
+                else:
+                    res = list(func(request, *args, **kwargs))
+                result_encoder(res)
         except Exception as e:
             # When printing out our debug argument list, do not print out more than a MB of text
             max_debug_str_len = 131072  # (1024*1024)/8

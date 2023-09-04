@@ -5,6 +5,8 @@ import ldm.models.diffusion.plms
 import numpy as np
 import torch
 
+import gradio as gr
+
 from modules.shared import state
 from modules import sd_samplers_common, prompt_parser, shared
 import modules.models.diffusion.uni_pc
@@ -39,6 +41,13 @@ class VanillaStableDiffusionSampler:
         self.last_latent = None
 
         self.conditioning_key = sd_model.model.conditioning_key
+        self._request = None
+
+    def set_request(self, request: gr.Request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
 
     def number_of_needed_noises(self, p):
         return 0

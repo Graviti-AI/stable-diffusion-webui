@@ -1026,6 +1026,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
 
     def sample(self, conditioning, unconditional_conditioning, seeds, subseeds, subseed_strength, prompts):
         self.sampler = sd_samplers.create_sampler(self.sampler_name, self.sd_model)
+        self.sampler.set_request(self.get_request())
 
         latent_scale_mode = shared.latent_upscale_modes.get(self.hr_upscaler, None) if self.hr_upscaler is not None else shared.latent_upscale_modes.get(shared.latent_upscale_default_mode, "nearest")
         if self.enable_hr and latent_scale_mode is None:
@@ -1100,6 +1101,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
             img2img_sampler_name = 'DDIM'
 
         self.sampler = sd_samplers.create_sampler(img2img_sampler_name, self.sd_model)
+        self.sampler.set_request(self.get_request())
 
         samples = samples[:, :, self.truncate_y//2:samples.shape[2]-(self.truncate_y+1)//2, self.truncate_x//2:samples.shape[3]-(self.truncate_x+1)//2]
 
@@ -1230,6 +1232,7 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
 
     def init(self, all_prompts, all_seeds, all_subseeds):
         self.sampler = sd_samplers.create_sampler(self.sampler_name, self.sd_model)
+        self.sampler.set_request(self.get_request())
         crop_region = None
 
         image_mask = self.image_mask

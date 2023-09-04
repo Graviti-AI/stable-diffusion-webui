@@ -2,6 +2,9 @@ from collections import deque
 import torch
 import inspect
 import k_diffusion.sampling
+
+import gradio as gr
+
 from modules import prompt_parser, devices, sd_samplers_common
 
 from modules.shared import opts, state
@@ -349,6 +352,13 @@ class KDiffusionSampler:
         self.s_min_uncond = None
 
         self.conditioning_key = sd_model.model.conditioning_key
+        self._request = None
+
+    def set_request(self, request: gr.Request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
 
     def callback_state(self, d):
         step = d['i']

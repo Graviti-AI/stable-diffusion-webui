@@ -167,10 +167,6 @@ function submit() {
 
     res[0] = id;
 
-    if (typeof posthog === 'object') {
-      posthog.capture('txt2img generation button clicked');
-    }
-
     return res;
 }
 
@@ -190,10 +186,6 @@ function submit_img2img() {
 
     res[0] = id;
     res[1] = get_tab_index('mode_img2img');
-
-    if (typeof posthog === 'object') {
-      posthog.capture('img2img generation button clicked');
-    }
 
     return res;
 }

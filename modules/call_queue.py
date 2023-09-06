@@ -98,19 +98,19 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         status = 'finished'
         task_failed = False
     except MonitorException as e:
-        logger.error(f'task {id_task} failed: {e.__str__()}')
+        logger.exception(f'task {id_task} failed: {e.__str__()}')
         res = extra_outputs_array + [str(e)]
         if add_monitor_state:
             return res, e.status_code == 402
         return res
     except Exception as e:
-        logger.error(f'task {id_task} failed: {e.__str__()}')
+        logger.exception(f'task {id_task} failed: {e.__str__()}')
         if isinstance(e, MonitorException):
             task_failed = False
         status = 'failed'
         traceback.print_tb(e.__traceback__, file=sys.stderr)
         print(e, file=sys.stderr)
-        error_message = f'{type(e).__name__}: {e}'
+        error_message = f'{id_task}: {type(e).__name__}: {e}'
         res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
     finally:
         progress.finish_task(id_task, task_failed)

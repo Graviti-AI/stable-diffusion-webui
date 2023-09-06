@@ -11,7 +11,12 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules import images, sd_samplers, processing, sd_models, sd_vae, sd_samplers_kdiffusion
-from modules.processing import process_images, Processed, StableDiffusionProcessingTxt2Img
+from modules.processing import (
+    process_images,
+    Processed,
+    StableDiffusionProcessingTxt2Img,
+    build_decoded_params_from_processing,
+    get_function_name_from_processing)
 from modules.shared import opts, state
 import modules.shared as shared
 import modules.sd_samplers
@@ -20,6 +25,7 @@ import modules.sd_vae
 import re
 
 from modules.ui_components import ToolButton
+from modules.system_monitor import monitor_call_context
 
 fill_values_symbol = "\U0001f4d2"  # 📒
 
@@ -648,7 +654,12 @@ class Script(scripts.Script):
             y_opt.apply(pc, y, ys)
             z_opt.apply(pc, z, zs)
 
-            res = process_images(pc)
+            with monitor_call_context(
+                    p.get_request(),
+                    get_function_name_from_processing(p),
+                    "script.xyz_grid.cell",
+                    decoded_params=build_decoded_params_from_processing(pc)):
+                res = process_images(pc)
 
             # Sets subgrid infotexts
             subgrid_index = 1 + iz
@@ -721,7 +732,7 @@ class Script(scripts.Script):
             for g in range(grid_count):
                 #TODO: See previous comment about intentional data misalignment.
                 adj_g = g-1 if g > 0 else g
-                images.save_image(processed.images[g], p.outpath_grids, "xyz_grid", info=processed.infotexts[g], extension=opts.grid_format, prompt=processed.all_prompts[adj_g], seed=processed.all_seeds[adj_g], grid=True, p=processed)
+                images.save_image(processed.images[g], p.outpath_grids, "xyz_grid", info=processed.infotexts[g], extension=opts.grid_format, prompt=processed.all_prompts[adj_g], seed=processed.all_seeds[adj_g], grid=True, p=p)
 
         if not include_sub_grids:
             # Done with sub-grids, drop all related information:

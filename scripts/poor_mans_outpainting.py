@@ -5,8 +5,9 @@ import gradio as gr
 from PIL import Image, ImageDraw
 
 from modules import images, devices
-from modules.processing import Processed, process_images
+from modules.processing import Processed, process_images, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import opts, state
+from modules.system_monitor import monitor_call_context
 
 
 class Script(scripts.Script):
@@ -114,7 +115,12 @@ class Script(scripts.Script):
             p.latent_mask = work_latent_mask[i]
 
             state.job = f"Batch {i + 1} out of {batch_count}"
-            processed = process_images(p)
+            with monitor_call_context(
+                    p.get_request(),
+                    get_function_name_from_processing(p),
+                    "script.poor_mans_outpainting.batch",
+                    decoded_params=build_decoded_params_from_processing(p)):
+                processed = process_images(p)
 
             if initial_seed is None:
                 initial_seed = processed.seed

@@ -1375,3 +1375,33 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
 
     def get_token_merging_ratio(self, for_hr=False):
         return self.token_merging_ratio or ("token_merging_ratio" in self.override_settings and opts.token_merging_ratio) or opts.token_merging_ratio_img2img or opts.token_merging_ratio
+
+
+def build_decoded_params_from_processing(p: StableDiffusionProcessing) -> dict:
+    decoded_params = {}
+    if isinstance(p, StableDiffusionProcessing):
+        decoded_params = {
+            'steps': p.steps,
+            'restore_faces': p.restore_faces,
+            'n_iter': p.n_iter,
+            'batch_size': p.batch_size,
+            "width": p.width,
+            "height": p.height,
+        }
+    if isinstance(p, StableDiffusionProcessingTxt2Img):
+        decoded_params.update({
+            'enable_hr': p.enable_hr,
+            'hr_scale': p.hr_scale,
+            'hr_second_pass_steps': p.hr_second_pass_steps,
+            'hr_resize_x': p.hr_resize_x,
+            'hr_resize_y': p.hr_resize_y,
+        })
+    return decoded_params
+
+
+def get_function_name_from_processing(p: StableDiffusionProcessing) -> str:
+    if isinstance(p, StableDiffusionProcessingTxt2Img):
+        return "modules.txt2img.txt2img"
+    if isinstance(p, StableDiffusionProcessingImg2Img):
+        return "modules.img2img.img2img"
+    return "modules.txt2img.txt2img"

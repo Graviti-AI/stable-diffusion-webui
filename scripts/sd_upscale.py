@@ -5,8 +5,9 @@ import gradio as gr
 from PIL import Image
 
 from modules import processing, shared, images, devices
-from modules.processing import Processed
+from modules.processing import Processed, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import opts, state
+from modules.system_monitor import monitor_call_context
 
 
 class Script(scripts.Script):
@@ -76,7 +77,12 @@ class Script(scripts.Script):
                 p.init_images = work[i * batch_size:(i + 1) * batch_size]
 
                 state.job = f"Batch {i + 1 + n * batch_count} out of {state.job_count}"
-                processed = processing.process_images(p)
+                with monitor_call_context(
+                        p.get_request(),
+                        get_function_name_from_processing(p),
+                        "script.sd_upscale.step",
+                        decoded_params=build_decoded_params_from_processing(p)):
+                    processed = processing.process_images(p)
 
                 if initial_info is None:
                     initial_info = processed.info

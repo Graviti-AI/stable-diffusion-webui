@@ -6,8 +6,9 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules import sd_samplers, errors
-from modules.processing import Processed, process_images
+from modules.processing import Processed, process_images, build_decoded_params_from_processing, get_function_name_from_processing
 from modules.shared import state
+from modules.system_monitor import monitor_call_context
 
 
 def process_string_tag(tag):
@@ -28,8 +29,8 @@ def process_boolean_tag(tag):
 
 prompt_tags = {
     "sd_model": None,
-    "outpath_samples": process_string_tag,
-    "outpath_grids": process_string_tag,
+    #"outpath_samples": process_string_tag,
+    #"outpath_grids": process_string_tag,
     "prompt_for_display": process_string_tag,
     "prompt": process_string_tag,
     "negative_prompt": process_string_tag,
@@ -158,8 +159,13 @@ class Script(scripts.Script):
             for k, v in args.items():
                 setattr(copy_p, k, v)
 
-            proc = process_images(copy_p)
-            images += proc.images
+            with monitor_call_context(
+                    p.get_request(),
+                    get_function_name_from_processing(copy_p),
+                    "script.prompts_from_file.line",
+                    decoded_params=build_decoded_params_from_processing(copy_p)):
+                proc = process_images(copy_p)
+                images += proc.images
 
             if checkbox_iterate:
                 p.seed = p.seed + (p.batch_size * p.n_iter)

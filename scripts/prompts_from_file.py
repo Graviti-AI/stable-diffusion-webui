@@ -119,6 +119,58 @@ class Script(scripts.Script):
         # We don't shrink back to 1, because that causes the control to ignore [enter], and it may
         # be unclear to the user that shift-enter is needed.
         prompt_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2), inputs=[prompt_txt], outputs=[prompt_txt], show_progress=False)
+
+        explanation = gr.HTML(value="""
+        <div id="script_prompts_from_file_rules">
+        <h1>Instructions</h1>
+
+        <p>You can either upload a text file or write in the textbox provided. Each line will be treated as a command for generating a image. The commands should follow the Unix shell format.</p>
+
+        <p>If the line does not start with <code>--</code>, it will be treated as a prompt. If it does start with <code>--</code>, it should be followed by a parameter and its corresponding value.</p>
+
+        <p>If the value has white spaces in it, it should use quotes("") at the both end of the value.</p>
+
+        <h2>Supported Parameters</h2>
+
+        <p>Here are the supported parameters and their expected values:</p>
+
+        <ul>
+            <li><code>--prompt</code>: String value. The prompt to process.</li>
+            <li><code>--negative_prompt</code>: String value. The negative prompt to process.</li>
+            <li><code>--styles</code>: String value. The styles to apply. Has to define it first.</li>
+            <li><code>--seed</code>: Integer value. The seed for the random number generator. -1 mean random.</li>
+            <li><code>--subseed_strength</code>: Float value. The strength of the subseed.</li>
+            <li><code>--subseed</code>: Integer value. The subseed for the random number generator.</li>
+            <li><code>--seed_resize_from_h</code>: Integer value. The height from which the seed should be resized.</li>
+            <li><code>--seed_resize_from_w</code>: Integer value. The width from which the seed should be resized.</li>
+            <li><code>--sampler_name</code>: String value. The name of the sampler to use. You probably need to have quotes("") about the value.</li>
+            <li><code>--batch_size</code>: Integer value. The size of the batch to process.</li>
+            <li><code>--n_iter</code>: Integer value. The number of iterations to process.</li>
+            <li><code>--steps</code>: Integer value. The number of steps to process.</li>
+            <li><code>--cfg_scale</code>: Float value. The cfg scale.</li>
+            <li><code>--width</code>: Integer value. The width of the output image.</li>
+            <li><code>--height</code>: Integer value. The height of the output image.</li>
+            <li><code>--restore_faces</code>: Boolean value. Whether to restore faces in the image.</li>
+            <li><code>--tiling</code>: Boolean value. Whether to apply tiling to the image.</li>
+        </ul>
+
+        <p>For example, if you want to set the prompt to "sunset", the seed to 42, and the width and height to 500, you would write:</p>
+
+        <pre style="
+            background-color: #151b2b;
+            height: 2em;
+            vertical-align: middle;
+            text-align: left;
+            white-space: pre-line;
+            padding-top: 0;
+            padding-bottom: 0;">
+        --prompt sunset --seed 42 --width 512 --height 512 --sampler_name "Eular a"
+        </pre>
+
+        <p>Each line will be a seperate generation.</p>
+        </div>
+        """)
+
         return [checkbox_iterate, checkbox_iterate_batch, prompt_txt]
 
     def run(self, p, checkbox_iterate, checkbox_iterate_batch, prompt_txt: str):

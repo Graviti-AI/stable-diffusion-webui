@@ -402,18 +402,59 @@ class Script(scripts.Script):
                     x_values = gr.Textbox(label="X values", lines=1, elem_id=self.elem_id("x_values"))
                     x_values_dropdown = gr.Dropdown(label="X values",visible=False,multiselect=True,interactive=True)
                     fill_x_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_x_tool_button", visible=False)
+                    tab_id = "tab_txt2img"
+                    function_name = "modules.txt2img.txt2img"
+                    if is_img2img:
+                        tab_id = "tab_img2img"
+                        function_name = "modules.img2img.img2img"
+                    x_values.change(
+                        None,
+                        inputs=[],
+                        outputs=[x_values],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.x', extractor = (values) => values.split(',').length)"
+                    )
+                    x_values_dropdown.change(
+                        None,
+                        inputs=[],
+                        outputs=[x_values_dropdown],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.x', extractor = (values) => values.length)"
+                    )
 
                 with gr.Row():
                     y_type = gr.Dropdown(label="Y type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[0].label, type="index", elem_id=self.elem_id("y_type"))
                     y_values = gr.Textbox(label="Y values", lines=1, elem_id=self.elem_id("y_values"))
                     y_values_dropdown = gr.Dropdown(label="Y values",visible=False,multiselect=True,interactive=True)
                     fill_y_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_y_tool_button", visible=False)
+                    y_values.change(
+                        None,
+                        inputs=[],
+                        outputs=[y_values],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.y', extractor = (values) => values.split(',').length)"
+                    )
+                    y_values_dropdown.change(
+                        None,
+                        inputs=[],
+                        outputs=[y_values_dropdown],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.y', extractor = (values) => values.length)"
+                    )
 
                 with gr.Row():
                     z_type = gr.Dropdown(label="Z type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[0].label, type="index", elem_id=self.elem_id("z_type"))
                     z_values = gr.Textbox(label="Z values", lines=1, elem_id=self.elem_id("z_values"))
                     z_values_dropdown = gr.Dropdown(label="Z values",visible=False,multiselect=True,interactive=True)
                     fill_z_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_z_tool_button", visible=False)
+                    z_values.change(
+                        None,
+                        inputs=[],
+                        outputs=[z_values],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.z', extractor = (values) => values.split(',').length)"
+                    )
+                    z_values_dropdown.change(
+                        None,
+                        inputs=[],
+                        outputs=[z_values_dropdown],
+                        _js=f"monitorMutiplier('{tab_id}', '{function_name}', 'scripts.xyz_grid.z', extractor = (values) => values.length)"
+                    )
 
         with gr.Row(variant="compact", elem_id="axis_options"):
             with gr.Column():

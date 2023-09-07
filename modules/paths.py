@@ -1,7 +1,7 @@
 import os
 import pathlib
 import sys
-from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir  # noqa: F401
+from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME  # noqa: F401
 
 import modules.safe  # noqa: F401
 import modules.user
@@ -94,7 +94,7 @@ class Paths:
             self._work_dir.mkdir(parents=True, exist_ok=True)
 
         # model dir save user uploaded models
-        self._model_dir = base_dir.joinpath('models', *parents_path)
+        self._model_dir = base_dir.joinpath(MODEL_CONTAINER_NAME, *parents_path)
         if not self._model_dir.exists():
             self._model_dir.mkdir(parents=True, exist_ok=True)
 

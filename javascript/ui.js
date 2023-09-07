@@ -305,7 +305,7 @@ async function calcuCreditTimes(width, height, batch_count, batch_size, steps, b
         });
         const { inference } = await response.json();
         const buttonEle = gradioApp().querySelector(`#${buttonId}`);
-        buttonEle.innerHTML = `Generate <span>(Use ${inference} ${inference === 1 ? 'credit)': 'credits)'}</span> `;
+        //buttonEle.innerHTML = `Generate <span>(Use ${inference} ${inference === 1 ? 'credit)': 'credits)'}</span> `;
     } catch(e) {
         console.log(e);
     }

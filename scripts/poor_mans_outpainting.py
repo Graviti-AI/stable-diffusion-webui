@@ -25,6 +25,19 @@ class Script(scripts.Script):
         mask_blur = gr.Slider(label='Mask blur', minimum=0, maximum=64, step=1, value=4, elem_id=self.elem_id("mask_blur"))
         inpainting_fill = gr.Radio(label='Masked content', choices=['fill', 'original', 'latent noise', 'latent nothing'], value='fill', type="index", elem_id=self.elem_id("inpainting_fill"))
         direction = gr.CheckboxGroup(label="Outpainting direction", choices=['left', 'right', 'up', 'down'], value=['left', 'right', 'up', 'down'], elem_id=self.elem_id("direction"))
+        tab_id = "tab_img2img"
+        function_name = "modules.img2img.img2img"
+        pixels.change(
+            None,
+            inputs=[],
+            outputs=[pixels],
+            _js=f"""
+                monitorMutiplier(
+                    '{tab_id}',
+                    '{function_name}',
+                    'script.poor_mans_outpainting.batch_count',
+                    extractor = (pixels) => Math.ceil((pixels * 2 + 512) * (pixels * 2 + 512) / 512 / 512))"""
+        )
 
         return [pixels, mask_blur, inpainting_fill, direction]
 

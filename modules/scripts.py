@@ -343,6 +343,7 @@ class ScriptRunner:
         self.infotext_fields = []
         self.paste_field_names = []
         self.inputs = [None]
+        self._is_img2img = None
 
     def initialize_scripts(self, is_img2img):
         from modules import scripts_auto_postprocessing
@@ -350,6 +351,7 @@ class ScriptRunner:
         self.scripts.clear()
         self.alwayson_scripts.clear()
         self.selectable_scripts.clear()
+        self._is_img2img = is_img2img
 
         auto_processing_scripts = scripts_auto_postprocessing.create_auto_preprocessing_script_data()
 
@@ -434,6 +436,15 @@ class ScriptRunner:
         self.setup_ui_for_section(None)
 
         dropdown = gr.Dropdown(label="Script", elem_id="script_list", choices=["None"] + self.titles, value="None", type="index")
+        if self._is_img2img is not None:
+            tab_id = "tab_img2img" if self._is_img2img else "tab_txt2img"
+            function_name = "modules.img2img.img2img" if self._is_img2img else "modules.txt2img.txt2img"
+            dropdown.select(
+                None,
+                inputs=[],
+                outputs=[dropdown],
+                _js=f"resetMutipliers('{tab_id}', '{function_name}', resetLinkParams = true, resetLinkMultipliers = true)"
+            )
         self.inputs[0] = dropdown
 
         self.setup_ui_for_section(None, self.selectable_scripts)

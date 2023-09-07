@@ -20,6 +20,19 @@ class Script(scripts.Script):
         final_denoising_strength = gr.Slider(minimum=0, maximum=1, step=0.01, label='Final denoising strength', value=0.5, elem_id=self.elem_id("final_denoising_strength"))
         denoising_curve = gr.Dropdown(label="Denoising strength curve", choices=["Aggressive", "Linear", "Lazy"], value="Linear")
         append_interrogation = gr.Dropdown(label="Append interrogated prompt at each iteration", choices=["None", "CLIP", "DeepBooru"], value="None")
+        tab_id = "tab_img2img"
+        function_name = "modules.img2img.img2img"
+        loops.change(
+            None,
+            inputs=[],
+            outputs=[loops],
+            _js=f"""
+                monitorMutiplier(
+                    '{tab_id}',
+                    '{function_name}',
+                    'script.loopback.loops',
+                    extractor = (loops) => loops)"""
+        )
 
         return [loops, final_denoising_strength, denoising_curve, append_interrogation]
 

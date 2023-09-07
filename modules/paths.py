@@ -1,5 +1,3 @@
-import base64
-import logging
 import os
 import pathlib
 import sys
@@ -9,6 +7,8 @@ import modules.safe  # noqa: F401
 import modules.user
 
 import gradio as gr
+
+WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
 
 
 def mute_sdxl_imports():
@@ -89,7 +89,7 @@ class Paths:
                         encoded_user_path)
 
         # work dir save user output files
-        self._work_dir = base_dir.joinpath('workdir', *parents_path)
+        self._work_dir = base_dir.joinpath(WORKDIR_NAME, *parents_path)
         if not self._work_dir.exists():
             self._work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -102,7 +102,7 @@ class Paths:
         self._private_output_dir = self._work_dir.joinpath('outputs')
         if not user.tire or user.tire.lower() == 'free':
             # free users use same output dir
-            self._output_dir = base_dir.joinpath('workdir', 'public', 'outputs')
+            self._output_dir = base_dir.joinpath(WORKDIR_NAME, 'public', 'outputs')
         else:
             # other users use their own dir
             self._output_dir = self._private_output_dir
@@ -126,7 +126,7 @@ class Paths:
         return self._check_dir(self._favorite_dir)
 
     def public_outdir(self) -> pathlib.Path:
-        return self._check_dir(pathlib.Path(data_path).joinpath('workdir', 'public', 'outputs'))
+        return self._check_dir(pathlib.Path(data_path).joinpath(WORKDIR_NAME, 'public', 'outputs'))
 
     def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import tempfile
 import importlib
 import signal
 import re
@@ -260,6 +261,9 @@ def configure_opts_onchange():
 
 
 def initialize():
+    # hijack tempdir to our temp_dir, to share tmp files between clusters
+    tempfile.tempdir = shared.opts.temp_dir
+
     call_queue.gpu_worker_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gpu_worker_")
     file_mover_worker_pool = ThreadPoolExecutor(thread_name_prefix="file_mover_threads_")
     lru_cache = LruCache()

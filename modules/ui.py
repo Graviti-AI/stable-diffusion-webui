@@ -501,10 +501,10 @@ def get_default_values_from_components(components: list, args: list[str], defaul
         value = components[idx].value
         if isinstance(components[idx], gr.Dropdown):
             value = value if value else []
-        if default_values[idx] and value != default_values[idx]:
-            print(f"{label} default value mistmatch: {default_values[idx]} != {value}")
-        if not default_values[idx] and value:
+        if not default_values[idx]:
             default_values[idx] = value
+        if value != default_values[idx]:
+            print(f"{label} default value mistmatch: {default_values[idx]} != {value}")
     return default_values
 
 

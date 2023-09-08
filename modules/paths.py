@@ -131,6 +131,9 @@ class Paths:
     def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)
 
+    def private_tempdir(self) -> pathlib.Path:
+        return self._check_dir(self._work_dir.joinpath('temp'))
+
     def _get_output_dir(self, force_to_private):
         return self._private_output_dir if force_to_private else self._output_dir
 

@@ -7,6 +7,7 @@ import traceback
 import time
 import functools
 import json
+from uuid import uuid4
 import psutil
 import asyncio
 from datetime import datetime
@@ -20,6 +21,7 @@ from modules import shared, progress, errors, script_callbacks
 
 from modules import sd_vae
 from modules.timer import Timer
+from modules.paths import Paths
 
 queue_lock = threading.Lock()
 
@@ -37,6 +39,18 @@ def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
         res = future_res.result(timeout=timeout)
         return res
     return call_function_in_gpu_wroker
+
+
+def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: Image.Image):
+    if hasattr(image, 'already_saved_as') and image.already_saved_as:
+        return image.already_saved_as
+    else:
+        paths = Paths(request)
+        image_id = str(uuid4())
+        image_path = paths.private_tempdir().joinpath(f'{image_id}.png')
+        image.save(image_path)
+        image.already_saved_as = str(image_path)
+        return str(image_path)
 
 
 def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *args, **kwargs):
@@ -119,7 +133,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
             try:
                 if len(res) > 0 and len(res[0]) > 0 and isinstance(res[0][0], Image.Image):
                     # First element in res is gallery
-                    image_paths = [item.already_saved_as for item in res[0] if isinstance(item, Image.Image)]
+                    image_paths = [extract_image_path_or_save_if_needed(request, item) for item in res[0] if isinstance(item, Image.Image)]
                     log_message = json.dumps([image_paths] + list(res[1:]))
                 else:
                     log_message = json.dumps(res)

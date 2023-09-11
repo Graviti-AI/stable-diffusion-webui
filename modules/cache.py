@@ -128,15 +128,15 @@ def cached_data_for_file(subsection, title, filename, func):
     return entry['value']
 
 
-def get_cache_filepath(filepath: str, base_dir: str, cache_dir: str) -> str:
+def get_cache_filepath(filepath: str, base_dir: str, cache_dir: str) -> tuple:
     filepath = os.path.abspath(filepath)
     base_dir = os.path.abspath(base_dir)
     cache_dir = os.path.abspath(cache_dir)
-    return os.path.join(cache_dir, os.path.relpath(filepath, base_dir))
+    relpath = os.path.relpath(filepath, base_dir)
+    return relpath, os.path.join(cache_dir, relpath)
 
 
-def copy_file_to_cache_dir_atomically(filepath: str, base_dir: str, cache_dir: str):
-    destpath = get_cache_filepath(filepath, base_dir, cache_dir)
+def _copy_file_atomically(filepath, destpath):
     dirname = os.path.dirname(destpath)
     tmppath = os.path.join(dirname, str(uuid.uuid4()))
     if not os.path.exists(dirname):
@@ -146,6 +146,26 @@ def copy_file_to_cache_dir_atomically(filepath: str, base_dir: str, cache_dir: s
     # This is atomic
     os.rename(tmppath, destpath)
     print(f"Cache model {destpath} created.")
+
+
+def _copy_file_to_cache_dir(
+        filepath: str,
+        base_dir: str,
+        cache_dir: str,
+        source_file_container: list,
+):
+    relpath, destpath = get_cache_filepath(filepath, base_dir, cache_dir)
+
+    copied = False
+    for src_container in source_file_container:
+        src_filepath = os.path.join(src_container, relpath)
+        if not os.path.exists(src_filepath):
+            continue
+        _copy_file_atomically(src_filepath, destpath)
+        copied = True
+        break
+    if not copied:
+        _copy_file_atomically(filepath, destpath)
     return destpath
 
 
@@ -161,7 +181,12 @@ def copy_file_to_cache_dir_if_space_available(lru_cache: LruCache,
                                               filepath: str,
                                               base_dir: str,
                                               cache_dir: str,
+                                              source_file_containers: list,
                                               cache_size_gb: float):
+    """
+    copy file from source_file_container for cache.
+    we do not copy src file from filepath directly, but copy it from source_file_container.
+    """
     cache_dir = os.path.abspath(cache_dir)
     filepath = os.path.abspath(filepath)
     current_file_size_gb = os.stat(filepath).st_size / 1e9  # Convert bytes to GB
@@ -175,7 +200,7 @@ def copy_file_to_cache_dir_if_space_available(lru_cache: LruCache,
 
     # in case of cache is empty, but still not get enough disk space
     if check_cache_space(lru_cache, current_file_size_gb, cache_size_gb):
-        cached_filepath = copy_file_to_cache_dir_atomically(filepath, base_dir, cache_dir)
+        cached_filepath = _copy_file_to_cache_dir(filepath, base_dir, cache_dir, source_file_containers)
         _cache_file_info(lru_cache, cached_filepath, current_file_size_gb)
 
 
@@ -205,6 +230,7 @@ def use_sdd_to_cache_remote_file(
         lru_cache: LruCache,
         base_dir: str,
         cache_dir: str,
+        source_file_container: list,
         executor_ppol: ThreadPoolExecutor,
         filepath_arg_index: int = 0,
         cache_size_gb: float = 100.0):
@@ -212,7 +238,7 @@ def use_sdd_to_cache_remote_file(
     def weight_loading_wrapper(*args, **kwargs):
         if base_dir and cache_dir and executor_ppol and cache_size_gb > 0:
             filepath = args[filepath_arg_index]
-            cached_filepath = get_cache_filepath(filepath, base_dir, cache_dir)
+            _, cached_filepath = get_cache_filepath(filepath, base_dir, cache_dir)
             if os.path.exists(cached_filepath):
                 args = list(args)
                 args[filepath_arg_index] = cached_filepath
@@ -221,7 +247,9 @@ def use_sdd_to_cache_remote_file(
             else:
                 print(f"Loading original model {filepath}.")
                 executor_ppol.submit(
-                    copy_file_to_cache_dir_if_space_available, lru_cache, filepath, base_dir, cache_dir, cache_size_gb)
+                    copy_file_to_cache_dir_if_space_available,
+                    lru_cache, filepath, base_dir, cache_dir, source_file_container, cache_size_gb
+                )
         return func(*args, **kwargs)
 
     return weight_loading_wrapper

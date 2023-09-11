@@ -120,5 +120,6 @@ parser.add_argument("--logging-file-dir", type=str,  help="specify place to save
 parser.add_argument("--logging-level", type=str,  help="logging level, can be one of CRITICAL, ERROR, INFO, DEBUG, NOTSET.", default='ERROR')
 parser.add_argument("--model-cache-dir", type=str,  help="User can use a ssd to cache the models to speed up loading speed", default="")
 parser.add_argument("--model-cache-max-size", type=int,  help="The maximum disk space (GB) to use to cache the model. Need to set --model-cache-dir first.", default=0)
+parser.add_argument("--model-cache-src", type=str,  help="comma split dir name list for model cache to copy model file", default='')
 parser.add_argument("--predict-timeout", type=int,  help="Timeout in second of /predict.", default=1800)
 parser.add_argument("--settings-not-interactive", action='store_true', help="Make settings not interactive, but still could be manipulate with program.", default=False)

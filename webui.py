@@ -38,7 +38,7 @@ from modules.cache import use_sdd_to_cache_remote_file, setup_remote_file_cache
 from modules.lru_cache import LruCache
 
 from modules import paths, timer, import_hook, errors, devices  # noqa: F401
-from modules.paths_internal import data_path
+from modules.paths_internal import models_path
 from modules.state_holder import make_state_holder
 
 startup_timer = timer.startup_timer
@@ -271,15 +271,17 @@ def initialize():
     torch.load = use_sdd_to_cache_remote_file(
         torch.load,
         lru_cache,
-        data_path,
+        models_path,
         cmd_opts.model_cache_dir,
+        cmd_opts.model_cache_src.split(','),
         file_mover_worker_pool,
         cache_size_gb=cmd_opts.model_cache_max_size)
     safetensors.torch.load_file = use_sdd_to_cache_remote_file(
         safetensors.torch.load_file,
         lru_cache,
-        data_path,
+        models_path,
         cmd_opts.model_cache_dir,
+        cmd_opts.model_cache_src.split(','),
         file_mover_worker_pool,
         cache_size_gb=cmd_opts.model_cache_max_size)
 

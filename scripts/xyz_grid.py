@@ -18,6 +18,7 @@ from modules.processing import (
     build_decoded_params_from_processing,
     get_function_name_from_processing)
 from modules.shared import opts, state
+import modules.call_utils
 import modules.shared as shared
 import modules.sd_samplers
 import modules.sd_models
@@ -216,6 +217,19 @@ class AxisOptionTxt2Img(AxisOption):
         self.is_img2img = False
 
 
+def get_user_sd_model_list(request: gr.Request):
+    sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
+    sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
+    result = []
+    if "choices" in sd_checkpoint_component_args:
+        result = sd_checkpoint_component_args["choices"]
+    return sorted(result, key=str.casefold)
+
+
+def get_user_style_list(request: gr.Request):
+    return list(shared.prompt_styles(request).styles)
+
+
 axis_options = [
     AxisOption("Nothing", str, do_nothing, format_value=format_nothing),
     AxisOption("Seed", int, apply_field("seed")),
@@ -229,7 +243,7 @@ axis_options = [
     AxisOption("Prompt order", str_permutations, apply_order, format_value=format_value_join_list),
     AxisOptionTxt2Img("Sampler", str, apply_sampler, format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers]),
     AxisOptionImg2Img("Sampler", str, apply_sampler, format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img]),
-    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_value, confirm=confirm_checkpoints, cost=1.0, choices=lambda: sorted(sd_models.checkpoints_list, key=str.casefold)),
+    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_value, confirm=confirm_checkpoints, cost=1.0, choices=get_user_sd_model_list),
     AxisOption("Negative Guidance minimum sigma", float, apply_field("s_min_uncond")),
     AxisOption("Sigma Churn", float, apply_field("s_churn")),
     AxisOption("Sigma min", float, apply_field("s_tmin")),
@@ -245,7 +259,7 @@ axis_options = [
     AxisOptionTxt2Img("Hires upscaler", str, apply_field("hr_upscaler"), choices=lambda: [*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]]),
     AxisOptionImg2Img("Cond. Image Mask Weight", float, apply_field("inpainting_mask_weight")),
     AxisOption("VAE", str, apply_vae, cost=0.7, choices=lambda: ['None'] + list(sd_vae.vae_dict)),
-    AxisOption("Styles", str, apply_styles, choices=lambda: list(shared.prompt_styles(None).styles)),
+    AxisOption("Styles", str, apply_styles, choices=get_user_style_list),
     AxisOption("UniPC Order", int, apply_uni_pc_order, cost=0.5),
     AxisOption("Face restore", str, apply_face_restore, format_value=format_value),
     AxisOption("Token merging ratio", float, apply_override('token_merging_ratio')),
@@ -481,21 +495,23 @@ class Script(scripts.Script):
         xz_swap_args = [x_type, x_values, x_values_dropdown, z_type, z_values, z_values_dropdown]
         swap_xz_axes_button.click(swap_axes, inputs=xz_swap_args, outputs=xz_swap_args)
 
-        def fill(x_type):
+        def fill(request: gr.Request, x_type):
             axis = self.current_axis_options[x_type]
-            return axis.choices() if axis.choices else gr.update()
+            args = modules.call_utils.special_args(axis.choices, [], request)
+            return axis.choices(*args) if axis.choices else gr.update()
 
         fill_x_button.click(fn=fill, inputs=[x_type], outputs=[x_values_dropdown])
         fill_y_button.click(fn=fill, inputs=[y_type], outputs=[y_values_dropdown])
         fill_z_button.click(fn=fill, inputs=[z_type], outputs=[z_values_dropdown])
 
-        def select_axis(axis_type,axis_values_dropdown):
+        def select_axis(request: gr.Request, axis_type, axis_values_dropdown):
             choices = self.current_axis_options[axis_type].choices
             has_choices = choices is not None
             current_values = axis_values_dropdown
             if has_choices:
-                choices = choices()
-                if isinstance(current_values,str):
+                args = modules.call_utils.special_args(choices, [], request)
+                choices = choices(*args)
+                if isinstance(current_values, str):
                     current_values = current_values.split(",")
                 current_values = list(filter(lambda x: x in choices, current_values))
             return gr.Button.update(visible=has_choices),gr.Textbox.update(visible=not has_choices),gr.update(choices=choices if has_choices else None,visible=has_choices,value=current_values)

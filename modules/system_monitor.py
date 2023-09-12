@@ -285,6 +285,9 @@ def before_task_started(
         return None
     if not is_intermediate and task_id != job_id:
         logger.error(f'x-task-id ({task_id}) and job_id ({job_id}) are not equal')
+    deduct_flag = header_dict.get('x-deduct-credits', None)
+    deduct_flag = not (deduct_flag == 'false')
+
 
     request_data = {
         'api': api_name,
@@ -292,7 +295,7 @@ def before_task_started(
         'user': modules.user.User.current_user(request).uid,
         'started_at': time.time(),
         'session_hash': session_hash,
-        'skip_charge':False,
+        'skip_charge': not deduct_flag,
         'refund_if_task_failed': refund_if_task_failed,
     }
     if is_intermediate:

@@ -209,7 +209,8 @@ class Paths:
             dest_path = self._private_output_dir.joinpath(relative_to)
             if not dest_path.parent.exists():
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
-            dest_path.symlink_to(src_path)
+            relative_to = os.path.relpath(src_path, dest_path.parent)
+            dest_path.symlink_to(relative_to)
 
 
 class Prioritize:

@@ -90,7 +90,7 @@ async function updateButton(tabID) {
         console.log(e);
     }
     const buttonEle = gradioApp().querySelector(`#${systemMonitorState[tabID].generate_button_id}`);
-    const functionText = buttonEle.innerHTML.split("<span>")[0];
+    const functionText = buttonEle.innerHTML.split("<span>")[0].trim();
     buttonEle.innerHTML = `${functionText} <span>(Estimated use ${credits} ${credits === 1 ? 'credit)': 'credits)'}</span>`;
   }
 }
@@ -210,4 +210,5 @@ function resetMutipliers(tabID, functionName, resetLinkParams = false, resetLink
 
 onUiLoaded(async function(){
   await updateButton("tab_txt2img");
+  await updateButton("tab_img2img");
 });

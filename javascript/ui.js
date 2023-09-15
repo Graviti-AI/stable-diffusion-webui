@@ -1014,8 +1014,10 @@ function on_sd_model_selection_updated(model_title){
 
 function check_tab(tabName, tabContainerId, element) {
   let switchBackToText2img = () => {
-    Array.from(gradioApp().querySelectorAll("#tabs > div.tab-nav > button"))
-      .find(el => el.textContent.includes("txt2img")).click();
+    const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
+    gradioApp().querySelectorAll("#tabs > div.tab-nav > button")[
+      Array.from(tabItems).findIndex(el => el.id === "tab_txt2img")]
+      .click();
   };
   let onOk = () => {
     switchBackToText2img();
@@ -1078,15 +1080,21 @@ function add_event_listener_to_tabs_and_features(options) {
       tabContainer.addEventListener("click", check_tab(tabInfo.tab_text, tabInfo.element_id, tabContainer));
     }
   });
-  let buttonContainer = gradioApp().querySelector(".tab-nav");
+  let buttonContainer = gradioApp().querySelector("#tabs > div.tab-nav");
   buttonContainer.addEventListener("click", (event) => {
     let target = event.target;
-    options.not_allowed_tabs.forEach((tabInfo) => {
-      if (target.textContent.includes(tabInfo.tab_text)) {
-        let action = check_tab(tabInfo.tab_text, tabInfo.element_id, target);
-        action(event);
-      }
-    });
+    const buttons = gradioApp().querySelectorAll("#tabs > div.tab-nav > button");
+    const buttonIndex = Array.from(buttons).findIndex(el => el.textContent === target.textContent);
+    if (buttonIndex >= 0) {
+      const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
+      const relevantTab = tabItems[buttonIndex];
+      options.not_allowed_tabs.forEach((tabInfo) => {
+        if (relevantTab.id.includes(tabInfo.element_id)) {
+          let action = check_tab(tabInfo.tab_text, tabInfo.element_id, target);
+          action(event);
+        }
+      });
+    }
   });
   options.not_allowed_features.forEach((featureInfo) => {
     let featureContainers;

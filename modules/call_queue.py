@@ -240,7 +240,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
                     res = list(res)
                 else:
                     res = list(func(request, *args, **kwargs))
-                result_encoder(res)
+                result_encoder(res, task_failed=progress.is_task_failed(f"task({task_id})" if task_id else ""))
         except Exception as e:
             # When printing out our debug argument list, do not print out more than a MB of text
             max_debug_str_len = 131072  # (1024*1024)/8

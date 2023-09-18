@@ -15,6 +15,7 @@ current_task = None
 current_task_step = ''
 pending_tasks = {}
 finished_tasks = []
+failed_tasks = []
 recorded_results = []
 recorded_results_limit = 2
 finished_task_count = 0
@@ -56,6 +57,8 @@ def finish_task(id_task, task_failed=False):
     global current_task_step
     global finished_task_count
     global failed_task_count
+    global finished_tasks
+    global failed_tasks
     logger.info(
         f'finish_task, id_task: {id_task}, current_task: {current_task}, current_task_step: {current_task_step}')
 
@@ -70,11 +73,20 @@ def finish_task(id_task, task_failed=False):
         finished_tasks.append(id_task)
         if task_failed:
             failed_task_count += 1
+            if id_task not in failed_tasks:
+                failed_tasks.append(id_task)
         else:
             finished_task_count += 1
 
     if len(finished_tasks) > 600:
         finished_tasks.pop(0)
+
+    if len(failed_tasks) > 600:
+        failed_tasks.pop(0)
+
+
+def is_task_failed(id_task: str) -> bool:
+    return id_task in failed_tasks
 
 
 def record_results(id_task, res):

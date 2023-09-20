@@ -1119,14 +1119,14 @@ onUiLoaded(function(){
                         }
                     }
 
-                    if (result.tier === 'Free') {
+                    if (result.tier.toLowerCase() === 'free') {
                         const upgradeContent = userContent.querySelector("#upgrade");
                         if (upgradeContent) {
                             upgradeContent.style.display = 'flex';
                         }
                     }
 
-                    if (result.tier === 'Basic') {
+                    if (["basic", "plus", "pro", "api"].includes(result.tier.toLowerCase())) {
                         gtag('event', 'conversion', {
                             'send_to': 'AW-347751974/EiR7CPWfu88YEKaM6aUB',
                             'value': 12.0,

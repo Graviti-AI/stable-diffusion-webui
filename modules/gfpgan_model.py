@@ -1,4 +1,5 @@
 import os
+from threading import Lock
 
 import facexlib
 import gfpgan
@@ -99,11 +100,16 @@ def setup_model(dirname):
         gfpgan_constructor = GFPGANer
 
         class FaceRestorerGFPGAN(modules.face_restoration.FaceRestoration):
+
+            def __init__(self):
+                self._lock = Lock()
+
             def name(self):
                 return "GFPGAN"
 
             def restore(self, np_image):
-                return gfpgan_fix_faces(np_image)
+                with self._lock:
+                    return gfpgan_fix_faces(np_image)
 
         shared.face_restorers.append(FaceRestorerGFPGAN())
     except Exception:

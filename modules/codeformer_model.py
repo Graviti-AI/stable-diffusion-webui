@@ -3,6 +3,8 @@ import os
 import cv2
 import torch
 
+from threading import Lock
+
 import modules.face_restoration
 import modules.shared
 from modules import shared, devices, modelloader, errors
@@ -42,6 +44,7 @@ def setup_model(dirname):
                 self.net = None
                 self.face_helper = None
                 self.cmd_dir = dirname
+                self._lock = Lock()
 
             def create_models(self):
 
@@ -74,6 +77,10 @@ def setup_model(dirname):
                 self.face_helper.face_parse.to(device)
 
             def restore(self, np_image, w=None):
+                with self._lock:
+                    return self._execute_restore(np_image, w)
+
+            def _execute_restore(self, np_image, w=None):
                 np_image = np_image[:, :, ::-1]
 
                 original_resolution = np_image.shape[0:2]

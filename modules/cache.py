@@ -133,19 +133,43 @@ def get_cache_filepath(filepath: str, base_dir: str, cache_dir: str) -> tuple:
     base_dir = os.path.abspath(base_dir)
     cache_dir = os.path.abspath(cache_dir)
     relpath = os.path.relpath(filepath, base_dir)
-    return relpath, os.path.join(cache_dir, relpath)
+
+    cached_filepath = os.path.join(cache_dir, relpath)
+    return relpath, cached_filepath, f'{cached_filepath}.lock'
 
 
-def _copy_file_atomically(filepath, destpath):
-    dirname = os.path.dirname(destpath)
-    tmppath = os.path.join(dirname, str(uuid.uuid4()))
-    if not os.path.exists(dirname):
-        os.makedirs(dirname, exist_ok=True)
-    # This is not atomic, so we first copy to a unique path
-    shutil.copy2(filepath, tmppath)
-    # This is atomic
-    os.rename(tmppath, destpath)
-    print(f"Cache model {destpath} created.")
+def _copy_file_synchronously(src_filepath, dst_filepath):
+    # a locker to make copying synchronously
+    filepath_locker = pathlib.Path(f'{dst_filepath}.lock')
+    if filepath_locker.exists():
+        if time.time() - filepath_locker.stat().st_ctime > 6 * 60 * 60:
+            # dst file locker exists for more than 6 hours, there should be something wrong of copying file
+            # delete it and re-copy
+            filepath_locker.unlink()
+        else:
+            # file locker exists means some one is copying the same file.
+            return
+
+    # make sure parent exists before do copy
+    dst_parent_dir = os.path.dirname(dst_filepath)
+    if not os.path.exists(dst_parent_dir):
+        os.makedirs(dst_parent_dir, exist_ok=True)
+
+    # sleep 1s, then check if locker exists again.
+    # in case of other one is copying the same file.
+    time.sleep(1)
+    if filepath_locker.exists():
+        return
+
+    # create locker
+    filepath_locker.touch()
+
+    # do copy
+    shutil.copy2(src_filepath, dst_filepath)
+    print(f"Make cache file {src_filepath} -> {dst_filepath}")
+
+    # remove locker
+    filepath_locker.unlink()
 
 
 def _copy_file_to_cache_dir(
@@ -154,19 +178,24 @@ def _copy_file_to_cache_dir(
         cache_dir: str,
         source_file_container: list,
 ):
-    relpath, destpath = get_cache_filepath(filepath, base_dir, cache_dir)
+    relpath, dstpath, _ = get_cache_filepath(filepath, base_dir, cache_dir)
 
     copied = False
+    missed_file = []
     for src_container in source_file_container:
         src_filepath = os.path.join(src_container, relpath)
         if not os.path.exists(src_filepath):
+            missed_file.append((filepath, src_filepath))
             continue
-        _copy_file_atomically(src_filepath, destpath)
+        missed_file.append((src_filepath, dstpath))
         copied = True
         break
     if not copied:
-        _copy_file_atomically(filepath, destpath)
-    return destpath
+        missed_file.append((filepath, dstpath))
+
+    for (src, dst) in missed_file:
+        _copy_file_synchronously(src, dst)
+    return dstpath
 
 
 # check if the cache_dir has enough space to store new file
@@ -238,8 +267,9 @@ def use_sdd_to_cache_remote_file(
     def weight_loading_wrapper(*args, **kwargs):
         if base_dir and cache_dir and executor_ppol and cache_size_gb > 0:
             filepath = args[filepath_arg_index]
-            _, cached_filepath = get_cache_filepath(filepath, base_dir, cache_dir)
-            if os.path.exists(cached_filepath):
+            _, cached_filepath, cached_filepath_locker = get_cache_filepath(filepath, base_dir, cache_dir)
+            # cached_filepath_locker exists means cached_file is not available for now
+            if os.path.exists(cached_filepath) and not os.path.exists(cached_filepath_locker):
                 args = list(args)
                 args[filepath_arg_index] = cached_filepath
                 lru_cache.touch(cached_filepath)

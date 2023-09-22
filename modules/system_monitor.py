@@ -256,6 +256,7 @@ def before_task_started(
         'session_hash': session_hash,
         'skip_charge': not deduct_flag,
         'refund_if_task_failed': refund_if_task_failed,
+        'node': os.getenv('HOST_IP', default=''),
     }
     if is_intermediate:
         request_data['step_id'] = job_id

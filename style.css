@@ -938,6 +938,12 @@ footer {
 
 /* extra networks UI */
 
+.gallery-cards {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: auto !important;
+}
+
 .extra-network-cards{
     height: calc(100vh - 24rem);
     overflow: clip scroll;

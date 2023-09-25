@@ -1,5 +1,6 @@
 import os
 import pathlib
+import shutil
 import sys
 from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME  # noqa: F401
 
@@ -201,15 +202,10 @@ class Paths:
             # image is generated at public folder, make a symlink to src image
             src_path = pathlib.Path(filename)
             relative_to = src_path.relative_to(self._output_dir)
-            # out_put_dir = src_path.parents[3]
-            # dest_path = self._private_output_dir.joinpath(src_path.parts[-4],
-            #                                               src_path.parts[-3],
-            #                                               src_path.parts[-2],
-            #                                               src_path.parts[-1])
-            dest_path = self._private_output_dir.joinpath(relative_to)
-            if not dest_path.parent.exists():
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-            dest_path.symlink_to(src_path)
+            dst_path = self._private_output_dir.joinpath(relative_to)
+            if not dst_path.parent.exists():
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src_path, dst_path)
 
 
 class Prioritize:

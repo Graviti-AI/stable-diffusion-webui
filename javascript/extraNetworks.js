@@ -553,7 +553,9 @@ function changeHomeMatureLevel(selectedLevel, {tabname}) {
     homePageMatureLevel = selectedLevel;
     const cardList = gradioApp().querySelector(`#${tabname}_${modelType}_cards`).querySelectorAll('.card');
     cardList.forEach(card => {
-        if (card.id !== `${tabname}_${modelType}_upload_button-card` && card.id !== `${tabname}_${modelType}_add_model-to-workspace`) {
+        if (card.id !== `${tabname}_${modelType}_upload_button-card` &&
+            card.id !== `${tabname}_${modelType}_add_model-to-workspace` &&
+            card.id !== `${tabname}_${modelType}_upload_button-card-private`) {
             const needBlur = judgeLevel(selectedLevel, card.getAttribute('mature-level'));
             const bgFilter = card.querySelector('.set-bg-filter');
             bgFilter.style['filter'] = needBlur ? 'blur(10px)' : 'none';

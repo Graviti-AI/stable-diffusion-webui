@@ -22,7 +22,7 @@ def javascript_html(request: gr.Request):
     head += f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
     head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue@2.7.14"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/npm/js-base64@3.7.5/base64.min.js"></script>\n'
-    head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/buefy/0.9.23/buefy.min.js"></script>\n'
+    head += '<script type="text/javascript" src="/components/js/buefy/buefy.min.js?v=0.9.24"></script>\n'
     head += '<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>\n'
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
     # head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
@@ -66,7 +66,7 @@ def css_html():
     head += '<link href="/components/style/share/shareon.min.css" rel="stylesheet" />\n'
     head += '<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/css/tabby-ui.min.css">\n'
 
-    head += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/buefy/0.9.23/buefy.min.css">\n'
+    head += '<link href="/components/style/buefy/buefy.min.css?v=0.9.24" rel="stylesheet" />\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">\n'
     head += '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">\n'
 

@@ -499,7 +499,7 @@ class SdModelData:
         self.sd_model: Optional[sd_models_types.WebuiSdModel] = None
         self.loaded_sd_models = []
         self.was_loaded_at_least_once = False
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
     def get_sd_model(self) -> Optional[sd_models_types.WebuiSdModel]:
         if self.was_loaded_at_least_once:
@@ -543,13 +543,8 @@ class SdModelData:
             except ValueError:
                 logger.warning("Failed to remove sd_model from loaded_sd_models when unload")
             self.sd_model = None
-            self.was_loaded_at_least_once = False
             gc.collect()
             devices.torch_gc()
-
-    def clear_current(self):
-        self.sd_model = None
-        self.was_loaded_at_least_once = False
 
 
 model_data = SdModelData()
@@ -571,7 +566,8 @@ def send_model_to_cpu(m):
     if m.lowvram:
         lowvram.send_everything_to_cpu()
     else:
-        m.to(devices.cpu)
+        if "cuda" in str(m.device):
+            m.to(devices.cpu)
 
     devices.torch_gc()
 
@@ -596,6 +592,11 @@ def send_model_to_trash(m):
 
 
 def load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken_to_load_state_dict=None):
+    with model_data.lock:
+        return _load_model(checkpoint_info, already_loaded_state_dict, time_taken_to_load_state_dict)
+
+
+def _load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken_to_load_state_dict=None):
     checkpoint_info = checkpoint_info or select_checkpoint()
 
     timer = Timer('sd_models.load_model', checkpoint_info.title)
@@ -745,6 +746,11 @@ def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
 
 
 def reload_model_weights(sd_model=None, info=None):
+    with model_data.lock:
+        return _reload_model_weights(sd_model, info)
+
+
+def _reload_model_weights(sd_model=None, info=None):
     checkpoint_info = info or select_checkpoint()
 
     timer = Timer('sd_models.reload_model_weights')
@@ -810,7 +816,8 @@ def unload_model_weights(sd_model=None, info=None):
     timer = Timer('sd_model.unload_model_weights')
 
     if model_data.sd_model:
-        model_data.sd_model.to(devices.cpu)
+        if "cuda" in str(model_data.sd_model.device):
+            model_data.sd_model.to(devices.cpu)
         sd_hijack.model_hijack.undo_hijack(model_data.sd_model)
         sd_model = None
         model_data.unload_current()

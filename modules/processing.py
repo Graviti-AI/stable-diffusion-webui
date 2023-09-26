@@ -741,7 +741,8 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
             opts.set(k, v, is_api=True, run_callbacks=False)
 
             if k == 'sd_model_checkpoint':
-                sd_models.reload_model_weights()
+                checkpoint = sd_models.get_closet_checkpoint_match(v)
+                sd_models.reload_model_weights(info=checkpoint)
 
             if k == 'sd_vae':
                 vae_file_path = os.path.join(sd_vae.vae_path, v)
@@ -845,7 +846,8 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             if state.interrupted:
                 break
 
-            sd_models.reload_model_weights()  # model can be changed for example by refiner
+            processing_checkpoint = sd_models.get_closet_checkpoint_match(p.sd_model_name)
+            sd_models.reload_model_weights(info=processing_checkpoint)  # model can be changed for example by refiner
 
             p.prompts = p.all_prompts[n * p.batch_size:(n + 1) * p.batch_size]
             p.negative_prompts = p.all_negative_prompts[n * p.batch_size:(n + 1) * p.batch_size]

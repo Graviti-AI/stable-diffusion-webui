@@ -1631,6 +1631,7 @@ def create_ui():
                         if "choices" in updates:
                             updates["choices"] = [
                                 item for item in updates["choices"] if "refiner" not in item.lower()]
+                        return updates
                     create_refresh_button(
                         sd_model_selection,
                         sd_checkpoint_options.refresh,

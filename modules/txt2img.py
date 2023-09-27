@@ -12,6 +12,15 @@ from modules.system_monitor import (
     generate_function_name, monitor_call_context)
 
 
+def _get_str(elements):
+    if isinstance(elements, list) and len(elements) > 0:
+        return elements[0]
+    elif isinstance(elements, str):
+        return elements
+    else:
+        return None
+
+
 def txt2img(request: gr.Request, id_task: str, prompt: str, negative_prompt: str, prompt_styles, steps: int, sampler_name: str, n_iter: int, batch_size: int, cfg_scale: float, height: int, width: int, enable_hr: bool, denoising_strength: float, hr_scale: float, hr_upscaler: str, hr_second_pass_steps: int, hr_resize_x: int, hr_resize_y: int, hr_checkpoint_name: str, hr_sampler_name: str, hr_prompt: str, hr_negative_prompt, override_settings_texts, *args):
     override_settings = create_override_settings_dict(override_settings_texts)
 
@@ -37,8 +46,8 @@ def txt2img(request: gr.Request, id_task: str, prompt: str, negative_prompt: str
         hr_second_pass_steps=hr_second_pass_steps,
         hr_resize_x=hr_resize_x,
         hr_resize_y=hr_resize_y,
-        hr_checkpoint_name=None if hr_checkpoint_name == 'Use same checkpoint' else hr_checkpoint_name,
-        hr_sampler_name=None if hr_sampler_name == 'Use same sampler' else hr_sampler_name,
+        hr_checkpoint_name=None if _get_str(hr_checkpoint_name) == 'Use same checkpoint' else hr_checkpoint_name,
+        hr_sampler_name=None if _get_str(hr_sampler_name) == 'Use same sampler' else hr_sampler_name,
         hr_prompt=hr_prompt,
         hr_negative_prompt=hr_negative_prompt,
         override_settings=override_settings,

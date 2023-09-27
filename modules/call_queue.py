@@ -123,6 +123,8 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         traceback.print_tb(e.__traceback__, file=sys.stderr)
         print(e, file=sys.stderr)
         error_message = f'{id_task}: {type(e).__name__}: {e}'
+        if "MetadataIncompleteBuffer" in error_message:
+            error_message = f"The model is probably corrupted, please contact us to delete it: {model_title}."
         res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
         exception_str = traceback.format_exc()
     finally:

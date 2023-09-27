@@ -136,7 +136,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                     log_message = json.dumps([image_paths] + list(res[1:]))
                 else:
                     if task_failed:
-                        log_message = json.dumps(list(res) + [exception_str])
+                        log_message = exception_str
                     else:
                         log_message = json.dumps(res)
             except Exception as e:

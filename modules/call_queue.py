@@ -130,13 +130,13 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         shared.state.end()
         if monitor_log_id:
             try:
-                if len(res) > 0 and len(res[0]) > 0 and isinstance(res[0][0], Image.Image):
-                    # First element in res is gallery
-                    image_paths = [extract_image_path_or_save_if_needed(request, item) for item in res[0] if isinstance(item, Image.Image)]
-                    log_message = json.dumps([image_paths] + list(res[1:]))
+                if task_failed:
+                    log_message = exception_str
                 else:
-                    if task_failed:
-                        log_message = exception_str
+                    if len(res) > 0 and res[0] and len(res[0]) > 0 and isinstance(res[0][0], Image.Image):
+                        # First element in res is gallery
+                        image_paths = [extract_image_path_or_save_if_needed(request, item) for item in res[0] if isinstance(item, Image.Image)]
+                        log_message = json.dumps([image_paths] + list(res[1:]))
                     else:
                         log_message = json.dumps(res)
             except Exception as e:

@@ -54,28 +54,8 @@ opts: Optional[options.Options] = None
 restricted_opts = None
 
 
-class Shared(sys.modules[__name__].__class__):
-    """
-    this class is here to provide sd_model field as a property, so that it can be created and loaded on demand rather than
-    at program startup.
-    """
-
-    sd_model_val = None
-
-    @property
-    def sd_model(self) -> sd_models_types.WebuiSdModel:
-        import modules.sd_models
-
-        return modules.sd_models.model_data.get_sd_model()
-
-    @sd_model.setter
-    def sd_model(self, value):
-        import modules.sd_models
-
-        modules.sd_models.model_data.set_sd_model(value)
-
 sd_model: Optional[sd_models_types.WebuiSdModel] = None
-sys.modules[__name__].__class__ = Shared
+
 
 settings_components = None
 """assinged from ui.py, a mapping on setting names to gradio components repsponsible for those settings"""

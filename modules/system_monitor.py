@@ -297,6 +297,7 @@ def before_task_started(
         'session_hash': session_hash,
         'skip_charge': not deduct_flag,
         'refund_if_task_failed': refund_if_task_failed,
+        'node': os.getenv('HOST_IP', default=''),
     }
     if is_intermediate:
         request_data['step_id'] = job_id
@@ -460,17 +461,23 @@ def monitor_call_context(
         refund_if_task_failed: bool = True):
     status = 'unknown'
     message = ''
-    def result_encoder(result):
+    task_is_failed = False
+    def result_encoder(result, task_failed=False):
         try:
             nonlocal message
+            nonlocal task_is_failed
             message = json.dumps(result, ensure_ascii=False, sort_keys=True)
+            task_is_failed = task_failed
         except Exception as e:
             logger.error(f'{task_id}: Json encode result failed {str(e)}.')
     try:
         task_id = before_task_started(
             request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed)
         yield result_encoder
-        status = 'finished'
+        if task_is_failed:
+            status = 'failed'
+        else:
+            status = 'finished'
     except Exception as e:
         status = 'failed'
         message = f'{type(e).__name__}: {str(e)}'

@@ -583,7 +583,8 @@ def send_model_to_device(m):
     lowvram.apply(m)
 
     if not m.lowvram:
-        m.to(shared.device)
+        if "cuda" in str(m.device) or "cpu" in str(m.device):
+            m.to(shared.device)
 
 
 def send_model_to_trash(m):

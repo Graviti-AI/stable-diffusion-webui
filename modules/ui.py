@@ -669,6 +669,7 @@ def create_ui():
                     hr_sampler_name,
                     hr_prompt,
                     hr_negative_prompt,
+                    restore_faces,
                     override_settings,
                 ] + custom_inputs + [txt2img_model_title, toprow.vae_model_title, txt2img_signature],
 
@@ -729,6 +730,7 @@ def create_ui():
                 (hr_prompt, "Hires prompt"),
                 (hr_negative_prompt, "Hires negative prompt"),
                 (hr_prompts_container, lambda d: gr.update(visible=True) if d.get("Hires prompt", "") != "" or d.get("Hires negative prompt", "") != "" else gr.update()),
+                (restore_faces, "Face restoration"),
                 *scripts.scripts_txt2img.infotext_fields
             ]
             parameters_copypaste.add_paste_fields("txt2img", None, txt2img_paste_fields, override_settings)
@@ -1098,6 +1100,7 @@ def create_ui():
                     img2img_batch_input_dir,
                     img2img_batch_output_dir,
                     img2img_batch_inpaint_mask_dir,
+                    restore_faces,
                     override_settings,
                     img2img_batch_use_png_info,
                     img2img_batch_png_info_props,
@@ -1190,6 +1193,7 @@ def create_ui():
                 (toprow.ui_styles.dropdown, lambda d: d["Styles array"] if isinstance(d.get("Styles array"), list) else gr.update()),
                 (denoising_strength, "Denoising strength"),
                 (mask_blur, "Mask blur"),
+                (restore_faces, "Face restoration"),
                 *scripts.scripts_img2img.infotext_fields
             ]
             parameters_copypaste.add_paste_fields("img2img", init_img, img2img_paste_fields, override_settings)

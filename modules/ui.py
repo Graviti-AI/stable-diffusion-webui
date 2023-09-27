@@ -569,7 +569,7 @@ def create_ui():
 
                                 with FormRow(elem_id="txt2img_hires_fix_row3", variant="compact", visible=opts.hires_fix_show_sampler) as hr_sampler_container:
 
-                                    hr_checkpoint_name = gr.Dropdown(label='Hires checkpoint', elem_id="hr_checkpoint", choices=["Use same checkpoint"], value="Use same checkpoint")
+                                    hr_checkpoint_name = gr.Dropdown(label='Hires checkpoint', elem_id="hr_checkpoint", choices=["Use same checkpoint"], value="Use same checkpoint", multiselect=False)
                                     def get_hr_checkpoint_names(request: gr.Request):
                                         return {"choices": ["Use same checkpoint"] + shared_items.list_checkpoint_tiles(request)}
                                     create_refresh_button(hr_checkpoint_name, shared_items.refresh_checkpoints, get_hr_checkpoint_names, "hr_checkpoint_refresh")

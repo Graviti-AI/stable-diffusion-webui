@@ -186,6 +186,8 @@ def _copy_file_to_cache_dir(
     copied = False
     missed_file = []
     for src_container in source_file_container:
+        if not src_container:
+            continue
         src_filepath = os.path.join(src_container, relpath)
         if not os.path.exists(src_filepath):
             missed_file.append((filepath, src_filepath))

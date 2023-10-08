@@ -7,8 +7,8 @@ def create_ui():
     tab_index = gr.State(value=0)
 
     with gr.Row(equal_height=False, variant='compact'):
-        need_upgrade = gr.Checkbox(
-            value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
+        need_upgrade = gr.Textbox(
+            value="", interactive=False, visible=False, elem_id="upgrade_checkbox_postprocessing")
         with gr.Column(variant='compact'):
             with gr.Tabs(elem_id="mode_extras"):
                 with gr.TabItem('Single Image', id="single_image", elem_id="extras_single_tab") as tab_single:
@@ -59,7 +59,7 @@ def create_ui():
         _js='submit_postprocessing'
     )
 
-    need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment")
+    need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment_factory('upgrade_checkbox_postprocessing')")
     parameters_copypaste.add_paste_fields("extras", extras_image, None)
 
     extras_image.change(

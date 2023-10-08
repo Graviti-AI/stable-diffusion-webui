@@ -113,7 +113,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         logger.exception(f'task {id_task} failed: {e.__str__()}')
         res = extra_outputs_array + [str(e)]
         if add_monitor_state:
-            return res, e.status_code == 402
+            if e.status_code == 402:
+                return res, json.dumps(
+                    {"need_upgrade": True,
+                     "message": "You have ran out of your credits, please purchase more or upgrade to a higher plan."})
+            else:
+                return res, json.dumps({"need_upgrade": False})
         return res
     except Exception as e:
         logger.exception(f'task {id_task} failed: {e.__str__()}')
@@ -149,7 +154,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 logging.warning(f'send task finished event to monitor failed: {str(e)}')
 
     if add_monitor_state:
-        return res, False
+        return res, json.dumps({"need_upgrade": False})
     return res
 
 
@@ -190,7 +195,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
             if add_monitor_state:
-                return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], False
+                return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], json.dumps({"need_upgrade": False})
             return extra_outputs_array + [f'Predict timeout: {predict_timeout}s']
 
         return res

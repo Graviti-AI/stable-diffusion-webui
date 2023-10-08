@@ -453,8 +453,8 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False) as txt2img_interface:
         toprow = Toprow(is_img2img=False)
-        need_upgrade = gr.Checkbox(
-            value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
+        need_upgrade = gr.Textbox(
+            value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
         txt2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_signature")
         txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
         txt2img_model_title = toprow.model_title
@@ -691,7 +691,7 @@ def create_ui():
             toprow.submit.click(**txt2img_args)
             txt2img_gradio_function = txt2img_interface.fns[-1]
 
-            need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment")
+            need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment_factory('upgrade_checkbox')")
             res_switch_btn.click(fn=None, _js="function(){switchWidthHeight('txt2img')}", inputs=None, outputs=None, show_progress=False)
 
             toprow.restore_progress_button.click(
@@ -765,8 +765,6 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False) as img2img_interface:
         toprow = Toprow(is_img2img=True)
-        img2img_need_upgrade = gr.Checkbox(
-            value=False, interactive=False, visible=False, elem_classes="upgrade_checkbox")
         img2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_signature")
         img2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_function_index")
         img2img_model_title = toprow.model_title

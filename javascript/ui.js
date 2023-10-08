@@ -398,10 +398,42 @@ function restart_reload() {
     return [];
 }
 
-function redirect_to_payment(need_upgrade){
-    if (need_upgrade) {
-        window.location.href = "/user?upgradeFlag=true";
+function update_textbox_by_id(id, value) {
+    const box = gradioApp().querySelector(`#${id} textarea`);
+    if (box) {
+      box.value = value;
+      updateInput(box);
     }
+}
+
+function redirect_to_payment_factory(boxId) {
+  function redirect_to_payment(need_upgrade){
+      if (need_upgrade) {
+          const need_upgrade_obj = JSON.parse(need_upgrade);
+          if (need_upgrade_obj.hasOwnProperty("need_upgrade") && need_upgrade_obj.need_upgrade) {
+              const message = need_upgrade_obj.hasOwnProperty("message")? need_upgrade_obj.message: "Upgrade to unlock more credits.";
+              let onOk = () => {
+                update_textbox_by_id(boxId, "");
+                window.location.href = "/user#/subscription?type=subscription";
+              };
+              let onCancel = () => {
+                update_textbox_by_id(boxId, "");
+              };
+              notifier.confirm(
+                message,
+                onOk,
+                onCancel,
+                {
+                  labels: {
+                    confirm: 'Upgrade Now',
+                    confirmOk: 'Upgrade'
+                  }
+                }
+              );
+          }
+      }
+  }
+  return redirect_to_payment;
 }
 
 // Simulate an `input` DOM event for Gradio Textbox component. Needed after you edit its contents in javascript, otherwise your edits

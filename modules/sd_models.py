@@ -818,7 +818,12 @@ def unload_model_weights(sd_model=None, info=None):
 
     if model_data.sd_model:
         if "cuda" in str(model_data.sd_model.device):
-            model_data.sd_model.to(devices.cpu)
+            try:
+                model_data.sd_model.to(devices.cpu)
+            except Exception as e:
+                if "Cannot copy out of meta tensor" not in str(e):
+                    raise
+                logger.warning("Failed to move sd_model to CPU because it is in meta")
         sd_hijack.model_hijack.undo_hijack(model_data.sd_model)
         sd_model = None
         model_data.unload_current()

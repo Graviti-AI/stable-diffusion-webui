@@ -7,6 +7,8 @@ from modules import devices, images, sd_vae_approx, sd_samplers, sd_vae_taesd, s
 from modules.shared import opts, state
 import k_diffusion.sampling
 
+import gradio as gr
+
 
 SamplerDataTuple = namedtuple('SamplerData', ['name', 'constructor', 'aliases', 'options'])
 
@@ -241,6 +243,13 @@ class Sampler:
         self.model_wrap_cfg = None
         self.sampler_extra_args = None
         self.options = {}
+        self._request = None
+
+    def set_request(self, request: gr.Request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
 
     def callback_state(self, d):
         step = d['i']

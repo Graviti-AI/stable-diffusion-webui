@@ -5,8 +5,6 @@ from modules import sd_samplers_common, sd_samplers_extra, sd_samplers_cfg_denoi
 from modules.sd_samplers_cfg_denoiser import CFGDenoiser  # noqa: F401
 from modules.script_callbacks import ExtraNoiseParams, extra_noise_callback
 
-import gradio as gr
-
 from modules.shared import opts
 import modules.shared as shared
 
@@ -157,13 +155,6 @@ class KDiffusionSampler(sd_samplers_common.Sampler):
 
         self.model_wrap_cfg = CFGDenoiserKDiffusion(self)
         self.model_wrap = self.model_wrap_cfg.inner_model
-        self._request = None
-
-    def set_request(self, request: gr.Request):
-        self._request = request
-
-    def get_request(self):
-        return self._request
 
     def get_sigmas(self, p, steps):
         discard_next_to_last_sigma = self.config is not None and self.config.options.get('discard_next_to_last_sigma', False)

@@ -28,6 +28,16 @@ class MonitorException(Exception):
         return self._msg
 
 
+class MonitorTierMismatchedException(Exception):
+    def __init__(self, msg, current_tier, allowed_tiers):
+        self._msg = msg
+        self.current_tier = current_tier
+        self.allowed_tiers = allowed_tiers
+
+    def __repr__(self) -> str:
+        return self._msg
+
+
 def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:
     """
     Make the object which will be used to calculate the consume by FE.
@@ -164,7 +174,7 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     module = inspect.getmodule(func)
     func_args.update(**kwargs)
     func_name = func.__name__
-    fund_module_name = module.__name__
+    fund_module_name = module.__name__ if module else ""
 
     # send call info to monitor server
     api_name = f'{fund_module_name}.{func_name}'
@@ -225,7 +235,8 @@ def before_task_started(
         job_id: Optional[str] = None,
         decoded_params: Optional[dict] = None,
         is_intermediate: bool = False,
-        refund_if_task_failed: bool = True) -> Optional[str]:
+        refund_if_task_failed: bool = True,
+        only_available_for: Optional[list[str]] = None) -> Optional[str]:
     if job_id is None:
         job_id = str(uuid.uuid4())
     monitor_addr = modules.shared.cmd_opts.system_monitor_addr
@@ -246,7 +257,13 @@ def before_task_started(
         logger.error(f'x-task-id ({task_id}) and job_id ({job_id}) are not equal')
     deduct_flag = header_dict.get('x-deduct-credits', None)
     deduct_flag = not (deduct_flag == 'false')
-
+    if only_available_for:
+        user_tier = header_dict.get('user-tire', None) or header_dict.get('user-tier', None)
+        if not user_tier or user_tier.lower() not in [item.lower() for item in only_available_for]:
+            raise MonitorTierMismatchedException(
+                f'This feature is available for {only_available_for} only. The current user tier is {user_tier}.',
+                user_tier,
+                only_available_for)
 
     request_data = {
         'api': api_name,
@@ -347,7 +364,8 @@ def monitor_this_call(
         is_intermediate: bool = False,
         param_list: Optional[list] = None,
         extract_task_id: bool = False,
-        refund_if_task_failed: bool = True
+        refund_if_task_failed: bool = True,
+        only_available_for: Optional[list[str]] = None
     ):
     def function_wrapper(func):
         @functools.wraps(func)
@@ -390,7 +408,7 @@ def monitor_this_call(
                             f'system_monitor function {func_name} param {arg} is not in the signature')
             try:
                 task_id = before_task_started(
-                    request_obj, api_name, initiator, task_id, decoded_params, is_intermediate, refund_if_task_failed)
+                    request_obj, api_name, initiator, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)
                 result = func(request, *args, **kwargs)
                 status = 'finished'
                 try:
@@ -417,7 +435,8 @@ def monitor_call_context(
         task_id: Optional[str] = None,
         decoded_params: Optional[dict] = None,
         is_intermediate: bool = True,
-        refund_if_task_failed: bool = True):
+        refund_if_task_failed: bool = True,
+        only_available_for: Optional[list[str]] = None):
     status = 'unknown'
     message = ''
     task_is_failed = False
@@ -431,7 +450,7 @@ def monitor_call_context(
             logger.error(f'{task_id}: Json encode result failed {str(e)}.')
     try:
         task_id = before_task_started(
-            request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed)
+            request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)
         yield result_encoder
         if task_is_failed:
             status = 'failed'

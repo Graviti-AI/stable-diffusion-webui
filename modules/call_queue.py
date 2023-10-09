@@ -15,7 +15,11 @@ from PIL import Image
 import gradio.routes
 
 import modules.system_monitor
-from modules.system_monitor import MonitorException, monitor_call_context, generate_function_name
+from modules.system_monitor import (
+    MonitorException,
+    MonitorTierMismatchedException,
+    monitor_call_context,
+    generate_function_name)
 from modules import shared, progress, errors, script_callbacks, devices
 
 from modules import sd_vae
@@ -51,6 +55,7 @@ def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: 
 
 
 def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *args, **kwargs):
+    assert shared.state, "shared.state is not initialized"
     monitor_log_id = None
     status = ''
     task_failed = True
@@ -111,7 +116,9 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         task_failed = False
     except MonitorException as e:
         logger.exception(f'task {id_task} failed: {e.__str__()}')
-        res = extra_outputs_array + [str(e)]
+        exception_str = traceback.format_exc()
+        res = extra_outputs_array + [repr(e)]
+        status = 'failed'
         if add_monitor_state:
             if e.status_code == 402:
                 return res, json.dumps(
@@ -119,6 +126,16 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                      "message": "You have ran out of your credits, please purchase more or upgrade to a higher plan."})
             else:
                 return res, json.dumps({"need_upgrade": False})
+        return res
+    except MonitorTierMismatchedException as e:
+        logger.exception(f'task {id_task} failed: {e.__str__()}')
+        exception_str = traceback.format_exc()
+        status = 'failed'
+        res = extra_outputs_array + [f"<div class='error'>{html.escape(repr(e))}</div>"]
+        if add_monitor_state:
+            return res, json.dumps({
+                "need_upgrade": True,
+                "message": f"This feature is available for {', '.join(e.allowed_tiers)} users, please upgrade to access it."})
         return res
     except Exception as e:
         logger.exception(f'task {id_task} failed: {e.__str__()}')
@@ -161,6 +178,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
 def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
     @functools.wraps(func)
     def f(request: gradio.routes.Request, *args, **kwargs):
+        assert shared.state, "shared.state is not initialized"
         predict_timeout = dict(request.headers).get('X-Predict-Timeout', shared.cmd_opts.predict_timeout)
         # if the first argument is a string that says "task(...)", it is treated as a job id
         if args and type(args[0]) == str and args[0].startswith("task(") and args[0].endswith(")"):
@@ -211,6 +229,7 @@ async def get_body(request: gradio.routes.Request):
 def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
     @functools.wraps(func)
     def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
+        assert shared.state, "shared.state is not initialized"
         task_id = None
         loop = asyncio.get_event_loop()
         request_body = loop.run_until_complete(get_body(request))
@@ -220,7 +239,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         current_datetime = datetime.now()
         print(f"{current_datetime.strftime('%Y-%m-%d %H:%M:%S')} task({task_id}) begins", file=sys.stderr)
 
-        monitor_state = False
+        monitor_state = json.dumps({"need_upgrade": False})
         run_memmon = shared.opts.memmon_poll_rate > 0 and not shared.mem_mon.disabled and add_stats
         if run_memmon:
             shared.mem_mon.monitor()
@@ -248,6 +267,15 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
                 else:
                     res = list(func(request, *args, **kwargs))
                 result_encoder(res, task_failed=progress.is_task_failed(f"task({task_id})" if task_id else ""))
+        except MonitorTierMismatchedException as e:
+            shared.state.job = ""
+            shared.state.job_count = 0
+            if extra_outputs_array is None:
+                extra_outputs_array = [None, '']
+            res = extra_outputs_array + [f"<div class='error'>{html.escape(repr(e))}</div>"]
+            monitor_state = json.dumps({
+                "need_upgrade": True,
+                "message": f"This feature is available for {', '.join(e.allowed_tiers)} users, please upgrade to access it."})
         except Exception as e:
             # When printing out our debug argument list, do not print out more than a MB of text
             max_debug_str_len = 131072  # (1024*1024)/8

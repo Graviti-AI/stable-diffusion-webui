@@ -99,7 +99,8 @@ class Script(scripts.Script):
                         p.get_request(),
                         get_function_name_from_processing(p),
                         "script.sd_upscale.step",
-                        decoded_params=build_decoded_params_from_processing(p)):
+                        decoded_params=build_decoded_params_from_processing(p),
+                        only_available_for=["plus", "pro", "api"]):
                     processed = processing.process_images(p)
 
                 if initial_info is None:

@@ -261,7 +261,8 @@ class Script(scripts.Script):
                     p.get_request(),
                     get_function_name_from_processing(p),
                     "script.outpainting_mk_2.expand",
-                    decoded_params=build_decoded_params_from_processing(p)):
+                    decoded_params=build_decoded_params_from_processing(p),
+                    only_available_for=["plus", "pro", "api"]):
                 proc = process_images(p)
 
             if initial_seed_and_info[0] is None:

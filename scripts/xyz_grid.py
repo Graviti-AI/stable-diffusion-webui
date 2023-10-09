@@ -27,7 +27,7 @@ import modules.sd_vae
 import re
 
 from modules.ui_components import ToolButton
-from modules.system_monitor import monitor_call_context
+from modules.system_monitor import monitor_call_context, MonitorTierMismatchedException
 
 fill_values_symbol = "\U0001f4d2"  # 📒
 
@@ -762,8 +762,11 @@ class Script(scripts.Script):
                         p.get_request(),
                         get_function_name_from_processing(p),
                         "script.xyz_grid.cell",
-                        decoded_params=build_decoded_params_from_processing(pc)):
+                        decoded_params=build_decoded_params_from_processing(pc),
+                        only_available_for=["plus", "pro", "api"]):
                     res = process_images(pc)
+            except MonitorTierMismatchedException:
+                raise
             except Exception as e:
                 errors.display(e, "generating image for xyz plot")
 

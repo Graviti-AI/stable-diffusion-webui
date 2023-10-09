@@ -215,7 +215,8 @@ class Script(scripts.Script):
                     p.get_request(),
                     get_function_name_from_processing(copy_p),
                     "script.prompts_from_file.line",
-                    decoded_params=build_decoded_params_from_processing(copy_p)):
+                    decoded_params=build_decoded_params_from_processing(copy_p),
+                    only_available_for=["plus", "pro", "api"]):
                 proc = process_images(copy_p)
                 images += proc.images
 

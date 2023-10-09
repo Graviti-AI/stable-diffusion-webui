@@ -110,7 +110,8 @@ class Script(scripts.Script):
                         p.get_request(),
                         processing.get_function_name_from_processing(p),
                         "script.loopback.batch",
-                        decoded_params=processing.build_decoded_params_from_processing(p)):
+                        decoded_params=processing.build_decoded_params_from_processing(p),
+                        only_available_for=["plus", "pro", "api"]):
                     processed = processing.process_images(p)
 
                 # Generation cancelled.

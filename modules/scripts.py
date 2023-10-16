@@ -9,7 +9,7 @@ import traceback
 import gradio as gr
 
 from modules.launch_utils import startup_timer
-from modules import shared, paths, script_callbacks, extensions, script_loading, scripts_postprocessing, errors, sd_hijack
+from modules import shared, paths, script_callbacks, extensions, script_loading, scripts_postprocessing, errors
 
 AlwaysVisible = object()
 
@@ -655,6 +655,7 @@ class ScriptRunner:
                 script_args = p.script_args[script.args_from:script.args_to]
                 script.process(p, *script_args)
             except Exception as e:
+                from modules import sd_hijack
                 sd_hijack.model_hijack.comments.append(f'Extension {script.title()} Process Error: {type(e).__name__}: {str(e)}')
                 errors.report(f"Error running process: {script.filename}", exc_info=True)
 
@@ -680,6 +681,7 @@ class ScriptRunner:
                 script_args = p.script_args[script.args_from:script.args_to]
                 script.process_batch(p, *script_args, **kwargs)
             except Exception as e:
+                from modules import sd_hijack
                 sd_hijack.model_hijack.comments.append(f'Extension {script.title()} Process Batch Error: {type(e).__name__}: {str(e)}')
                 errors.report(f"Error running process_batch: {script.filename}", exc_info=True)
 
@@ -689,6 +691,7 @@ class ScriptRunner:
                 script_args = p.script_args[script.args_from:script.args_to]
                 script.postprocess(p, processed, *script_args)
             except Exception as e:
+                from modules import sd_hijack
                 sd_hijack.model_hijack.comments.append(f'Extension {script.title()} Postprocess Error: {type(e).__name__}: {str(e)}')
                 errors.report(f"Error running postprocess: {script.filename}", exc_info=True)
 
@@ -698,6 +701,7 @@ class ScriptRunner:
                 script_args = p.script_args[script.args_from:script.args_to]
                 script.postprocess_batch(p, *script_args, images=images, **kwargs)
             except Exception as e:
+                from modules import sd_hijack
                 sd_hijack.model_hijack.comments.append(f'Extension {script.title()} Postprocess Batch Error: {type(e).__name__}: {str(e)}')
                 errors.report(f"Error running postprocess_batch: {script.filename}", exc_info=True)
 
@@ -715,6 +719,7 @@ class ScriptRunner:
                 script_args = p.script_args[script.args_from:script.args_to]
                 script.postprocess_image(p, pp, *script_args)
             except Exception as e:
+                from modules import sd_hijack
                 sd_hijack.model_hijack.comments.append(f'Extension {script.title()} Postprocess Image Error: {type(e).__name__}: {str(e)}')
                 errors.report(f"Error running postprocess_image: {script.filename}", exc_info=True)
 

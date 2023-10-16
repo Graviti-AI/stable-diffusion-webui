@@ -129,6 +129,9 @@ class Paths:
     def public_outdir(self) -> pathlib.Path:
         return self._check_dir(pathlib.Path(data_path).joinpath(WORKDIR_NAME, 'public', 'outputs'))
 
+    def shared_outdir(self) -> pathlib.Path:
+        return self._check_dir(pathlib.Path(data_path).joinpath(WORKDIR_NAME, 'shared', 'outputs'))
+
     def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)
 

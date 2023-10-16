@@ -13,7 +13,7 @@ from PIL import Image, ImageOps
 import random
 import cv2
 from skimage import exposure
-from typing import Any
+from typing import Any, Optional
 
 import modules.sd_hijack
 from modules import devices, prompt_parser, masking, sd_samplers, lowvram, generation_parameters_copypaste, extra_networks, sd_vae_approx, scripts, sd_samplers_common, sd_unet, errors, rng
@@ -204,6 +204,8 @@ class StableDiffusionProcessing:
 
     _global_prompt_styles = None
     _request = None
+    _task_id: Optional[str] = None
+    _origin: Optional[str] = None
 
     def __post_init__(self):
         if self.sampler_index is not None:
@@ -241,10 +243,22 @@ class StableDiffusionProcessing:
 
     def set_request(self, request):
         self._request = request
+        if request:
+            header_dict = dict(request.headers)
+            self._task_id = header_dict.get('x-task-id', None)
+            self._origin = header_dict.get('origin', None)
         self._global_prompt_styles = shared.prompt_styles(request.request)
 
     def get_request(self):
         return self._request
+
+    @property
+    def task_id(self) -> Optional[str]:
+        return self._task_id
+
+    @property
+    def origin(self) -> Optional[str]:
+        return self._origin
 
     @property
     def sd_model(self):
@@ -669,6 +683,7 @@ def program_version():
 
 
 def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iteration=0, position_in_batch=0, use_main_prompt=False, index=None, all_negative_prompts=None):
+    assert opts, "opts is not initialized"
     if index is None:
         index = position_in_batch + iteration * p.batch_size
 
@@ -701,7 +716,7 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
         "Seed resize from": (None if p.seed_resize_from_w <= 0 or p.seed_resize_from_h <= 0 else f"{p.seed_resize_from_w}x{p.seed_resize_from_h}"),
         "Denoising strength": getattr(p, 'denoising_strength', None),
         "Conditional mask weight": getattr(p, "inpainting_mask_weight", shared.opts.inpainting_mask_weight) if p.is_using_inpainting_conditioning else None,
-        "Clip skip": None if clip_skip <= 1 else clip_skip,
+        "Clip skip": None if clip_skip is None or clip_skip <= 1 else clip_skip,
         "ENSD": opts.eta_noise_seed_delta if uses_ensd else None,
         "Token merging ratio": None if token_merging_ratio == 0 else token_merging_ratio,
         "Token merging ratio hr": None if not enable_hr or token_merging_ratio_hr == 0 else token_merging_ratio_hr,
@@ -712,6 +727,8 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
         **p.extra_generation_params,
         "Version": program_version() if opts.add_version_to_infotext else None,
         "User": p.user if opts.add_user_name_to_info else None,
+        "Diffus task ID": p.task_id,
+        "Image created at": p.origin,
     }
 
     generation_params_text = ", ".join([k if k == v else f'{k}: {generation_parameters_copypaste.quote(v)}' for k, v in generation_params.items() if v is not None])

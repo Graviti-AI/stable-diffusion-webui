@@ -304,6 +304,9 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         shared.state.interrupted = False
         shared.state.job_count = 0
 
+        if isinstance(res[-1], str):
+            res[-1] = f"<p class='comments'>task({task_id})</p>" + res[-1]
+
         if not add_stats:
             task_end_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
             logger.info(f"task({task_id}) end memory: {task_end_system_memory:.2f} GB")

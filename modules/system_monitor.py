@@ -303,7 +303,8 @@ def after_task_finished(
         job_id: Optional[str],
         status: str,
         message: Optional[str] = None,
-        is_intermediate: bool = False):
+        is_intermediate: bool = False,
+        refund_if_failed: bool = False):
     if job_id is None:
         logger.error('task_id is not present in after_task_finished, there might be error occured in before_task_started.')
         return
@@ -328,6 +329,7 @@ def after_task_finished(
         'result': message if message else "{}",
         'finished_at': time.time(),
         'session_hash': session_hash,
+        'refund_if_failed': refund_if_failed,
     }
     if is_intermediate:
         request_body['step_id'] = job_id
@@ -365,6 +367,7 @@ def monitor_this_call(
         param_list: Optional[list] = None,
         extract_task_id: bool = False,
         refund_if_task_failed: bool = True,
+        refund_if_failed: bool = False,
         only_available_for: Optional[list[str]] = None
     ):
     def function_wrapper(func):
@@ -420,7 +423,7 @@ def monitor_this_call(
                 message = f'{type(e).__name__}: {str(e)}'
                 raise e
             finally:
-                after_task_finished(request_obj, task_id, status, message, is_intermediate)
+                after_task_finished(request_obj, task_id, status, message, is_intermediate, refund_if_failed)
             return result
 
         return wrapper
@@ -436,6 +439,7 @@ def monitor_call_context(
         decoded_params: Optional[dict] = None,
         is_intermediate: bool = True,
         refund_if_task_failed: bool = True,
+        refund_if_failed: bool = False,
         only_available_for: Optional[list[str]] = None):
     status = 'unknown'
     message = ''
@@ -461,4 +465,4 @@ def monitor_call_context(
         message = f'{type(e).__name__}: {str(e)}'
         raise e
     finally:
-        after_task_finished(request, task_id, status, message, is_intermediate)
+        after_task_finished(request, task_id, status, message, is_intermediate, refund_if_failed)

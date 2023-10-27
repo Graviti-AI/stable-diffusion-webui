@@ -1,4 +1,5 @@
 import os
+import copy
 import tempfile
 import time
 import uuid
@@ -7,8 +8,12 @@ import json
 import requests
 import functools
 import inspect
+import base64
+import io
+import imghdr
+from PIL import Image
 
-from typing import Optional, Protocol, Union
+from typing import Optional, Protocol, Union, Any, Callable
 from contextlib import contextmanager
 
 import gradio as gr
@@ -36,6 +41,83 @@ class MonitorTierMismatchedException(Exception):
 
     def __repr__(self) -> str:
         return self._msg
+
+
+def remove_schema(base64_str: str) -> str:
+    if "base64," in base64_str:
+        base64_str = base64_str.split("base64,")[1]
+    return base64_str
+
+
+def is_base64_image(img_str: str, supress_exception: bool = True) -> tuple[bool, str, int | None, int | None, str | None]:
+    """
+    Check if a string is a base64 encoded image and return its dimensions and MIME type.
+
+    :param str s: a string to check
+    :return: tuple (is_image, removed_schema_str, width, height, mime) or (False, img_str, None, None, None) if the string is not a valid image
+    """
+    try:
+        mime = None
+        # Check if the string has the embedded schema and remove it
+        removed_schema_str = img_str
+        if ";base64," in img_str:
+            mime, removed_schema_str = img_str.split(";base64,")
+            mime = mime.split(":")[1] if "data:" in mime else None
+
+        # Decode the base64 string
+        decoded = base64.b64decode(removed_schema_str)
+
+        # Open the image and get its size
+        image = Image.open(io.BytesIO(decoded))
+        width, height = image.size
+
+        # If mime type is not available in the string, guess it using imghdr
+        if mime is None:
+            mime = imghdr.what(None, h=decoded)
+            mime = "image/" + mime if mime else None
+
+        return True, removed_schema_str, width, height, mime
+    except Exception as e:
+        if not supress_exception:
+            logger.exception(f"Failed to check if the string ({img_str[:100]}) is a valid image: {e}")
+        return False, img_str, None, None, None
+
+
+def save_base64_image_to_file(encoded_image: str, output_path: str) -> str:
+    output_dir = os.path.dirname(output_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+    decoded_image = base64.b64decode(remove_schema(encoded_image))
+    with open(output_path, 'wb') as f:
+        f.write(decoded_image)
+    return output_path
+
+
+def copy_object_and_replace_images_with_path(
+        obj: Any, output_dir: str, save_image_callback: Optional[Callable] = None):
+    if isinstance(obj, dict):
+        copied_obj = {}
+        for key, value in obj.items():
+            copied_obj[key] = copy_object_and_replace_images_with_path(value, output_dir, save_image_callback)
+        return copied_obj
+    elif isinstance(obj, list) or isinstance(obj, tuple):
+        return [copy_object_and_replace_images_with_path(item, output_dir, save_image_callback) for item in obj]
+    elif isinstance(obj, str):
+        if len(obj) < 200:
+            return obj
+        is_image, removed_schema_str, _, _, mime = is_base64_image(obj)
+        if is_image:
+            ext = mime.split('/')[1] if mime else 'jpg'
+            return save_base64_image_to_file(
+                removed_schema_str, os.path.join(output_dir, f"{str(uuid.uuid4())}.{ext}"))
+    elif isinstance(obj, Image.Image):
+        if save_image_callback:
+            return save_image_callback(obj)
+        ext = 'jpg'
+        output_path = os.path.join(output_dir, f"{str(uuid.uuid4())}.{ext}")
+        obj.save(output_path)
+        return output_path
+    return obj
 
 
 def _make_gpu_consumption(func_name, named_args, *args, **kwargs) -> dict:

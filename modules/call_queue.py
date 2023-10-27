@@ -9,6 +9,7 @@ import json
 from uuid import uuid4
 import psutil
 import asyncio
+import pathlib
 from datetime import datetime
 from PIL import Image
 
@@ -18,6 +19,7 @@ import modules.system_monitor
 from modules.system_monitor import (
     MonitorException,
     MonitorTierMismatchedException,
+    copy_object_and_replace_images_with_path,
     monitor_call_context,
     generate_function_name)
 from modules import shared, progress, errors, script_callbacks, devices
@@ -42,13 +44,18 @@ def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
     return call_function_in_gpu_wroker
 
 
+def get_private_tempdir(request: gradio.routes.Request) -> pathlib.Path:
+    paths = Paths(request)
+    return paths.private_tempdir()
+
+
 def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: Image.Image):
     if hasattr(image, 'already_saved_as') and image.already_saved_as:
         return image.already_saved_as
     else:
-        paths = Paths(request)
+        image_dir = get_private_tempdir(request)
         image_id = str(uuid4())
-        image_path = paths.private_tempdir().joinpath(f'{image_id}.png')
+        image_path = image_dir.joinpath(f'{image_id}.png')
         image.save(image_path)
         image.already_saved_as = str(image_path)
         return str(image_path)
@@ -244,12 +251,14 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         if run_memmon:
             shared.mem_mon.monitor()
         t = time.perf_counter()
+        private_tempdir = get_private_tempdir(request)
         logger.info(f"Begin of task({task_id}) request")
         logger.info(f"url path: {request.url.path}")
         logger.info(f"headers: {json.dumps(dict(request.headers), ensure_ascii=False, sort_keys=True)}")
         logger.info(f"query params: {request.query_params}")
         logger.info(f"path params: {request.path_params}")
-        logger.info(f"body: {json.dumps(request_body, ensure_ascii=False, sort_keys=True)}")
+        logger.info(
+            f"body: {json.dumps(copy_object_and_replace_images_with_path(request_body, str(private_tempdir)), ensure_ascii=False, sort_keys=True)}")
         logger.info(f"End of task({task_id}) request")
         task_start_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
         logger.info(f"task({task_id}) begin memory: {task_start_system_memory:.2f} GB")
@@ -266,7 +275,14 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
                     res = list(res)
                 else:
                     res = list(func(request, *args, **kwargs))
-                result_encoder(res, task_failed=progress.is_task_failed(f"task({task_id})" if task_id else ""))
+                def save_image_if_not_saved_already(img_obj: Image.Image):
+                    return extract_image_path_or_save_if_needed(request, img_obj)
+                result_encoder(
+                    copy_object_and_replace_images_with_path(
+                        res,
+                        str(private_tempdir),
+                        save_image_callback=save_image_if_not_saved_already),
+                    task_failed=progress.is_task_failed(f"task({task_id})" if task_id else ""))
         except MonitorTierMismatchedException as e:
             shared.state.job = ""
             shared.state.job_count = 0

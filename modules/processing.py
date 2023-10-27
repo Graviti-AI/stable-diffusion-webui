@@ -770,6 +770,11 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
 
         res = process_images_inner(p)
 
+    except Exception:
+        if p.scripts is not None:
+            p.scripts.on_fail(p)
+        raise
+
     finally:
         sd_models.apply_token_merging(p.sd_model, 0)
 

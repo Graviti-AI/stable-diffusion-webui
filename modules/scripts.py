@@ -293,6 +293,11 @@ class Script:
         """
         pass
 
+    def on_fail(self, p, *args):
+        """This function is called when exception raised from "process_images" """
+
+        pass
+
 
 class ScriptBuiltinUI(Script):
     setup_for_ui_only = True
@@ -777,6 +782,14 @@ class ScriptRunner:
                 script.before_hr(p, *script_args)
             except Exception:
                 errors.report(f"Error running before_hr: {script.filename}", exc_info=True)
+
+    def on_fail(self, p):
+        for script in self.alwayson_scripts:
+            try:
+                script_args = p.script_args[script.args_from:script.args_to]
+                script.on_fail(p, *script_args)
+            except Exception:
+                errors.report(f"Error running on_fail: {script.filename}", exc_info=True)
 
     def setup_scrips(self, p, *, is_ui=True):
         for script in self.alwayson_scripts:

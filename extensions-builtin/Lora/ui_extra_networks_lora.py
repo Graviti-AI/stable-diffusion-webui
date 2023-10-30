@@ -14,7 +14,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Lora')
         self.min_model_size_mb = 1
-        self.max_model_size_mb = 1e3
+        self.max_model_size_mb = 1500
 
     def refresh_metadata(self):
         for name, network_on_disk in networks.available_networks.items():

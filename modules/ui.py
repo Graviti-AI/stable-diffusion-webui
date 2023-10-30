@@ -501,7 +501,7 @@ def create_ui():
                             if opts.dimensions_and_batch_together:
                                 with gr.Column(elem_id="txt2img_column_batch"):
                                     batch_count = gr.Slider(minimum=1, maximum=4, step=1, label='Batch count', value=1, elem_id="txt2img_batch_count")
-                                    batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=1, elem_id="txt2img_batch_size")
+                                    batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=4, elem_id="txt2img_batch_size")
                                     batch_count.change(
                                         None,
                                         inputs=[],
@@ -986,7 +986,7 @@ def create_ui():
                         if not opts.dimensions_and_batch_together:
                             with FormRow(elem_id="img2img_column_batch"):
                                 batch_count = gr.Slider(minimum=1, maximum=4, step=1, label='Batch count', value=1, elem_id="img2img_batch_count")
-                                batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=1, elem_id="img2img_batch_size")
+                                batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=4, elem_id="img2img_batch_size")
                                 batch_count.change(
                                     None,
                                     inputs=[],

@@ -377,6 +377,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
 
 def _check_sd_model(model_title, vae_title):
+    shared.opts.sd_model_checkpoint = model_title
     if not shared.sd_model or shared.sd_model.sd_checkpoint_info.title != model_title:
         import modules.sd_models
         # refresh model, unload it from memory to prevent OOM

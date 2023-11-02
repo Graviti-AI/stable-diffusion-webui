@@ -44,6 +44,20 @@ def submit_to_gpu_worker(func: callable, timeout: int = 60) -> callable:
     return call_function_in_gpu_wroker
 
 
+def submit_to_gpu_worker_with_request(func: callable, timeout: int = 60) -> callable:
+    def call_function_in_gpu_wroker(request: gradio.routes.Request, *args, **kwargs):
+        if gpu_worker_pool is None:
+            raise RuntimeError("GPU worker thread has not been initialized.")
+        args = [request] + [arg for arg in args]
+        future_res = gpu_worker_pool.submit(
+            func, *args, **kwargs)
+        res = future_res.result(timeout=timeout)
+        return res
+    return call_function_in_gpu_wroker
+
+
+
+
 def get_private_tempdir(request: gradio.routes.Request) -> pathlib.Path:
     paths = Paths(request)
     return paths.private_tempdir()
@@ -83,7 +97,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         timer = Timer('gpu_call', func_name)
 
         # reset global state
-        shared.state.begin(job=id_task)
+        shared.state.begin(job=id_task, request=request)
 
         # start job process
         task_info = progress.start_task(id_task)

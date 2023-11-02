@@ -5,6 +5,7 @@ import time
 
 from modules import errors, shared, devices, script_callbacks
 from typing import Optional
+import gradio as gr
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class State:
     server_port = 0
     _server_command_signal = threading.Event()
     _server_command: Optional[str] = None
+    request = None
 
     def __init__(self):
         self.server_start = time.time()
@@ -152,7 +154,7 @@ class State:
 
         return obj
 
-    def begin(self, job: str = "(unknown)"):
+    def begin(self, job: str = "(unknown)", request: gr.Request = None):
         self.sampling_step = 0
         self.job_count = -1
         self.processing_has_refined_job_count = False
@@ -167,6 +169,7 @@ class State:
         self.textinfo = None
         self.time_start = time.time()
         self.job = job
+        self.request = request
         devices.torch_gc()
         log.info("Starting job %s", job)
 
@@ -177,6 +180,7 @@ class State:
         log.info("Ending job %s (%.2f seconds)", self.job, duration)
         self.job = ""
         self.job_count = 0
+        self.request = None
 
         devices.torch_gc()
 

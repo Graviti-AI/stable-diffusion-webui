@@ -300,14 +300,14 @@ class StableDiffusionModelHijack:
         self.comments = []
         self.extra_generation_params = {}
 
-    def get_prompt_lengths(self, text):
+    def get_prompt_lengths(self, request, text):
         if self.clip is None:
             # If Clip is none, need to give a total token number
             # token_count = len(text.split(' '))
             # return token_count, opts.default_clip_target_token_count
             return "-", "-"
 
-        _, token_count = self.clip.process_texts([text])
+        _, token_count = self.clip.process_texts([text], request)
 
         return token_count, self.clip.get_target_prompt_token_count(token_count)
 

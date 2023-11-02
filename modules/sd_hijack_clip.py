@@ -81,7 +81,7 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
 
         raise NotImplementedError
 
-    def tokenize_line(self, line):
+    def tokenize_line(self, line, request=None):
         """
         this transforms a single prompt into a list of PromptChunk objects - as many as needed to
         represent the prompt.
@@ -154,7 +154,7 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
                 if len(chunk.tokens) == self.chunk_length:
                     next_chunk()
 
-                embedding, embedding_length_in_tokens = self.hijack.embedding_db.find_embedding_at_position(tokens, position)
+                embedding, embedding_length_in_tokens = self.hijack.embedding_db.find_embedding_at_position(tokens, position, request)
                 if embedding is None:
                     chunk.tokens.append(token)
                     chunk.multipliers.append(weight)
@@ -176,7 +176,7 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
 
         return chunks, token_count
 
-    def process_texts(self, texts):
+    def process_texts(self, texts, request=None):
         """
         Accepts a list of texts and calls tokenize_line() on each, with cache. Returns the list of results and maximum
         length, in tokens, of all texts.
@@ -190,7 +190,7 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
             if line in cache:
                 chunks = cache[line]
             else:
-                chunks, current_token_count = self.tokenize_line(line)
+                chunks, current_token_count = self.tokenize_line(line, request)
                 token_count = max(current_token_count, token_count)
 
                 cache[line] = chunks

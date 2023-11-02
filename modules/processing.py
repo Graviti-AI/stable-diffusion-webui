@@ -474,19 +474,22 @@ class StableDiffusionProcessing:
             if old_schedules != new_schedules:
                 self.extra_generation_params["Old prompt editing timelines"] = True
 
-        cached_params = self.cached_params(required_prompts, steps, extra_network_data, hires_steps, shared.opts.use_old_scheduling)
+        # disable cache, because cache cannot record textural_inversion model updates
+        return function(shared.sd_model, required_prompts, steps, hires_steps, shared.opts.use_old_scheduling)
 
-        for cache in caches:
-            if cache[0] is not None and cached_params == cache[0]:
-                return cache[1]
-
-        cache = caches[0]
-
-        with devices.autocast():
-            cache[1] = function(shared.sd_model, required_prompts, steps, hires_steps, shared.opts.use_old_scheduling)
-
-        cache[0] = cached_params
-        return cache[1]
+        # cached_params = self.cached_params(required_prompts, steps, extra_network_data, hires_steps, shared.opts.use_old_scheduling)
+        #
+        # for cache in caches:
+        #     if cache[0] is not None and cached_params == cache[0]:
+        #         return cache[1]
+        #
+        # cache = caches[0]
+        #
+        # with devices.autocast():
+        #     cache[1] = function(shared.sd_model, required_prompts, steps, hires_steps, shared.opts.use_old_scheduling)
+        #
+        # cache[0] = cached_params
+        # return cache[1]
 
     def setup_conds(self):
         prompts = prompt_parser.SdConditioning(self.prompts, width=self.width, height=self.height)
@@ -838,7 +841,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         p.all_subseeds = [int(subseed) + x for x in range(len(p.all_prompts))]
 
     if os.path.exists(cmd_opts.embeddings_dir) and not p.do_not_reload_embeddings:
-        model_hijack.embedding_db.load_textual_inversion_embeddings()
+        model_hijack.embedding_db.load_textual_inversion_embeddings(p.get_request())
 
     if p.scripts is not None:
         p.scripts.process(p)

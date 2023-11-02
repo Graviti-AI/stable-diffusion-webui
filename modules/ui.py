@@ -12,7 +12,7 @@ from typing import Optional, List, Callable
 import gradio as gr
 import gradio.utils
 import numpy as np
-from modules.call_queue import wrap_gradio_gpu_call, wrap_gradio_call, submit_to_gpu_worker
+from modules.call_queue import wrap_gradio_gpu_call, wrap_gradio_call, submit_to_gpu_worker, submit_to_gpu_worker_with_request
 import modules.call_utils
 
 from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, extra_networks, ui_common, ui_postprocessing, progress, ui_loadsave, shared_items, ui_settings,sysinfo, ui_checkpoint_merger, ui_prompt_styles, scripts, sd_samplers, processing, ui_extra_networks
@@ -184,7 +184,7 @@ def connect_clear_prompt(button):
     )
 
 
-def update_token_counter(text, steps):
+def update_token_counter(request: gr.Request, text, steps):
     try:
         text, _ = extra_networks.parse_prompt(text)
 
@@ -198,7 +198,7 @@ def update_token_counter(text, steps):
 
     flat_prompts = reduce(lambda list1, list2: list1+list2, prompt_schedules)
     prompts = [prompt_text for step, prompt_text in flat_prompts]
-    token_count, max_length = max([model_hijack.get_prompt_lengths(prompt) for prompt in prompts], key=lambda args: args[0])
+    token_count, max_length = max([model_hijack.get_prompt_lengths(request, prompt) for prompt in prompts], key=lambda args: args[0])
     return f"<span class='gr-box gr-text-input'>{token_count}/{max_length}</span>"
 
 
@@ -750,11 +750,11 @@ def create_ui():
             ]
 
             toprow.token_button.click(
-                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 30),
+                fn=submit_to_gpu_worker_with_request(update_token_counter, timeout=60 * 30),
                 inputs=[toprow.prompt, steps],
                 outputs=[toprow.token_counter])
             toprow.negative_token_button.click(
-                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 30),
+                fn=submit_to_gpu_worker_with_request(update_token_counter, timeout=60 * 30),
                 inputs=[toprow.negative_prompt, steps],
                 outputs=[toprow.negative_token_counter])
 
@@ -1172,9 +1172,11 @@ def create_ui():
                 **interrogate_args,
             )
 
-            toprow.token_button.click(fn=update_token_counter, inputs=[toprow.prompt, steps], outputs=[toprow.token_counter])
+            toprow.token_button.click(fn=submit_to_gpu_worker_with_request(update_token_counter, timeout=60 * 30),
+                                      inputs=[toprow.prompt, steps],
+                                      outputs=[toprow.token_counter])
             toprow.negative_token_button.click(
-                fn=submit_to_gpu_worker(update_token_counter, timeout=60 * 30),
+                fn=submit_to_gpu_worker_with_request(update_token_counter, timeout=60 * 30),
                 inputs=[toprow.negative_prompt, steps],
                 outputs=[toprow.negative_token_counter])
 

@@ -39,6 +39,10 @@ def list_textual_inversion_templates():
     return textual_inversion_templates
 
 
+def is_embedding_in_workspace(request, embedding):
+    return True
+
+
 class Embedding:
     def __init__(self, vec, name, step=None):
         self.vec = vec
@@ -258,7 +262,7 @@ class EmbeddingDatabase:
             else:
                 self.skipped_embeddings[name] = embedding
 
-    def load_from_dir(self, embdir):
+    def load_from_dir(self, request, embdir):
         if not os.path.isdir(embdir.path):
             return
 
@@ -275,7 +279,7 @@ class EmbeddingDatabase:
                     errors.report(f"Error loading embedding {fn}", exc_info=True)
                     continue
 
-    def load_textual_inversion_embeddings(self, force_reload=False):
+    def load_textual_inversion_embeddings(self, request, force_reload=False):
         if not force_reload:
             need_reload = False
             for embdir in self.embedding_dirs.values():
@@ -292,7 +296,7 @@ class EmbeddingDatabase:
         self.expected_shape = self.get_expected_shape()
 
         for embdir in self.embedding_dirs.values():
-            self.load_from_dir(embdir)
+            self.load_from_dir(request, embdir)
             embdir.update()
 
         # re-sort word_embeddings because load_from_dir may not load in alphabetic order.
@@ -308,7 +312,7 @@ class EmbeddingDatabase:
             if self.skipped_embeddings:
                 print(f"Textual inversion embeddings skipped({len(self.skipped_embeddings)}): {', '.join(self.skipped_embeddings.keys())}")
 
-    def find_embedding_at_position(self, tokens, offset):
+    def find_embedding_at_position(self, tokens, offset, request=None):
         token = tokens[offset]
         possible_matches = self.ids_lookup.get(token, None)
 
@@ -316,6 +320,8 @@ class EmbeddingDatabase:
             return None, None
 
         for ids, embedding in possible_matches:
+            if not is_embedding_in_workspace(request, embedding):
+                continue
             if tokens[offset:offset + len(ids)] == ids:
                 return embedding, len(ids)
 

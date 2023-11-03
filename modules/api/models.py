@@ -313,14 +313,6 @@ class ScriptInfo(BaseModel):
     args: List[ScriptArg] = Field(title="Arguments", description="List of script's arguments")
 
 
-class GetDaemonStatusResponse(BaseModel):
-    status: str = Field(title="status")
-
-
-class UpdateStatusRequest(BaseModel):
-    status: str = Field(title="status")
-
-
 class GetTaskCountResponse(BaseModel):
     current_task: str = Field(title="CurrentTask")
     queued_tasks: dict = Field(title="QueuedTasks")

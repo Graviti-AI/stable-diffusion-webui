@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Request, HTTPException
 
-from modules.api.models import GetTaskCountResponse, GetDaemonStatusResponse, UpdateStatusRequest
+from modules.api.models import GetTaskCountResponse
 import modules.progress
 import modules.shared
 
@@ -19,24 +19,13 @@ class DaemonApi:
     def __init__(self, app: FastAPI):
         self._app = app
         self._secret = modules.shared.cmd_opts.system_monitor_api_secret
-        self._status = DAEMON_STATUS_UP
 
-        self._add_api_route("/daemon/v1/status", self.get_status, methods=["GET"], response_model=GetDaemonStatusResponse)
-        self._add_api_route("/daemon/v1/status", self.set_status, methods=["PUT"])
-        self._add_api_route("/daemon/v1/pending-task-count", self.get_task_count, methods=["GET"], response_model=GetTaskCountResponse)
+        self._add_api_route("/daemon/v1/health/check", self.health_check, methods=["GET"])
+        self._add_api_route("/daemon/v1/pending-task-count", self.get_task_count, methods=["GET"],
+                            response_model=GetTaskCountResponse)
 
-    def get_status(self):
-        return GetDaemonStatusResponse(status=self._status)
-
-    def set_status(self, request: UpdateStatusRequest):
-        status = request.status
-        if status not in (DAEMON_STATUS_PENDING, DAEMON_STATUS_UP, DAEMON_STATUS_DOWN):
-            raise HTTPException(status_code=400, detail="invalid status")
-
-        self._status = request.status
-        return GetDaemonStatusResponse(status=self._status)
-
-    def get_task_count(self):
+    @staticmethod
+    def get_task_count():
         current_task, pending_tasks, _, finished_task_count, failed_task_count = modules.progress.get_task_queue_info()
         return GetTaskCountResponse(current_task=current_task if current_task else '',
                                     queued_tasks=pending_tasks,
@@ -52,3 +41,7 @@ class DaemonApi:
             return True
 
         raise HTTPException(status_code=401, detail="invalid API secret")
+
+    @staticmethod
+    def health_check() -> str:
+        return 'OK'

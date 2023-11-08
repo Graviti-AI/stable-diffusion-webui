@@ -1590,6 +1590,7 @@ def create_ui():
                 gr.HTML(
                     value="<div class='user-content'>"
                             "<div class='right-content'>"
+                            "<div id='one_click_boost_button' class='one_click_boost_button_area' style='display: none'></div>"
                             "<div id='discord' class='discord-icon'><a title='Join Discord' href='https://discord.gg/QfBbBYqQ7z'><img src='/public/image/discord.png' /></a></div>"
                             "<div id='sign' title='' class='upgrade-content' style='display: none'><a><img /><span></span></a></div>"
                             "<div id='package' title='Credits Package' class='upgrade-content' style='display: none'><a><img src='/public/image/package.png' /><span></span></a></div>"

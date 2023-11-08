@@ -21,6 +21,7 @@ div.gradio-image button[aria-label="Edit"] {
 
 .user-content {
     justify-content: flex-end;
+    flex-wrap: wrap-reverse;
 }
 
 .right-content, .user-content  {
@@ -29,6 +30,8 @@ div.gradio-image button[aria-label="Edit"] {
 
 .right-content {
     margin-right: 10px;
+    flex-wrap: wrap-reverse;
+    justify-content: flex-end;
 }
 
 .discord-icon img {
@@ -1726,4 +1729,15 @@ body.resizing .resize-handle {
 
 .container {
   padding: unset;
+}
+
+#one_click_boost_button {
+  justify-content: center;
+  display: flex;
+}
+
+@media screen (max-width: 550px) {
+  #one_click_boost_button {
+    width: 100%; 
+  }
 }

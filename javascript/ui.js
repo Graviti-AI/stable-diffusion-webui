@@ -921,6 +921,55 @@ async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null)
     }
 }
 
+function renderHtmlResponse(elem, url, method, onSucceeded=null, onFailed=null, body = null) {
+  let fetchParams = {
+    method: method.toUpperCase(),
+    redirect: 'error'
+  };
+  if (method.toLowerCase() === 'post' && body) {
+    fetchParams.headers = {
+        'Content-Type': 'application/json'
+    };
+    fetchParams.body = JSON.stringify(body);
+  }
+  fetch(url, fetchParams)
+  .then(response => {
+      if (response.status === 200) {
+          return response.text();
+      }
+      return Promise.reject(response);
+  })
+  .then((htmlResponse) => {
+    let doc = document.implementation.createHTMLDocument();
+    doc.body.innerHTML = htmlResponse;
+    let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+        return el;
+    });
+    for (const index in arrayScripts) {
+        doc.body.removeChild(arrayScripts[index]);
+    }
+    elem.innerHTML = doc.body.innerHTML;
+    for (const index in arrayScripts) {
+        let new_script = document.createElement("script");
+        if (arrayScripts[index].src) {
+            new_script.src = arrayScripts[index].src;
+        } else {
+            new_script.innerHTML = arrayScripts[index].innerHTML;
+        }
+        document.body.appendChild(new_script);
+    }
+    if (onSucceeded && typeof onSucceeded === "function") {
+      onSucceeded(elem);
+    }
+  })
+  .catch((error) => {
+    console.error('Error:', error);
+    if (onFailed && typeof onFailed === "function") {
+      onFailed(elem, error);
+    }
+  });
+}
+
 async function joinShareGroup(userName=null, avatarUrl=null) {
     const urlParams = new URLSearchParams(window.location.search);
     const share_id = urlParams.get('share_id');
@@ -1127,7 +1176,7 @@ onUiLoaded(function(){
         if (res && res.ok && !res.redirected) {
             return res.json();
         }
-    }).then(result => {
+    }).then((result) => {
         if (result) {
                 const userContent = gradioApp().querySelector(".user-content");
                 const userInfo = userContent.querySelector(".user_info");
@@ -1178,7 +1227,16 @@ onUiLoaded(function(){
                     }
                 }
                 if (result.access) {
-                  add_event_listener_to_tabs_and_features(result.access);
+                  try {
+                    add_event_listener_to_tabs_and_features(result.access);
+                  } catch (error) {
+                    console.error(error);
+                  }
+                }
+                const boostButton = gradioApp().querySelector("#one_click_boost_button");
+                let onSucceededCallback = (elem) => {elem.style.display = 'flex';};
+                if (boostButton) {
+                  renderHtmlResponse(boostButton, "/boost_button/html", "GET", onSucceeded=onSucceededCallback);
                 }
         }
     })

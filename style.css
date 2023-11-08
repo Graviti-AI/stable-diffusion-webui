@@ -1723,3 +1723,7 @@ body.resizing .resize-handle {
   width: 200px;
   flex-grow: 0.3;
 }
+
+.container {
+  padding: unset;
+}

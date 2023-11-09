@@ -226,9 +226,20 @@ def _extract_task_id(*args):
         return uuid.uuid4().hex
 
 
+def _get_system_monitor_config(request: gr.Request):
+    headers = dict(request.headers)
+
+    # take per-task config as priority instead of global config
+    monitor_addr = headers.get('x-diffus-system-monitor-url', '') or headers.get('X-Diffus-System-Monitor-Url', '')
+    system_monitor_api_secret = headers.get('x-diffus-system-monitor-api-secret', '') or headers.get('X-Diffus-System-Monitor-Api-Secret', '')
+    if not monitor_addr or not system_monitor_api_secret:
+        monitor_addr = modules.shared.cmd_opts.system_monitor_addr
+        system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
+    return monitor_addr, system_monitor_api_secret
+
+
 def on_task(request: gr.Request, func, task_info, *args, **kwargs):
-    monitor_addr = modules.shared.cmd_opts.system_monitor_addr
-    system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
+    monitor_addr, system_monitor_api_secret = _get_system_monitor_config(request)
     if not monitor_addr or not system_monitor_api_secret:
         logger.error('system_monitor_addr or system_monitor_api_secret is not present')
         return None
@@ -288,11 +299,11 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
 
 
 def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str, time_consumption: dict):
-    monitor_addr = modules.shared.cmd_opts.system_monitor_addr
-    system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
+    monitor_addr, system_monitor_api_secret = _get_system_monitor_config(request)
     if not monitor_addr or not system_monitor_api_secret:
         logger.error('system_monitor_addr or system_monitor_api_secret is not present')
         return
+
     request_url = f'{monitor_addr}/{monitor_log_id}'
     resp = requests.post(request_url,
                          headers={
@@ -321,11 +332,11 @@ def before_task_started(
         only_available_for: Optional[list[str]] = None) -> Optional[str]:
     if job_id is None:
         job_id = str(uuid.uuid4())
-    monitor_addr = modules.shared.cmd_opts.system_monitor_addr
-    system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
+    monitor_addr, system_monitor_api_secret = _get_system_monitor_config(request)
     if not monitor_addr or not system_monitor_api_secret:
         logger.error(f'{job_id}: system_monitor_addr or system_monitor_api_secret is not present')
         return None
+
     header_dict = dict(request.headers)
     session_hash = header_dict.get('x-session-hash', None)
     if not session_hash:
@@ -390,11 +401,11 @@ def after_task_finished(
     if job_id is None:
         logger.error('task_id is not present in after_task_finished, there might be error occured in before_task_started.')
         return
-    monitor_addr = modules.shared.cmd_opts.system_monitor_addr
-    system_monitor_api_secret = modules.shared.cmd_opts.system_monitor_api_secret
+    monitor_addr, system_monitor_api_secret = _get_system_monitor_config(request)
     if not monitor_addr or not system_monitor_api_secret:
         logger.error(f'{job_id}: system_monitor_addr or system_monitor_api_secret is not present')
         return
+
     header_dict = dict(request.headers)
     session_hash = header_dict.get('x-session-hash', None)
     if not session_hash:
@@ -451,7 +462,7 @@ def monitor_this_call(
         refund_if_task_failed: bool = True,
         refund_if_failed: bool = False,
         only_available_for: Optional[list[str]] = None
-    ):
+):
     def function_wrapper(func):
         @functools.wraps(func)
         def wrapper(request: Union[gr.Request, RequestGetter], *args, **kwargs):

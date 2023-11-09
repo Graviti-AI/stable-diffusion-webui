@@ -475,7 +475,8 @@ class StableDiffusionProcessing:
                 self.extra_generation_params["Old prompt editing timelines"] = True
 
         # disable cache, because cache cannot record textural_inversion model updates
-        return function(shared.sd_model, required_prompts, steps, hires_steps, shared.opts.use_old_scheduling)
+        with devices.autocast():
+            return function(shared.sd_model, required_prompts, steps, hires_steps, shared.opts.use_old_scheduling)
 
         # cached_params = self.cached_params(required_prompts, steps, extra_network_data, hires_steps, shared.opts.use_old_scheduling)
         #

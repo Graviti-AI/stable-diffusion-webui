@@ -279,7 +279,7 @@ class EmbeddingDatabase:
                     errors.report(f"Error loading embedding {fn}", exc_info=True)
                     continue
 
-    def load_textual_inversion_embeddings(self, request, force_reload=False):
+    def load_textual_inversion_embeddings(self, request, force_reload=True):
         if not force_reload:
             need_reload = False
             for embdir in self.embedding_dirs.values():

@@ -71,7 +71,7 @@ function testApi() {
 
 function judgeEnvironment() {
     const origin = location.origin;
-    return origin.includes('com') && !origin.includes('test') ? 'prod' : 'dev';
+    return (origin.includes('com') || origin.includes('me') || origin.includes('co')) && !origin.includes('test') ? 'prod' : 'dev';
   }
 
 testApi();

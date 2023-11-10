@@ -334,7 +334,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         shared.state.interrupted = False
         shared.state.job_count = 0
 
-        if isinstance(res[-1], str):
+        if isinstance(res[-1], str) and task_id:
             res[-1] = f"<p class='comments'>task({task_id})</p>" + res[-1]
 
         if not add_stats:

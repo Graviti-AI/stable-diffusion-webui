@@ -1139,7 +1139,7 @@ function add_event_listener_to_tabs_and_features(options) {
     } else if (featureInfo.element_id) {
       featureContainers = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
     } else {
-      featureContainers = Array.from(gradioApp().querySelectorAll(".gradio-group > .gradio-accordion > .label-wrap > span"))
+      featureContainers = Array.from(gradioApp().querySelectorAll(".gradio-accordion > .label-wrap > span"))
         .filter(el => el.textContent.includes(featureInfo.label_name)).map(el => el.parentElement.parentElement);
     }
     if (featureContainers) {

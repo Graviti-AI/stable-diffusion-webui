@@ -51,6 +51,7 @@ let searchValue = '';
 let tabSearchValueMap = new Map();
 const isPcScreen = window.innerWidth > 600;
 let userTier = 'Free';
+let featurePermissions = null;
 const tierLevels = {
     'free': 0,
     'basic': 1,

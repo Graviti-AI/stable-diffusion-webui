@@ -120,6 +120,119 @@ function create_submit_args(args) {
     return res;
 }
 
+async function _getFeaturePermissions() {
+    if (!featurePermissions) {
+        const response = await fetchGet("/config/feature_permissions");
+        const body = await response.json()
+        featurePermissions = {
+            generate: body.generate,
+            buttons: Object.fromEntries(body.buttons.map((item) => [item.name, item]))
+        }
+    }
+    return featurePermissions;
+
+}
+
+function _joinWords(words, conjunction = "and") {
+    const names = words.map((item) => `"${item}"`);
+    if (names.length == 1) {
+        return names[0];
+    }
+    const last_name = names.pop();
+    return `${names.join(", ")} ${conjunction} ${last_name}`;
+}
+
+function _joinTiers(tiers) {
+    const unique_tiers = [];
+    for (let tier of ["Basic", "Plus", "Pro", "Api"]) {
+        if (tiers.includes(tier)) {
+            unique_tiers.push(tier);
+        }
+    }
+    return _joinWords(unique_tiers, "or");
+}
+
+function _tierCheckFailed(features, allowed_tiers) {
+    notifier.confirm(
+        `${features} is not available in the current plan. Please upgrade to ${allowed_tiers} to use it.`,
+        () => {window.open("/user#/subscription?type=subscription", "_blank")},
+        () => {},
+        {
+            labels: {
+                confirm: 'Upgrade Now',
+                confirmOk: 'Upgrade'
+            }
+        }
+    );
+    throw `${features} is not available for current tier.`;
+}
+
+async function tierCheckGenerate(tabname) {
+    const features = [];
+    const allowed_tiers = [];
+    let is_order_info_requested = false;
+
+    const permissions = await _getFeaturePermissions()
+    for (let permission of permissions.generate) {
+        if (permission.allowed_tiers.includes(userTier)) {
+            continue;
+        }
+        if (!is_order_info_requested) {
+            await updateOrderInfo();
+            is_order_info_requested = true;
+            if (permission.allowed_tiers.includes(userTier)) {
+                continue;
+            }
+        }
+
+        const elem_id = permission[`${tabname}_id`];
+        const tab_elem_id = `tab_${tabname}`
+        if (permission.type === "checkbox") {
+            const target_elem = document.querySelector(`#${tab_elem_id} #${elem_id} input`);
+            if (target_elem.checked === permission.value) {
+                continue;
+            }
+        } else if (permission.type === "dropdown") {
+            const target_elem = document.querySelector(`#${tab_elem_id} #${elem_id} input`);
+            if (target_elem.value === permission.value) {
+                continue;
+            }
+        } else {
+            continue;
+        }
+        features.push(permission.name);
+        allowed_tiers.push(...permission.allowed_tiers);
+    }
+
+    if (features.length == 0) {
+        return;
+    }
+    _tierCheckFailed(_joinWords(features), _joinTiers(allowed_tiers));
+}
+
+
+async function tierCheckButtonInternal(feature_name) {
+    const permissions = await _getFeaturePermissions()
+    const permission = permissions.buttons[feature_name];
+
+    if (permission.allowed_tiers.includes(userTier)) {
+        return;
+    }
+    await updateOrderInfo();
+    if (permission.allowed_tiers.includes(userTier)) {
+        return;
+    }
+    _tierCheckFailed(`"${feature_name}"`, _joinTiers(permission.allowed_tiers));
+}
+
+function tierCheckButton(feature_name) {
+    return async () => {
+        tierCheckButtonInternal(feature_name);
+        return Array.from(arguments);
+    }
+}
+
+
 function showSubmitButtons(tabname, show) {
     gradioApp().getElementById(tabname + '_interrupt').style.display = show ? "none" : "block";
     gradioApp().getElementById(tabname + '_skip').style.display = show ? "none" : "block";
@@ -132,7 +245,8 @@ function showRestoreProgressButton(tabname, show) {
     button.style.display = show ? "flex" : "none";
 }
 
-function submit() {
+async function submit() {
+    await tierCheckGenerate("txt2img");
     checkSignatureCompatibility();
 
     showSubmitButtons('txt2img', false);
@@ -153,7 +267,8 @@ function submit() {
     return res;
 }
 
-function submit_img2img() {
+async function submit_img2img() {
+    await tierCheckGenerate("img2img");
     showSubmitButtons('img2img', false);
 
     var id = randomId();
@@ -1038,116 +1153,81 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
-function check_tab(tabName, tabContainerId, element) {
-  let switchBackToText2img = () => {
-    const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
-    gradioApp().querySelectorAll("#tabs > div.tab-nav > button")[
-      Array.from(tabItems).findIndex(el => el.id === "tab_txt2img")]
-      .click();
-  };
-  let onOk = () => {
-    switchBackToText2img();
-    element.setAttribute("data-uprade-notifier", "");
-    window.location.href = "/user#/subscription?type=subscription";
-  };
-  let onCancel = () => {
-    switchBackToText2img();
-    element.setAttribute("data-uprade-notifier", "");
-  }
-  return remind_user_friendly(tabName, onOk, onCancel, element);
-}
 
-function check_feature(featureName, featureContainerId, element) {
-  let closeAccordin = () => {
-    let labelWrapper = Array.from(element.querySelectorAll(".gradio-accordion > .label-wrap > span"))
-      .find(el => el.textContent.includes(featureName));
-    if (labelWrapper.nextElementSibling.textContent.includes("▼")) {
-      labelWrapper.click();
-    }
-  };
-  let onOk = () => {
-    closeAccordin();
-    element.setAttribute("data-uprade-notifier", "");
-    window.location.href = "/user#/subscription?type=subscription";
-  };
-  let onCancel = () => {
-    closeAccordin();
-    element.setAttribute("data-uprade-notifier", "");
-  }
-  return remind_user_friendly(featureName, onOk, onCancel, element);
-}
+async function updateOrderInfo() {
+    await fetch(`/api/order_info`, { method: "GET", credentials: "include" })
+        .then((res) => {
+            if (res && res.ok && !res.redirected) {
+                return res.json();
+            }
+        })
+        .then((result) => {
+            if (result) {
+                const userContent = gradioApp().querySelector(".user-content");
+                const userInfo = userContent.querySelector(".user_info");
+                if (userInfo) {
+                    userTier = result.tier;
+                    userInfo.style.display = "flex";
+                    const img = userInfo.querySelector("a > img");
+                    if (img) {
+                        imgExists(result.picture, img, result.name);
+                    }
+                    const name = userInfo.querySelector(".user_info-name > span");
+                    if (name) {
+                        name.innerHTML = result.name;
+                    }
+                    const logOutLink = userInfo.querySelector(".user_info-name > a");
+                    if (logOutLink) {
+                        logOutLink.target = "_self";
+                        // remove cookie
+                        logOutLink.onclick = () => {
+                            document.cookie = "auth-session=;";
+                        };
+                    }
 
-function remind_user_friendly(name, onOk, onCancel, element) {
-  let reminder_function = (event) => {
-    event.stopPropagation();
-    const notified = element.getAttribute("data-uprade-notifier");
-    if (!notified) {
-      notifier.confirm(
-        `${name} is not available in the current plan. Click the button to upgrade to enjoy these features.`,
-        onOk,
-        onCancel,
-        {
-          labels: {
-            confirm: 'Upgrade Now',
-            confirmOk: 'Upgrade'
-          }
-        }
-      );
-      element.setAttribute("data-uprade-notifier", true);
-    }
-  };
-  return reminder_function;
-}
+                    if (result.tier.toLowerCase() === "free") {
+                        const upgradeContent = userContent.querySelector("#upgrade");
+                        if (upgradeContent) {
+                            upgradeContent.style.display = "flex";
+                        }
+                    }
 
-function add_event_listener_to_tabs_and_features(options) {
-  options.not_allowed_tabs.forEach((tabInfo) => {
-    const tabContainer = gradioApp().querySelector(`#${tabInfo.element_id}`);
-    if (tabContainer) {
-      tabContainer.addEventListener("click", check_tab(tabInfo.tab_text, tabInfo.element_id, tabContainer));
-    }
-  });
-  let buttonContainer = gradioApp().querySelector("#tabs > div.tab-nav");
-  buttonContainer.addEventListener("click", (event) => {
-    let target = event.target;
-    const buttons = gradioApp().querySelectorAll("#tabs > div.tab-nav > button");
-    const buttonIndex = Array.from(buttons).findIndex(el => el.textContent === target.textContent);
-    if (buttonIndex >= 0) {
-      const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
-      const relevantTab = tabItems[buttonIndex];
-      options.not_allowed_tabs.forEach((tabInfo) => {
-        if (relevantTab.id.includes(tabInfo.element_id)) {
-          let action = check_tab(tabInfo.tab_text, tabInfo.element_id, target);
-          action(event);
-        }
-      });
-    }
-  });
-  options.not_allowed_features.forEach((featureInfo) => {
-    let featureContainers;
-    if (featureInfo.element_id == "script_list") {
-      const scriptLists = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
-      scriptLists.forEach((scriptList) => {
-        let onOk = () => {
-          scriptList.setAttribute("data-uprade-notifier", "");
-          window.location.href = "/user#/subscription?type=subscription";
-        };
-        let onCancel = () => {
-          scriptList.setAttribute("data-uprade-notifier", "");
-        }
-        scriptList.addEventListener("click", remind_user_friendly(featureInfo.label_name, onOk, onCancel, scriptList));
-      });
-    } else if (featureInfo.element_id) {
-      featureContainers = gradioApp().querySelectorAll(`#${featureInfo.element_id}`);
-    } else {
-      featureContainers = Array.from(gradioApp().querySelectorAll(".gradio-accordion > .label-wrap > span"))
-        .filter(el => el.textContent.includes(featureInfo.label_name)).map(el => el.parentElement.parentElement);
-    }
-    if (featureContainers) {
-      featureContainers.forEach((featureContainer) => {
-        featureContainer.addEventListener("click", check_feature(featureInfo.label_name, featureInfo.element_id, featureContainer));
-      });
-    }
-  });
+                    if (["basic", "plus", "pro", "api"].includes(result.tier.toLowerCase())) {
+                        gtag("event", "conversion", {
+                            send_to: "AW-347751974/EiR7CPWfu88YEKaM6aUB",
+                            value: 12.0,
+                            currency: "USD",
+                        });
+                        const packageIcon = gradioApp().querySelector("#package");
+                        if (packageIcon) {
+                            packageIcon.style.display = "flex";
+                            const aLink = packageIcon.querySelector("a");
+                            const spanNode = aLink.querySelector("span");
+                            const resultInfo = { user_id: result.user_id };
+                            const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+                            const host =
+                                judgeEnvironment() === "prod"
+                                    ? "https://buy.stripe.com/00g7sF1K90IXa0UeV5"
+                                    : "https://buy.stripe.com/test_9AQ15Uewh6kEb2o9AF";
+                            aLink.href = `${host}?prefilled_email=${result.email}&client_reference_id=${referenceId}`;
+                            spanNode.textContent = isPcScreen ? "Credits Package" : "";
+                        }
+                    }
+                }
+                const boostButton = gradioApp().querySelector("#one_click_boost_button");
+                let onSucceededCallback = (elem) => {
+                    elem.style.display = "flex";
+                };
+                if (boostButton) {
+                    renderHtmlResponse(
+                        boostButton,
+                        "/boost_button/html",
+                        "GET",
+                        (onSucceeded = onSucceededCallback),
+                    );
+                }
+            }
+        });
 }
 
 // get user info
@@ -1171,73 +1251,5 @@ onUiLoaded(function(){
 
     setTimeout(monitorSignatureChange, 30000);
     pullNewSubscribers();
-
-    fetch(`/api/order_info`, {method: "GET", credentials: "include"}).then(res => {
-        if (res && res.ok && !res.redirected) {
-            return res.json();
-        }
-    }).then((result) => {
-        if (result) {
-                const userContent = gradioApp().querySelector(".user-content");
-                const userInfo = userContent.querySelector(".user_info");
-                if (userInfo) {
-                    userTier = result.tier;
-                    userInfo.style.display = 'flex';
-                    const img = userInfo.querySelector("a > img");
-                    if (img) {
-                        imgExists(result.picture, img, result.name);
-                    }
-                    const name = userInfo.querySelector(".user_info-name > span");
-                    if (name) {
-                        name.innerHTML = result.name;
-                    }
-                    const logOutLink = userInfo.querySelector(".user_info-name > a");
-                    if (logOutLink) {
-                        logOutLink.target="_self";
-                        // remove cookie
-                        logOutLink.onclick = () => {
-                            document.cookie = 'auth-session=;';
-                        }
-                    }
-
-                    if (result.tier.toLowerCase() === 'free') {
-                        const upgradeContent = userContent.querySelector("#upgrade");
-                        if (upgradeContent) {
-                            upgradeContent.style.display = 'flex';
-                        }
-                    }
-
-                    if (["basic", "plus", "pro", "api"].includes(result.tier.toLowerCase())) {
-                        gtag('event', 'conversion', {
-                            'send_to': 'AW-347751974/EiR7CPWfu88YEKaM6aUB',
-                            'value': 12.0,
-                            'currency': 'USD'
-                        });
-                        const packageIcon = gradioApp().querySelector('#package');
-                        if (packageIcon) {
-                            packageIcon.style.display = 'flex';
-                            const aLink = packageIcon.querySelector('a');
-                            const spanNode = aLink.querySelector('span');
-                            const resultInfo = {"user_id": result.user_id};
-                            const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-                            const host = judgeEnvironment() === 'prod' ? 'https://buy.stripe.com/00g7sF1K90IXa0UeV5' : 'https://buy.stripe.com/test_9AQ15Uewh6kEb2o9AF';
-                            aLink.href = `${host}?prefilled_email=${result.email}&client_reference_id=${referenceId}`;
-                            spanNode.textContent = isPcScreen ? 'Credits Package' : '';
-                        }
-                    }
-                }
-                if (result.access) {
-                  try {
-                    add_event_listener_to_tabs_and_features(result.access);
-                  } catch (error) {
-                    console.error(error);
-                  }
-                }
-                const boostButton = gradioApp().querySelector("#one_click_boost_button");
-                let onSucceededCallback = (elem) => {elem.style.display = 'flex';};
-                if (boostButton) {
-                  renderHtmlResponse(boostButton, "/boost_button/html", "GET", onSucceeded=onSucceededCallback);
-                }
-        }
-    })
+    updateOrderInfo();
 });

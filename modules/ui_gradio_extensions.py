@@ -46,6 +46,7 @@ def javascript_html(request: gr.Request):
     """
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
     head += '<script src="/components/js/scrollload/index.js"></script>\n'
+    head += '<script src=" https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
 
     for script in scripts.list_scripts("javascript", ".js"):
         head += f'<script type="text/javascript" src="{webpath(script.path)}"></script>\n'
@@ -72,6 +73,7 @@ def css_html():
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">\n'
     head += '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">\n'
     head += '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">\n'
+    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">\n'
 
     def stylesheet(fn):
         return f'<link rel="stylesheet" property="stylesheet" href="{webpath(fn)}">\n'

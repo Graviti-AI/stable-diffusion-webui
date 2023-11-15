@@ -1643,6 +1643,10 @@ def create_ui():
                         #sd_checkpoint_options.component_args,
                         filter_out_refiners,
                         "refresh_sd_model_checkpoint_dropdown")
+                    gr.HTML(
+                        '<button id="introjs_button" class="mdi mdi-help-circle-outline" style="font-size: 1.4rem;"></button>',
+                    )
+
                     inspire_button = gr.Button(
                         "Inspire me", elem_id="gallery_inspire_me_button", variant="primary")
                     inspire_button.click(

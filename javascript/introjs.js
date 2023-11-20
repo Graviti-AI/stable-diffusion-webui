@@ -118,11 +118,9 @@ async function loadIntroJS() {
 
     const tab = _registered_tabs["tab_txt2img"];
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
     if (!window.Cookies.get(tab.cookie_key)) {
         tab.introjs.start();
     }
 }
 
-onUiLoaded(loadIntroJS);
+onNotificationComplete(loadIntroJS);

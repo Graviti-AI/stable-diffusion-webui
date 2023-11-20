@@ -743,16 +743,110 @@ async function getModelFromUrl() {
     });
 }
 
+function observeModalClose(modalElement, onClosedCallback) {
+  let observer = new MutationObserver(function(mutations) {
+    // check for removed target
+    mutations.forEach(function(mutation) {
+      let nodes = Array.from(mutation.removedNodes);
+      let directMatch = nodes.indexOf(modalElement) > -1
+      let parentMatch = nodes.some(parent => parent.contains(modalElement));
+      if (directMatch) {
+        if (typeof onClosedCallback === 'function') {
+          onClosedCallback(modalElement);
+        }
+        observer.disconnect();
+      } else if (parentMatch) {
+        if (typeof onClosedCallback === 'function') {
+          onClosedCallback(modalElement);
+        }
+        observer.disconnect();
+      }
+    });
+  });
+
+  let config = {
+    subtree: true,
+    childList: true
+  };
+  observer.observe(document.body, config);
+}
+
+function showNotification(userName, avatarUrl, closeCallback=null) {
+  fetch(
+    '/webui/notification?' + new URLSearchParams({
+        avatar_url: avatarUrl,
+        user_name: userName,
+    }),
+    {
+      method: 'GET',
+      credentials: 'include',
+    }
+  )
+  .then(response => {
+    if (response.status === 200) {
+      return response.json();
+    }
+    return Promise.reject(response);
+  })
+  .then((data) => {
+    if (data && data.show) {
+      let doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = data.html;
+      let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
+        return el;
+      });
+      for (const index in arrayScripts) {
+        doc.body.removeChild(arrayScripts[index]);
+      }
+      const modal = notifier.modal(doc.body.innerHTML);
+      for (const index in arrayScripts) {
+        let new_script = document.createElement("script");
+        if (arrayScripts[index].src) {
+            new_script.src = arrayScripts[index].src;
+        } else {
+            new_script.innerHTML = arrayScripts[index].innerHTML;
+        }
+        document.body.appendChild(new_script);
+      }
+      if (typeof closeCallback === 'function') {
+        observeModalClose(modal.newNode, closeCallback);
+      }
+    } else {
+      if (typeof closeCallback === 'function') {
+        closeCallback();
+      }
+    }
+  })
+  .catch((error) => {
+      console.error('Notification error:', error);
+      closeCallback();
+  });
+}
+
+var notificationShowed = false;
+
+function callShowNotification() {
+  if (!notificationShowed) {
+    notificationShowed = true;
+    const userName = getCurrentUserName();
+    const userAvatarUrl = getCurrentUserAvatar();
+
+    showNotification(userName, userAvatarUrl, closeCallback= () => {
+      executeNotificationCallbacks();
+    });
+  }
+}
+
 function imgExists(url, imgNode, name){
     const img = new Image();
     img.src= url;
     img.onerror = () => {
-        imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=random&format=svg`
-        joinShareGroup(name, imgNode.src);
+      imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=random&format=svg`
+      joinShareGroup(name, imgNode.src);
     }
     img.onload = () => {
-        imgNode.src = url;
-        joinShareGroup(name, url);
+      imgNode.src = url;
+      joinShareGroup(name, url);
     }
 }
 
@@ -916,14 +1010,14 @@ const loadImages = (htmlResponse) => new Promise((resolve, reject) => {
     });
 });
 
-function renderInPopup(doc) {
+function renderInPopup(doc, onClosedCallback=null) {
     let arrayScripts = [].map.call(doc.getElementsByTagName('script'), function(el) {
         return el;
     });
     for (const index in arrayScripts) {
         doc.body.removeChild(arrayScripts[index]);
     }
-    notifier.modal(doc.body.innerHTML);
+    const modal = notifier.modal(doc.body.innerHTML);
     for (const index in arrayScripts) {
         let new_script = document.createElement("script");
         if (arrayScripts[index].src) {
@@ -933,12 +1027,22 @@ function renderInPopup(doc) {
         }
         document.body.appendChild(new_script);
     }
+    window.openningAnotherModal = false;
+    if (typeof onClosedCallback === 'function') {
+      observeModalClose(modal.newNode, onClosedCallback);
+    }
 }
 
-function popupHtmlResponse(htmlResponse) {
+function popupHtmlResponse(htmlResponse, onClosedCallback=null) {
     loadImages(htmlResponse)
-    .then((doc) => {renderInPopup(doc);})
-    .catch((error) => {console.error("Error:", error)});
+    .then((doc) => {renderInPopup(doc, onClosedCallback);})
+    .catch((error) => {
+      console.error("Error:", error);
+      window.openningAnotherModal = false;
+      if (typeof onClosedCallback === 'function') {
+        onClosedCallback();
+      }
+    });
 }
 
 function showInspirationPopup() {
@@ -1024,15 +1128,27 @@ async function joinShareGroupWithId(share_id, userName=null, userAvatarUrl=null)
                     }
                     return Promise.reject(response);
                 })
-                .then(popupHtmlResponse)
+                .then((htmlResponse) => {popupHtmlResponse(htmlResponse, (modalElement) => {
+                  const elementWithSameId = document.getElementById(modalElement.id);
+                  if (!window.openningAnotherModal && !elementWithSameId) {callShowNotification();}
+                });})
                 .catch((error) => {
                     console.error('Error:', error);
+                    window.openningAnotherModal = false;
+                    callShowNotification();
                 });
+            } else {
+              window.openningAnotherModal = false;
+              callShowNotification();
             }
         })
         .catch((error) => {
-            console.error('Error:', error);
+          console.error('Error:', error);
+          window.openningAnotherModal = false;
+          callShowNotification();
         });
+    } else {
+      callShowNotification();
     }
 }
 
@@ -1085,6 +1201,8 @@ function renderHtmlResponse(elem, url, method, onSucceeded=null, onFailed=null, 
   });
 }
 
+var openningAnotherModal = false;
+
 async function joinShareGroup(userName=null, avatarUrl=null) {
     const urlParams = new URLSearchParams(window.location.search);
     const share_id = urlParams.get('share_id');
@@ -1130,7 +1248,7 @@ function notifyUserTheShareCampaign(userName, avatarUrl) {
             const shareButton = doc.body.querySelector("button.share-group-share-btn");
             const checkStatusButton = doc.body.querySelector("button.share-group-status-btn");
             if (shareButton || checkStatusButton) {
-                notifier.modal(doc.body.innerHTML);
+                const modal = notifier.modal(doc.body.innerHTML);
                 for (const index in arrayScripts) {
                     let new_script = document.createElement("script");
                     if (arrayScripts[index].src) {
@@ -1141,11 +1259,19 @@ function notifyUserTheShareCampaign(userName, avatarUrl) {
                     document.body.appendChild(new_script);
                 }
                 window.Cookies.set("_1000by1000showed", true, { expires: 28 });
+                observeModalClose(modal.newNode, (modalElement) => {
+                  const elementWithSameId = document.getElementById(modalElement.id);
+                  if (!window.openningAnotherModal && !elementWithSameId) {callShowNotification();}});
+            } else {
+              callShowNotification();
             }
         })
         .catch((error) => {
-            console.error('Error:', error);
+          console.error('Error:', error);
+          callShowNotification();
         });
+    } else {
+      callShowNotification();
     }
 }
 

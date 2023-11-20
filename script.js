@@ -161,3 +161,13 @@ function uiElementInSight(el) {
 
     return isOnScreen;
 }
+
+var notificationCallbacks = [];
+
+function onNotificationComplete(callback) {
+    notificationCallbacks.push(callback);
+}
+
+function executeNotificationCallbacks() {
+  executeCallbacks(notificationCallbacks);
+}

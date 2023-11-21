@@ -819,7 +819,9 @@ function showNotification(userName, avatarUrl, closeCallback=null) {
   })
   .catch((error) => {
       console.error('Notification error:', error);
-      closeCallback();
+      if (typeof closeCallback === 'function') {
+        closeCallback();
+      }
   });
 }
 
@@ -831,9 +833,7 @@ function callShowNotification() {
     const userName = getCurrentUserName();
     const userAvatarUrl = getCurrentUserAvatar();
 
-    showNotification(userName, userAvatarUrl, closeCallback= () => {
-      executeNotificationCallbacks();
-    });
+    showNotification(userName, userAvatarUrl, executeNotificationCallbacks);
   }
 }
 

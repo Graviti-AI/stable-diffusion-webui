@@ -78,12 +78,13 @@ div.gradio-image button[aria-label="Edit"] {
   top: 40px;
   z-index: 1000;
   transition: all 0.6s ease-in-out;
-  width: 150px;
+  width: 12rem;
 }
 
 .hover-image > img {
   left: 20%;
   transform: translateX(-50%);
+  width: 100%;
 }
 
 .discord-link:hover + .hover-image {

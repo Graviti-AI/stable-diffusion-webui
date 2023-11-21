@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-11-19 23:18:28
+ * @LastEditTime: 2023-11-21 20:32:17
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -47,7 +47,7 @@ class ChannelInfo {
       discordIcon.appendChild(hoverImge);
       aLink.title = 'Scan Code';
       aLink.querySelector('img').src = icon;
-      aLink.href = 'javascript:void(0)';
+      aLink.removeAttribute('href');
     } else {
       aLink.href = url;
       aLink.title = 'Join Discord';

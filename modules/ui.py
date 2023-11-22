@@ -1584,7 +1584,7 @@ def create_ui():
     for _interface, label, _ifid in interfaces:
         shared.tab_names.append(label)
 
-    with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, title="GRAVITI Diffus") as demo:
+    with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False) as demo:
         with gr.Row():
              with gr.Column(elem_id="user-setting", min_width=500, scale=2):
                 gr.HTML(

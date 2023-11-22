@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-11-21 20:32:17
+ * @LastEditTime: 2023-11-22 23:28:15
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -10,6 +10,7 @@ class ChannelInfo {
       const res = await fetchGet('api/user_channel');
       const channelInfo = await res.json();
       if (channelInfo) {
+        document.title = channelInfo.name || '';
         channelResult = channelInfo;
         this.changeDiscordIcon(channelInfo);
         this.hideCheckinBtn(channelInfo);

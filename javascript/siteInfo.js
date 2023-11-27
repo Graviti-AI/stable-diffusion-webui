@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-11-22 23:28:15
+ * @LastEditTime: 2023-11-27 20:49:02
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -34,7 +34,7 @@ class ChannelInfo {
     const discordIcon = gradioApp().querySelector('#discord');
     const aLink = discordIcon.querySelector('a');
     const {
-      customer_support: { type, url, icon },
+      customer_support: { type, attributes, icon },
     } = channelInfo;
     if (type === 'image') {
       const hoverImge = document.createDocumentFragment();
@@ -42,7 +42,7 @@ class ChannelInfo {
       hoverImgeNode.className = 'hover-image';
       hoverImgeNode.style.opacity = 0;
       hoverImgeNode.innerHTML = `
-            <img src="${url}" alt="" />
+            <img src="${attributes.url}" alt="" />
         `;
       hoverImge.appendChild(hoverImgeNode);
       discordIcon.appendChild(hoverImge);

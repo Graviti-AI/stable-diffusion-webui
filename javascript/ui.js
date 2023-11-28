@@ -1367,7 +1367,7 @@ onUiLoaded(function(){
 
     const {search} = location;
     const isDarkTheme = /theme=dark/g.test(search);
-    Cookies.set(theme, isDarkTheme ? 'dark' : 'light');
+    Cookies.set('theme', isDarkTheme ? 'dark' : 'light');
     if (isDarkTheme) {
         const rightContent = gradioApp().querySelector(".right-content");
         const imgNodes = rightContent.querySelectorAll("a > img");

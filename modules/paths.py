@@ -10,7 +10,7 @@ import modules.user
 import gradio as gr
 
 WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
-
+workdir = pathlib.Path(data_path, WORKDIR_NAME)
 
 def mute_sdxl_imports():
     """create fake modules that SDXL wants to import but doesn't actually use for our purposes"""

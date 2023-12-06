@@ -12,7 +12,7 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Checkpoints')
         self.min_model_size_mb = 1e3
-        self.max_model_size_mb = 12e3
+        self.max_model_size_mb = 15e3
 
     def refresh_metadata(self):
         for name, checkpoint in sd_models.checkpoints_list.items():

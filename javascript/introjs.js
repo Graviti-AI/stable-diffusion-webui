@@ -23,7 +23,7 @@ function txt2imgIntroJS() {
             {
                 element: gradioApp().getElementById("introjs_button"),
                 title: "Enjoy the Webui",
-                intro: "Click here to view guide again. Enjoy!",
+                intro: "Click here to view guide again. <p> Join our <a href='https://discord.gg/e4UVBNuHyB'>Discord</a> for futher support.</p><br><p>Enjoy!</p>",
             },
         ],
     });
@@ -58,7 +58,7 @@ function img2imgIntroJS() {
             {
                 element: gradioApp().getElementById("introjs_button"),
                 title: "Enjoy the Webui",
-                intro: "Click here to view guide again. Enjoy!",
+                intro: "Click here to view guide again. <p> Join our <a href='https://discord.gg/e4UVBNuHyB'>Discord</a> for futher support.</p><br><p>Enjoy!</p>",
             },
         ],
     });

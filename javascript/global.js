@@ -89,5 +89,6 @@ function judgeEnvironment() {
 }
 
 let channelResult = null;
+let hasSingPermission = false;
 
 testApi();

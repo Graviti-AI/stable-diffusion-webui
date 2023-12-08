@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-11-27 20:49:02
+ * @LastEditTime: 2023-12-08 21:46:40
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -10,14 +10,28 @@ class ChannelInfo {
       const res = await fetchGet('api/user_channel');
       const channelInfo = await res.json();
       if (channelInfo) {
-        document.title = channelInfo.name || '';
+        document.title = channelInfo.title || '';
         channelResult = channelInfo;
         this.changeDiscordIcon(channelInfo);
         this.hideCheckinBtn(channelInfo);
+        this.changeFreeCreditLink(channelInfo);
       }
       this.iniatlLanguage();
     } catch (e) {
       console.log(e);
+    }
+  }
+
+  async changeFreeCreditLink(channelInfo) {
+    const signNode = gradioApp().querySelector('.user-content #sign');
+    const linkNode = signNode.querySelector('a');
+    if (!hasSingPermission) {
+      if (channelInfo) {
+        const {
+          prices: { credit_package },
+        } = channelInfo;
+        linkNode.href = credit_package.price_link;
+      }
     }
   }
 

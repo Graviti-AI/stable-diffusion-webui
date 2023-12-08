@@ -41,13 +41,16 @@ class SignForCredits {
         credentials: 'include',
       });
       const { has_sign_permission, has_signed_today } = await response.json();
+      hasSingPermission = has_sign_permission;
       if (!has_sign_permission) {
         signNode.title = 'Unlock up to 1500 free credits per month';
         imgNode.src = '/public/image/unlock.png';
         spanNode.textContent = isPcScreen ? 'Free Credits' : '';
         signNode.style.display = 'flex';
         if (channelResult) {
-          const { prices: {credit_package}} = channelResult;
+          const {
+            prices: { credit_package },
+          } = channelResult;
           linkNode.href = credit_package.price_link;
         }
       } else {

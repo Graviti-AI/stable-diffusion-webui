@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-12-08 21:46:40
+ * @LastEditTime: 2023-12-12 22:00:50
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -30,16 +30,19 @@ class ChannelInfo {
         const {
           prices: { credit_package },
         } = channelInfo;
-        linkNode.href = credit_package.price_link;
+        const resultInfo = { user_id: orderInfoResult.user_id };
+        const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+        linkNode.href = `${credit_package.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
       }
     }
+    changeCreditsPackageLink();
   }
 
   hideCheckinBtn(channelInfo) {
     const signBtn = gradioApp().querySelector('#sign');
     const { name } = channelInfo;
     // hide sign button if channel is not graviti.
-    if (signBtn && name !== 'graviti.com') {
+    if (hasSingPermission && signBtn && name !== 'graviti.com') {
       signBtn.style.display = 'none';
     }
   }
@@ -64,7 +67,7 @@ class ChannelInfo {
       aLink.querySelector('img').src = icon;
       aLink.removeAttribute('href');
     } else {
-      aLink.href = url;
+      aLink.href = attributes.url;
       aLink.title = 'Join Discord';
     }
   }

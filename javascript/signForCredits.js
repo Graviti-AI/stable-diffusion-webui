@@ -51,7 +51,9 @@ class SignForCredits {
           const {
             prices: { credit_package },
           } = channelResult;
-          linkNode.href = credit_package.price_link;
+          const resultInfo = { user_id: orderInfoResult.user_id };
+          const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+          linkNode.href = `${credit_package.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
         }
       } else {
         // set after reload

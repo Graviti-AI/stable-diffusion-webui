@@ -51,9 +51,14 @@ class SignForCredits {
           const {
             prices: { credit_package },
           } = channelResult;
-          const resultInfo = { user_id: orderInfoResult.user_id };
-          const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-          linkNode.href = `${credit_package.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+          if (orderInfoResult) {
+            const resultInfo = { user_id: orderInfoResult.user_id };
+            const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+            linkNode.href = `${credit_package.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+          } else {
+            linkNode.href = credit_package.price_link;
+          }
+          
         }
       } else {
         // set after reload

@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-12-12 22:00:50
+ * @LastEditTime: 2023-12-12 23:15:21
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -30,9 +30,13 @@ class ChannelInfo {
         const {
           prices: { credit_package },
         } = channelInfo;
-        const resultInfo = { user_id: orderInfoResult.user_id };
-        const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-        linkNode.href = `${credit_package.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+        if (orderInfoResult) {
+          const resultInfo = { user_id: orderInfoResult.user_id };
+          const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+          linkNode.href = `${credit_package.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+        } else {
+          linkNode.href = credit_package.price_link;
+        }
       }
     }
     changeCreditsPackageLink();

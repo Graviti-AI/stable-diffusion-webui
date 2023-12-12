@@ -1291,6 +1291,7 @@ async function updateOrderInfo() {
                 const userInfo = userContent.querySelector(".user_info");
                 if (userInfo) {
                     userTier = result.tier;
+                    orderInfoResult = result;
                     userInfo.style.display = "flex";
                     const img = userInfo.querySelector("a > img");
                     if (img) {
@@ -1315,30 +1316,7 @@ async function updateOrderInfo() {
                             upgradeContent.style.display = "flex";
                         }
                     }
-
-                    if (["basic", "plus", "pro", "api"].includes(result.tier.toLowerCase())) {
-                        gtag("event", "conversion", {
-                            send_to: "AW-347751974/EiR7CPWfu88YEKaM6aUB",
-                            value: 12.0,
-                            currency: "USD",
-                        });
-                        const packageIcon = gradioApp().querySelector("#package");
-                        if (packageIcon) {
-                            packageIcon.style.display = "flex";
-                            const aLink = packageIcon.querySelector("a");
-                            const spanNode = aLink.querySelector("span");
-                            const resultInfo = { user_id: result.user_id };
-                            const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-                            if (channelResult) {
-                              const {
-                                prices: { credit_package },
-                              } = channelResult;
-                              const host = credit_package.price_link;
-                              aLink.href = `${host}?prefilled_email=${result.email}&client_reference_id=${referenceId}`;
-                            }
-                            spanNode.textContent = isPcScreen ? "Credits Package" : "";
-                        }
-                    }
+                    changeCreditsPackageLink();
                 }
                 const boostButton = gradioApp().querySelector("#one_click_boost_button");
                 let onSucceededCallback = (elem) => {

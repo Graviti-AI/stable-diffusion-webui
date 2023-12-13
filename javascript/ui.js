@@ -906,16 +906,16 @@ async function checkSignatureCompatibility(timeoutId = null)
                 {
                     clearTimeout(timeoutId);
                 }
-//                notifier.confirm(
-//                    'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
-//                    onRefresh,
-//                    false,
-//                    {
-//                        labels: {
-//                        confirm: 'Page Need Refresh'
-//                        }
-//                    }
-//                );
+               notifier.confirm(
+                   'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+                   onRefresh,
+                   false,
+                   {
+                       labels: {
+                       confirm: 'Page Need Refresh'
+                       }
+                   }
+               );
             }
         }
     })
@@ -940,16 +940,16 @@ async function checkSignatureCompatibility(timeoutId = null)
                 {
                     clearTimeout(timeoutId);
                 }
-//                notifier.confirm(
-//                    'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
-//                    onRefresh,
-//                    false,
-//                    {
-//                        labels: {
-//                        confirm: 'Page Need Refresh'
-//                        }
-//                    }
-//                );
+               notifier.confirm(
+                   'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+                   onRefresh,
+                   false,
+                   {
+                       labels: {
+                       confirm: 'Page Need Refresh'
+                       }
+                   }
+               );
             }
         }
     })

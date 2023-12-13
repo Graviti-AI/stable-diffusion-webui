@@ -21,6 +21,7 @@ from modules.rng import slerp # noqa: F401
 from modules.sd_hijack import model_hijack
 from modules.sd_samplers_common import images_tensor_to_samples, decode_first_stage, approximation_indexes
 from modules.shared import opts, cmd_opts, state
+from modules.model_info import AllModelInfo, ModelInfo, DatabaseAllModelInfo
 import modules.shared as shared
 import modules.paths as paths
 import modules.face_restoration
@@ -206,6 +207,7 @@ class StableDiffusionProcessing:
     _request = None
     _task_id: Optional[str] = None
     _origin: Optional[str] = None
+    _all_model_info = None
 
     def __post_init__(self):
         if self.sampler_index is not None:
@@ -227,7 +229,7 @@ class StableDiffusionProcessing:
         self.override_settings = self.override_settings or {}
         self.script_args = self.script_args or {}
 
-        self.refiner_checkpoint_info = None
+        self.refiner_checkpoint_info: ModelInfo | None = None
 
         if not self.seed_enable_extras:
             self.subseed = -1
@@ -251,6 +253,17 @@ class StableDiffusionProcessing:
 
     def get_request(self):
         return self._request
+
+    def set_all_model_info(self, all_model_info: AllModelInfo):
+        self._all_model_info = all_model_info
+
+    def get_all_model_info(self) -> AllModelInfo:
+        if self._all_model_info is None:
+            request = self.get_request()
+            assert request is not None
+            self._all_model_info = DatabaseAllModelInfo(request)
+
+        return self._all_model_info
 
     @property
     def task_id(self) -> Optional[str]:
@@ -750,19 +763,20 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
         p.scripts.before_process(p)
 
     stored_opts = {k: getattr(opts, k) for k in p.override_settings.keys()}
+    all_checkpoint_models = p.get_all_model_info().checkpoint_models
 
     try:
         # if no checkpoint override or the override checkpoint can't be found, remove override entry and load opts checkpoint
         # and if after running refiner, the refiner model is not unloaded - webui swaps back to main model here, if model over is present it will be reloaded afterwards
-        if sd_models.checkpoint_aliases.get(p.override_settings.get('sd_model_checkpoint')) is None:
-            p.override_settings.pop('sd_model_checkpoint', None)
-            sd_models.reload_model_weights()
+        # if sd_models.checkpoint_aliases.get(p.override_settings.get('sd_model_checkpoint')) is None:
+        #     p.override_settings.pop('sd_model_checkpoint', None)
+        #     sd_models.reload_model_weights()
 
         for k, v in p.override_settings.items():
             opts.set(k, v, is_api=True, run_callbacks=False)
 
             if k == 'sd_model_checkpoint':
-                checkpoint = sd_models.get_closet_checkpoint_match(v)
+                checkpoint = all_checkpoint_models[v]
                 sd_models.reload_model_weights(info=checkpoint)
 
             if k == 'sd_vae':
@@ -817,9 +831,11 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         p.tiling = opts.tiling
 
     if p.refiner_checkpoint not in (None, "", "None", "none"):
-        p.refiner_checkpoint_info = sd_models.get_closet_checkpoint_match(p.refiner_checkpoint)
+        p.refiner_checkpoint_info = p.get_all_model_info().checkpoint_models.get(p.refiner_checkpoint)
         if p.refiner_checkpoint_info is None:
             raise Exception(f'Could not find checkpoint with name {p.refiner_checkpoint}')
+
+    model_info = shared.sd_model.sd_checkpoint_info
 
     p.sd_model_name = shared.sd_model.sd_checkpoint_info.name_for_extra
     p.sd_model_hash = shared.sd_model.sd_model_hash
@@ -841,8 +857,8 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
     else:
         p.all_subseeds = [int(subseed) + x for x in range(len(p.all_prompts))]
 
-    if os.path.exists(cmd_opts.embeddings_dir) and not p.do_not_reload_embeddings:
-        model_hijack.embedding_db.load_textual_inversion_embeddings(p.get_request())
+    if not p.do_not_reload_embeddings:
+        model_hijack.embedding_db.load_textual_inversion_embeddings(p.get_all_model_info().embedding_models, False)
 
     if p.scripts is not None:
         p.scripts.process(p)
@@ -872,8 +888,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             if state.interrupted:
                 break
 
-            processing_checkpoint = sd_models.get_closet_checkpoint_match(p.sd_model_name)
-            sd_models.reload_model_weights(info=processing_checkpoint)  # model can be changed for example by refiner
+            sd_models.reload_model_weights(info=model_info)  # model can be changed for example by refiner
 
             p.prompts = p.all_prompts[n * p.batch_size:(n + 1) * p.batch_size]
             p.negative_prompts = p.all_negative_prompts[n * p.batch_size:(n + 1) * p.batch_size]
@@ -1080,7 +1095,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
     cached_hr_uc = [None, None]
     cached_hr_c = [None, None]
 
-    hr_checkpoint_info: dict = field(default=None, init=False)
+    hr_checkpoint_info: ModelInfo | None = field(default=None, init=False)
     hr_upscale_to_x: int = field(default=0, init=False)
     hr_upscale_to_y: int = field(default=0, init=False)
     truncate_x: int = field(default=0, init=False)
@@ -1149,7 +1164,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
     def init(self, all_prompts, all_seeds, all_subseeds):
         if self.enable_hr:
             if self.hr_checkpoint_name:
-                self.hr_checkpoint_info = sd_models.get_closet_checkpoint_match(self.hr_checkpoint_name)
+                self.hr_checkpoint_info = self.get_all_model_info().checkpoint_models.get(self.hr_checkpoint_name)
 
                 if self.hr_checkpoint_info is None:
                     raise Exception(f'Could not find checkpoint with name {self.hr_checkpoint_name}')

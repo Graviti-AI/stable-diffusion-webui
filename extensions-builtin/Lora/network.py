@@ -2,8 +2,10 @@ from __future__ import annotations
 import os
 from collections import namedtuple
 import enum
+from typing_extensions import Self
 
 from modules import sd_models, cache, errors, hashes, shared
+from modules.model_info import ModelInfo
 
 NetworkWeights = namedtuple('NetworkWeights', ['network_key', 'sd_key', 'w', 'sd_module'])
 
@@ -18,6 +20,8 @@ class SdVersion(enum.Enum):
 
 
 class NetworkOnDisk:
+    model_info: ModelInfo
+
     def __init__(self, name, filename, metadata: dict = None):
         self.name = name
         self.filename = filename
@@ -55,6 +59,35 @@ class NetworkOnDisk:
         )
 
         self.sd_version = self.detect_version()
+
+    @classmethod
+    def from_model_info(cls, model_info: ModelInfo) -> Self:
+        obj = object.__new__(cls)
+        obj.name = model_info.name
+        obj.filename = model_info.filename
+        obj.metadata = {}
+        obj.is_safetensors = model_info.is_safetensors()
+        obj.safetensor_metadata = {}
+
+        def read_metadata():
+            metadata = sd_models.read_metadata_from_safetensors(model_info.filename)
+            metadata.pop('ssmd_cover_images', None)  # those are cover images, and they are too big to display in UI as text
+
+            return metadata
+
+        if obj.is_safetensors:
+            try:
+                obj.safetensor_metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + model_info.sha256, obj.filename, read_metadata)
+            except Exception as e:
+                errors.display(e, f"reading lora {obj.filename}")
+
+        obj.alias = obj.name
+        obj.set_hash(model_info.sha256)
+        obj.sd_version = obj.detect_version()
+        obj.model_info = model_info
+
+        return obj
+
 
     def detect_version(self):
         if str(self.safetensor_metadata.get('ss_base_model_version', "")).startswith("sdxl_"):

@@ -2,7 +2,7 @@ import os
 import pathlib
 import shutil
 import sys
-from modules.paths_internal import models_path, script_path, data_path, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME  # noqa: F401
+from modules.paths_internal import models_path, script_path, data_path, binary_dir, configs_dir, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME  # noqa: F401
 
 import modules.safe  # noqa: F401
 import modules.user
@@ -223,3 +223,11 @@ class Prioritize:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.path = self.path
         self.path = None
+
+
+def get_binary_path(sha256: str) -> pathlib.Path:
+    return pathlib.Path(binary_dir) / sha256[:2] / sha256[2:4] / sha256[4:6] / sha256
+
+
+def get_config_path(sha256: str) -> pathlib.Path:
+    return pathlib.Path(configs_dir) / sha256

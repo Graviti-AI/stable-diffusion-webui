@@ -21,6 +21,8 @@ from modules import paths, shared, modelloader, devices, script_callbacks, sd_va
 from modules.timer import Timer
 import tomesd
 
+from modules.model_info import ModelInfo
+
 logger = logging.getLogger(__name__)
 
 model_dir = "Stable-diffusion"
@@ -216,7 +218,7 @@ def model_hash(filename):
         return 'NOFILE'
 
 
-def select_checkpoint():
+def select_checkpoint() -> ModelInfo:
     """Raises `FileNotFoundError` if no checkpoints are found."""
     model_checkpoint = shared.opts.sd_model_checkpoint
 
@@ -297,18 +299,17 @@ def read_metadata_from_safetensors(filename):
         return res
 
 
-def read_state_dict(checkpoint_file, print_global_state=False, map_location=None):
-    _, extension = os.path.splitext(checkpoint_file)
-    if extension.lower() == ".safetensors":
+def read_state_dict(model_info: ModelInfo, print_global_state=False, map_location=None):
+    if model_info.is_safetensors():
         device = map_location or shared.weight_load_location or devices.get_optimal_device_name()
 
         if not shared.opts.disable_mmap_load_safetensors:
-            pl_sd = safetensors.torch.load_file(checkpoint_file, device=device)
+            pl_sd = safetensors.torch.load_file(model_info.filename, device=device)
         else:
-            pl_sd = safetensors.torch.load(open(checkpoint_file, 'rb').read())
+            pl_sd = safetensors.torch.load(open(model_info.filename, 'rb').read())
             pl_sd = {k: v.to(device) for k, v in pl_sd.items()}
     else:
-        pl_sd = torch.load(checkpoint_file, map_location=map_location or shared.weight_load_location)
+        pl_sd = torch.load(model_info.filename, map_location=map_location or shared.weight_load_location)
 
     if print_global_state and "global_step" in pl_sd:
         print(f"Global Step: {pl_sd['global_step']}")
@@ -317,17 +318,17 @@ def read_state_dict(checkpoint_file, print_global_state=False, map_location=None
     return sd
 
 
-def get_checkpoint_state_dict(checkpoint_info: CheckpointInfo, timer):
+def get_checkpoint_state_dict(checkpoint_info: ModelInfo, timer):
     sd_model_hash = checkpoint_info.calculate_shorthash()
     timer.record("calculate hash")
 
-    if checkpoint_info in checkpoints_loaded:
+    if checkpoint_info.sha256 in checkpoints_loaded:
         # use checkpoint cache
         print(f"Loading weights [{sd_model_hash}] from cache")
-        return checkpoints_loaded[checkpoint_info]
+        return checkpoints_loaded[checkpoint_info.sha256]
 
-    print(f"Loading weights [{sd_model_hash}] from {checkpoint_info.filename}")
-    res = read_state_dict(checkpoint_info.filename)
+    print(f"Loading weights [{sd_model_hash}] from {checkpoint_info.name}")
+    res = read_state_dict(checkpoint_info)
     timer.record("load weights from disk")
 
     return res
@@ -348,7 +349,7 @@ class SkipWritingToConfig:
         SkipWritingToConfig.skip = self.previous
 
 
-def load_model_weights(model, checkpoint_info: CheckpointInfo, state_dict, timer):
+def load_model_weights(model, checkpoint_info: ModelInfo, state_dict, timer):
     sd_model_hash = checkpoint_info.calculate_shorthash()
     timer.record("calculate hash")
 
@@ -370,7 +371,7 @@ def load_model_weights(model, checkpoint_info: CheckpointInfo, state_dict, timer
 
     if shared.opts.sd_checkpoint_cache > 0:
         # cache newly loaded model
-        checkpoints_loaded[checkpoint_info] = state_dict
+        checkpoints_loaded[checkpoint_info.sha256] = state_dict
 
     del state_dict
 
@@ -511,7 +512,7 @@ class SdModelData:
                     return self.sd_model
 
                 try:
-                    load_model()
+                    load_model(select_checkpoint())
 
                 except Exception as e:
                     errors.display(e, "loading stable diffusion model", full_traceback=True)
@@ -592,14 +593,20 @@ def send_model_to_trash(m):
     devices.torch_gc()
 
 
-def load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken_to_load_state_dict=None):
+def load_model(
+    checkpoint_info: ModelInfo,
+    embedding_model_info: dict[str, ModelInfo] | None=None,
+    already_loaded_state_dict=None,
+):
     with model_data.lock:
-        return _load_model(checkpoint_info, already_loaded_state_dict, time_taken_to_load_state_dict)
+        return _load_model(checkpoint_info, embedding_model_info, already_loaded_state_dict)
 
 
-def _load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken_to_load_state_dict=None):
-    checkpoint_info = checkpoint_info or select_checkpoint()
-
+def _load_model(
+    checkpoint_info: ModelInfo,
+    embedding_model_info: dict[str, ModelInfo] | None=None,
+    already_loaded_state_dict=None,
+):
     timer = Timer('sd_models.load_model', checkpoint_info.title)
 
     if model_data.sd_model:
@@ -668,9 +675,10 @@ def _load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken
     model_data.set_sd_model(sd_model)
     model_data.was_loaded_at_least_once = True
 
-    sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(None, force_reload=True)  # Reload embeddings after model load as they may or may not fit the model
+    if embedding_model_info is not None:
+        sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(embedding_model_info, force_reload=True)  # Reload embeddings after model load as they may or may not fit the model
 
-    timer.record("load textual inversion embeddings")
+        timer.record("load textual inversion embeddings")
 
     script_callbacks.model_loaded_callback(sd_model)
 
@@ -686,7 +694,12 @@ def _load_model(checkpoint_info=None, already_loaded_state_dict=None, time_taken
     return sd_model
 
 
-def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
+def reuse_model_from_already_loaded(
+    sd_model,
+    checkpoint_info: ModelInfo,
+    embedding_model_info: dict[str, ModelInfo] | None,
+    timer,
+):
     """
     Checks if the desired checkpoint from checkpoint_info is not already loaded in model_data.loaded_sd_models.
     If it is loaded, returns that (moving it to GPU if necessary, and moving the currently loadded model to CPU if necessary).
@@ -699,7 +712,7 @@ def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
     already_loaded = None
     for i in reversed(range(len(model_data.loaded_sd_models))):
         loaded_model = model_data.loaded_sd_models[i]
-        if loaded_model.sd_checkpoint_info.filename == checkpoint_info.filename:
+        if loaded_model.sd_checkpoint_info.sha256 == checkpoint_info.sha256:
             already_loaded = loaded_model
             continue
 
@@ -723,14 +736,14 @@ def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
             shared.opts.data["sd_model_checkpoint"] = already_loaded.sd_checkpoint_info.title
             shared.opts.data["sd_checkpoint_hash"] = already_loaded.sd_checkpoint_info.sha256
 
-        print(f"Using already loaded model {already_loaded.sd_checkpoint_info.title}: done in {timer.summary()}")
+        print(f"Using already loaded model {already_loaded.sd_checkpoint_info.sha256}: done in {timer.summary()}")
         sd_vae.reload_vae_weights(already_loaded)
         return model_data.sd_model
     elif shared.opts.sd_checkpoints_limit > 1 and len(model_data.loaded_sd_models) < shared.opts.sd_checkpoints_limit:
         print(f"Loading model {checkpoint_info.title} ({len(model_data.loaded_sd_models) + 1} out of {shared.opts.sd_checkpoints_limit})")
 
         model_data.sd_model = None
-        load_model(checkpoint_info)
+        load_model(checkpoint_info, embedding_model_info)
         return model_data.sd_model
     elif len(model_data.loaded_sd_models) > 0:
         sd_model = model_data.loaded_sd_models.pop()
@@ -746,14 +759,20 @@ def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
         return None
 
 
-def reload_model_weights(sd_model=None, info=None):
+def reload_model_weights(
+    sd_model=None,
+    info: ModelInfo | None=None,
+    embedding_model_info: dict[str, ModelInfo] | None=None
+):
     with model_data.lock:
-        return _reload_model_weights(sd_model, info)
+        return _reload_model_weights(sd_model, info, embedding_model_info)
 
 
-def _reload_model_weights(sd_model=None, info=None):
-    checkpoint_info = info or select_checkpoint()
-
+def _reload_model_weights(
+    sd_model=None,
+    info: ModelInfo | None=None,
+    embedding_model_info: dict[str, ModelInfo] | None=None
+):
     timer = Timer('sd_models.reload_model_weights')
 
     if not sd_model:
@@ -761,13 +780,17 @@ def _reload_model_weights(sd_model=None, info=None):
 
     if sd_model is None:  # previous model load failed
         current_checkpoint_info = None
+        checkpoint_info = info or select_checkpoint()
+    elif info is None:
+        return sd_model
     else:
+        checkpoint_info = info
         current_checkpoint_info = sd_model.sd_checkpoint_info
-        if sd_model.sd_model_checkpoint == checkpoint_info.filename:
+        if current_checkpoint_info.sha256 == checkpoint_info.sha256:
             return sd_model
 
-    sd_model = reuse_model_from_already_loaded(sd_model, checkpoint_info, timer)
-    if sd_model is not None and sd_model.sd_checkpoint_info.filename == checkpoint_info.filename:
+    sd_model = reuse_model_from_already_loaded(sd_model, checkpoint_info, embedding_model_info, timer)
+    if sd_model is not None and sd_model.sd_checkpoint_info.sha256 == checkpoint_info.sha256:
         return sd_model
 
     if sd_model is not None:
@@ -785,14 +808,15 @@ def _reload_model_weights(sd_model=None, info=None):
         if sd_model is not None:
             send_model_to_trash(sd_model)
 
-        load_model(checkpoint_info, already_loaded_state_dict=state_dict)
+        load_model(checkpoint_info, embedding_model_info, already_loaded_state_dict=state_dict)
         return model_data.sd_model
 
     try:
         load_model_weights(sd_model, checkpoint_info, state_dict, timer)
     except Exception:
-        print("Failed to load checkpoint, restoring previous")
-        load_model_weights(sd_model, current_checkpoint_info, None, timer)
+        if current_checkpoint_info is not None:
+            print("Failed to load checkpoint, restoring previous")
+            load_model_weights(sd_model, current_checkpoint_info, None, timer)
         raise
     finally:
         sd_hijack.model_hijack.hijack(sd_model)

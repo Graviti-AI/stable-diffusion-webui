@@ -81,10 +81,10 @@ def confirm_samplers(p, xs):
 
 
 def apply_checkpoint(p, x, xs):
-    info = modules.sd_models.get_closet_checkpoint_match(x)
-    if info is None:
-        raise RuntimeError(f"Unknown checkpoint: {x}")
-    p.override_settings['sd_model_checkpoint'] = info.name
+    # info = modules.sd_models.get_closet_checkpoint_match(x)
+    # if info is None:
+        # raise RuntimeError(f"Unknown checkpoint: {x}")
+    p.override_settings['sd_model_checkpoint'] = x
 
 
 def confirm_checkpoints(p, xs):

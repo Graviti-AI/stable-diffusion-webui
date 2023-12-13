@@ -1,6 +1,7 @@
 import logging
 import os
 from collections import namedtuple
+from collections.abc import Mapping
 from contextlib import closing
 
 import starlette.requests
@@ -21,6 +22,7 @@ from modules.textual_inversion.learn_schedule import LearnRateScheduler
 
 from modules.textual_inversion.image_embedding import embedding_to_b64, embedding_from_b64, insert_image_data_embed, extract_image_data_embed, caption_image_overlay
 from modules.textual_inversion.logger import save_settings_to_file
+from modules.model_info import ModelInfo
 
 
 TextualInversionTemplate = namedtuple("TextualInversionTemplate", ["name", "path"])
@@ -127,7 +129,8 @@ class EmbeddingDatabase:
         # a cache to store loaded embeddings
         # key: embedding filename
         # value: embedding data
-        self.loaded_embeddings = {}
+        self._loaded_embeddings = {}
+        self._embedding_model_info: dict[str, ModelInfo] = {}
 
     def add_embedding_dir(self, path):
         self.embedding_dirs[path] = DirWithTextualInversionEmbeddings(path)
@@ -169,35 +172,15 @@ class EmbeddingDatabase:
         else:
             return -1
 
-    def load_from_file(self, path, filename):
-        name, ext = os.path.splitext(filename)
-        ext = ext.upper()
-        if filename not in self.loaded_embeddings:
-            # if ext in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
-            #     _, second_ext = os.path.splitext(name)
-            #     if second_ext.upper() == '.PREVIEW':
-            #         self.loaded_embeddings[filename] = None
-            #         return
-            #
-            #     embed_image = Image.open(path)
-            #     if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
-            #         data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
-            #         name = data.get('name', name)
-            #     else:
-            #         data = extract_image_data_embed(embed_image)
-            #         if data:
-            #             name = data.get('name', name)
-            #         else:
-            #             # if data is None, means this is not an embeding, just a preview image
-            #             self.loaded_embeddings[filename] = None
-            #             return
-            if ext in ['.BIN', '.PT']:
-                data = torch.load(path, map_location="cpu")
-            elif ext in ['.SAFETENSORS']:
-                data = safetensors.torch.load_file(path, device="cpu")
+    def load_from_model_info(self, model_info: ModelInfo):
+        name = model_info.name_for_extra
+        sha256 = model_info.sha256
+
+        if sha256 not in self._loaded_embeddings:
+            if not model_info.is_safetensors():
+                data = torch.load(model_info.filename, map_location="cpu")
             else:
-                self.loaded_embeddings[filename] = None
-                return
+                data = safetensors.torch.load_file(model_info.filename, device="cpu")
 
             # textual inversion embeddings
             if 'string_to_param' in data:
@@ -205,8 +188,8 @@ class EmbeddingDatabase:
                 if hasattr(param_dict, '_parameters'):
                     param_dict = getattr(param_dict, '_parameters')  # fix for torch 1.12.1 loading saved file from torch 1.11
                 if len(param_dict) != 1:
-                    logging.error(f'embedding file {filename} has multiple terms in it')
-                    self.loaded_embeddings[filename] = None
+                    logging.error(f'embedding file {model_info.filename} has multiple terms in it')
+                    self._loaded_embeddings[sha256] = None
                     return
                 emb = next(iter(param_dict.items()))[1]
                 vec = emb.detach().to(devices.device, dtype=torch.float32)
@@ -219,8 +202,8 @@ class EmbeddingDatabase:
             # diffuser concepts
             elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor:
                 if len(data.keys()) != 1:
-                    logging.error(f"embedding file '{filename}' has multiple terms in it")
-                    self.loaded_embeddings[filename] = None
+                    logging.error(f"embedding file '{model_info.filename}' has multiple terms in it")
+                    self._loaded_embeddings[sha256] = None
                     return
                 emb = next(iter(data.values()))
                 if len(emb.shape) == 1:
@@ -229,8 +212,8 @@ class EmbeddingDatabase:
                 shape = vec.shape[-1]
                 vectors = vec.shape[0]
             else:
-                logging.error(f"Couldn't identify {filename} as neither textual inversion embedding nor diffuser concept.")
-                self.loaded_embeddings[filename] = None
+                logging.error(f"Couldn't identify {model_info.filename} as neither textual inversion embedding nor diffuser concept.")
+                self._loaded_embeddings[sha256] = None
                 return
 
             embedding = Embedding(vec, name)
@@ -239,55 +222,45 @@ class EmbeddingDatabase:
             embedding.sd_checkpoint_name = data.get('sd_checkpoint_name', None)
             embedding.vectors = vectors
             embedding.shape = shape
-            embedding.filename = path
-            embedding.set_hash(hashes.sha256(embedding.filename, "textual_inversion/" + name) or '')
+            embedding.filename = model_info.filename
+            embedding.set_hash(sha256)
 
             # cache the loaded embedding
-            self.loaded_embeddings[filename] = embedding
+            self._loaded_embeddings[sha256] = embedding
 
-        ## textual inversion embeddings
-        #if 'string_to_param' in data:
-        #    param_dict = data['string_to_param']
-        #    param_dict = getattr(param_dict, '_parameters', param_dict)  # fix for torch 1.12.1 loading saved file from torch 1.11
-        #    assert len(param_dict) == 1, 'embedding file has multiple terms in it'
-        #    emb = next(iter(param_dict.items()))[1]
-        ## diffuser concepts
-        #elif type(data) == dict and type(next(iter(data.values()))) == torch.Tensor:
-        #    assert len(data.keys()) == 1, 'embedding file has multiple terms in it'
-
-        embedding = self.loaded_embeddings.get(filename)
+        embedding = self._loaded_embeddings.get(sha256)
         if embedding:
+            embedding.name = name
+            embedding.filename = model_info.filename
+
             if self.expected_shape == -1 or self.expected_shape == embedding.shape:
                 self.register_embedding(embedding, shared.sd_model)
             else:
                 self.skipped_embeddings[name] = embedding
 
-    def load_from_dir(self, request, embdir):
-        if not os.path.isdir(embdir.path):
-            return
 
-        for root, _, fns in os.walk(embdir.path, followlinks=True):
-            for fn in fns:
-                try:
-                    fullfn = os.path.join(root, fn)
+    # def load_from_dir(self, request, embdir):
+    #     if not os.path.isdir(embdir.path):
+    #         return
 
-                    if os.stat(fullfn).st_size == 0:
-                        continue
+    #     for root, _, fns in os.walk(embdir.path, followlinks=True):
+    #         for fn in fns:
+    #             try:
+    #                 fullfn = os.path.join(root, fn)
 
-                    self.load_from_file(fullfn, fn)
-                except Exception:
-                    errors.report(f"Error loading embedding {fn}", exc_info=True)
-                    continue
+    #                 if os.stat(fullfn).st_size == 0:
+    #                     continue
 
-    def load_textual_inversion_embeddings(self, request, force_reload=True):
+    #                 self.load_from_file(fullfn, fn)
+    #             except Exception:
+    #                 errors.report(f"Error loading embedding {fn}", exc_info=True)
+    #                 continue
+
+
+    def load_textual_inversion_embeddings(self, embedding_model_info: Mapping[str, ModelInfo], force_reload=True):
+        embedding_model_info = dict(embedding_model_info)
         if not force_reload:
-            need_reload = False
-            for embdir in self.embedding_dirs.values():
-                if embdir.has_changed():
-                    need_reload = True
-                    break
-
-            if not need_reload:
+            if self._embedding_model_info == embedding_model_info:
                 return
 
         self.ids_lookup.clear()
@@ -295,9 +268,8 @@ class EmbeddingDatabase:
         self.skipped_embeddings.clear()
         self.expected_shape = self.get_expected_shape()
 
-        for embdir in self.embedding_dirs.values():
-            self.load_from_dir(request, embdir)
-            embdir.update()
+        for model_info in embedding_model_info.values():
+            self.load_from_model_info(model_info)
 
         # re-sort word_embeddings because load_from_dir may not load in alphabetic order.
         # using a temporary copy so we don't reinitialize self.word_embeddings in case other objects have a reference to it.
@@ -311,6 +283,8 @@ class EmbeddingDatabase:
             print(f"Textual inversion embeddings loaded({len(self.word_embeddings)}): {', '.join(self.word_embeddings.keys())}")
             if self.skipped_embeddings:
                 print(f"Textual inversion embeddings skipped({len(self.skipped_embeddings)}): {', '.join(self.skipped_embeddings.keys())}")
+
+        self._embedding_model_info = embedding_model_info
 
     def find_embedding_at_position(self, tokens, offset, request=None):
         token = tokens[offset]

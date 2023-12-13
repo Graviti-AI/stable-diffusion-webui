@@ -43,3 +43,9 @@ cache.json.lock
 localizations/*.json
 *.log
 data
+daemon.env
+daemon-7861.yaml
+daemon.py
+node.env.sh
+version.py
+extensions.bak

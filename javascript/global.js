@@ -93,28 +93,47 @@ let hasSingPermission = false;
 let orderInfoResult = null;
 
 function changeCreditsPackageLink() {
-  if (["basic", "plus", "pro", "api"].includes(orderInfoResult.tier.toLowerCase())) {
-    gtag("event", "conversion", {
-        send_to: "AW-347751974/EiR7CPWfu88YEKaM6aUB",
-        value: 12.0,
-        currency: "USD",
-    });
-    const packageIcon = gradioApp().querySelector("#package");
-    if (packageIcon) {
-        packageIcon.style.display = "flex";
-        const aLink = packageIcon.querySelector("a");
-        const spanNode = aLink.querySelector("span");
-        const resultInfo = { user_id: orderInfoResult.user_id };
-        const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-        if (channelResult) {
-          const {
-            prices: { credit_package },
-          } = channelResult;
-          const host = credit_package.price_link;
-          aLink.href = `${host}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
-        }
-        spanNode.textContent = isPcScreen ? "Credits Package" : "";
+  if (orderInfoResult) {
+    if (["basic", "plus", "pro", "api"].includes(orderInfoResult.tier.toLowerCase())) {
+      gtag("event", "conversion", {
+          send_to: "AW-347751974/EiR7CPWfu88YEKaM6aUB",
+          value: 12.0,
+          currency: "USD",
+      });
+      const packageIcon = gradioApp().querySelector("#package");
+      if (packageIcon) {
+          packageIcon.style.display = "flex";
+          const aLink = packageIcon.querySelector("a");
+          const spanNode = aLink.querySelector("span");
+          if (channelResult) {
+            supportDifferentPriceType('credit_package', aLink);
+          }
+          spanNode.textContent = isPcScreen ? "Credits Package" : "";
+      }
     }
+  }
+}
+
+function supportDifferentPriceType(priceType, linkNode) {
+  const priceInfo = channelResult && channelResult.prices[priceType];
+  if (orderInfoResult) {
+    if (priceInfo && priceInfo.price_link) {
+      const resultInfo = { user_id: orderInfoResult.user_id };
+      const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
+      linkNode.href = `${priceInfo.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+    } else if (priceInfo && priceInfo.pricing_table_id) {
+      linkNode.href = `/user#/subscription?priceType=${priceType}`
+    } else {
+      linkNode.href = (priceInfo && priceInfo.link) || '';
+    }
+  }
+}
+
+function changeFreeCreditLink() {
+  if (!hasSingPermission) {
+    const signNode = gradioApp().querySelector('.user-content #sign');
+    const linkNode = signNode.querySelector('a');
+    supportDifferentPriceType('free', linkNode)
   }
 }
 

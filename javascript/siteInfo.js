@@ -1,7 +1,7 @@
 /*
  * @Date: 2023-11-19 10:16:55
  * @LastEditors: yuanbo.chen yuanbo.chen@graviti.com
- * @LastEditTime: 2023-12-12 23:15:21
+ * @LastEditTime: 2023-12-13 20:43:24
  * @FilePath: /stable-diffusion-webui/javascript/siteInfo.js
  */
 class ChannelInfo {
@@ -14,32 +14,13 @@ class ChannelInfo {
         channelResult = channelInfo;
         this.changeDiscordIcon(channelInfo);
         this.hideCheckinBtn(channelInfo);
-        this.changeFreeCreditLink(channelInfo);
+        changeFreeCreditLink();
+        changeCreditsPackageLink();
       }
       this.iniatlLanguage();
     } catch (e) {
       console.log(e);
     }
-  }
-
-  async changeFreeCreditLink(channelInfo) {
-    const signNode = gradioApp().querySelector('.user-content #sign');
-    const linkNode = signNode.querySelector('a');
-    if (!hasSingPermission) {
-      if (channelInfo) {
-        const {
-          prices: { free },
-        } = channelInfo;
-        if (orderInfoResult) {
-          const resultInfo = { user_id: orderInfoResult.user_id };
-          const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-          linkNode.href = `${free.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
-        } else {
-          linkNode.href = free.price_link;
-        }
-      }
-    }
-    changeCreditsPackageLink();
   }
 
   hideCheckinBtn(channelInfo) {

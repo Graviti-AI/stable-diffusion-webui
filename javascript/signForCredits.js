@@ -48,17 +48,7 @@ class SignForCredits {
         spanNode.textContent = isPcScreen ? 'Free Credits' : '';
         signNode.style.display = 'flex';
         if (channelResult) {
-          const {
-            prices: { free },
-          } = channelResult;
-          if (orderInfoResult) {
-            const resultInfo = { user_id: orderInfoResult.user_id };
-            const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-            linkNode.href = `${free.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
-          } else {
-            linkNode.href = free.price_link;
-          }
-          
+          changeFreeCreditLink()
         }
       } else {
         // set after reload

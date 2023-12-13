@@ -3,6 +3,7 @@ import os
 import torch
 
 from modules import shared, paths, sd_disable_initialization, devices
+from modules.model_info import ModelInfo
 
 sd_configs_path = shared.sd_configs_path
 sd_repo_configs_path = os.path.join(paths.paths['Stable Diffusion'], "configs", "stable-diffusion")
@@ -101,11 +102,11 @@ def guess_model_config_from_state_dict(sd, filename):
     return config_default
 
 
-def find_checkpoint_config(state_dict, info):
+def find_checkpoint_config(state_dict, info: ModelInfo | None):
     if info is None:
         return guess_model_config_from_state_dict(state_dict, "")
 
-    config = find_checkpoint_config_near_filename(info)
+    config = info.config_filename
     if config is not None:
         return config
 

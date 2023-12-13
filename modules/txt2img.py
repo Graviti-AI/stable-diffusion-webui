@@ -10,6 +10,7 @@ from modules.ui import plaintext_to_html
 from modules.paths import Paths
 from modules.system_monitor import (
     generate_function_name, monitor_call_context)
+from modules.model_info import AllModelInfo
 
 
 def _get_str(elements):
@@ -56,6 +57,7 @@ def txt2img(request: gr.Request, id_task: str, prompt: str, negative_prompt: str
         override_settings=override_settings,
     )
     p.set_request(request)
+    p.set_all_model_info(AllModelInfo(args[-2]))
 
     p.scripts = modules.scripts.scripts_txt2img
     p.script_args = args

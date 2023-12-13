@@ -17,6 +17,7 @@ from modules.paths import Paths
 import modules.scripts
 from modules.system_monitor import (
     generate_function_name, monitor_call_context)
+from modules.model_info import AllModelInfo
 
 
 def process_batch(p, input_dir, output_dir, inpaint_mask_dir, args, to_scale=False, scale_by=1.0, use_png_info=False, png_info_props=None, png_info_dir=None):
@@ -204,6 +205,7 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
         override_settings=override_settings,
     )
     p.set_request(request)
+    p.set_all_model_info(AllModelInfo(args[-2]))
 
     p.scripts = modules.scripts.scripts_img2img
     p.script_args = args

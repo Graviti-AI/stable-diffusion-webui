@@ -16,13 +16,36 @@ class ExtraNetworkHypernet(extra_networks.ExtraNetwork):
 
         names = []
         multipliers = []
+
+        if not params_list:
+            return
+
         for params in params_list:
             assert params.items
 
             names.append(params.items[0])
             multipliers.append(float(params.items[1]) if len(params.items) > 1 else 1.0)
 
-        hypernetwork.load_hypernetworks(names, multipliers)
+
+        hypernetwork_model_info = p.get_all_model_info().hypernetwork_models
+        hypernetwork.load_hypernetworks(names, hypernetwork_model_info, multipliers)
+
+        network_hashes = []
+        for item in shared.loaded_hypernetworks:
+            shorthash = item.shorthash()
+            if not shorthash:
+                continue
+
+            alias = item.name
+            if not alias:
+                continue
+
+            alias = alias.replace(":", "").replace(",", "")
+
+            network_hashes.append(f"{alias}: {shorthash}")
+
+        if network_hashes:
+            p.extra_generation_params["Hypernetwork hashes"] = ", ".join(network_hashes)
 
     def deactivate(self, p):
         pass

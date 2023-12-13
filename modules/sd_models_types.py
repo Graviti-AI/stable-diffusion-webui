@@ -1,9 +1,7 @@
 from ldm.models.diffusion.ddpm import LatentDiffusion
 from typing import TYPE_CHECKING
 
-
-if TYPE_CHECKING:
-    from modules.sd_models import CheckpointInfo
+from modules.model_info import ModelInfo
 
 
 class WebuiSdModel(LatentDiffusion):
@@ -18,7 +16,7 @@ class WebuiSdModel(LatentDiffusion):
     sd_model_checkpoint: str
     """path to the file on disk that model weights were obtained from"""
 
-    sd_checkpoint_info: 'CheckpointInfo'
+    sd_checkpoint_info: ModelInfo
     """structure with additional information about the file with model's weights"""
 
     is_sdxl: bool

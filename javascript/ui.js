@@ -264,6 +264,9 @@ async function submit() {
 
     res[0] = id;
 
+    const [index, all_model_info] = await getAllModelInfo("txt2img", res);
+    res[index] = all_model_info;
+
     return res;
 }
 
@@ -284,6 +287,9 @@ async function submit_img2img() {
 
     res[0] = id;
     res[1] = get_tab_index('mode_img2img');
+
+    const [index, all_model_info] = await getAllModelInfo("img2img", res);
+    res[index] = all_model_info;
 
     return res;
 }
@@ -672,8 +678,8 @@ async function getModelFromUrl() {
         "t": "textual_inversion",
         "hn": "hypernetworks",
         "h": "hypernetworks",
-        "lycoris": "lycoris",
-        "y": "lycoris",
+        "lycoris": "lora",
+        "y": "lora",
     }
 
     const promiseList = [];

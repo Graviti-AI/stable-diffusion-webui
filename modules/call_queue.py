@@ -27,6 +27,7 @@ from modules import shared, progress, errors, script_callbacks, devices
 from modules import sd_vae
 from modules.timer import Timer
 from modules.paths import Paths
+from modules.model_info import ModelInfo, AllModelInfo
 
 gpu_worker_pool: ThreadPoolExecutor | None = None
 
@@ -104,21 +105,26 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
 
         # log all gpu calls with monitor, we should log it before task begin
         if func_name in ('txt2img', 'img2img'):
-            model_title = args[-3]
-            vae_title = args[-2]
+            all_model_info = AllModelInfo(args[-2])
+            all_model_info.check_file_existence()
+            model_title = args[-4]
         else:
+            all_model_info = None
             model_title = ''
-            vae_title = ''
 
         task_info['model_title'] = model_title
         monitor_log_id = modules.system_monitor.on_task(request, func, task_info, *args, **kwargs)
         time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
 
         # reload model if necessary
-        if model_title:
+        if all_model_info:
             progress.set_current_task_step('reload_model_weights')
             script_callbacks.state_updated_callback(shared.state)
-            _check_sd_model(model_title=model_title, vae_title=vae_title)
+            if not all_model_info.is_xyz_plot_enabled():
+                _check_sd_model(
+                    model_info=all_model_info.checkpoint_models[model_title],
+                    embedding_model_info=all_model_info.embedding_models,
+                )
         timer.record('load_models')
 
         # do gpu task
@@ -390,14 +396,17 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
     return f
 
 
-def _check_sd_model(model_title, vae_title):
-    shared.opts.sd_model_checkpoint = model_title
-    if not shared.sd_model or shared.sd_model.sd_checkpoint_info.title != model_title:
+def _check_sd_model(model_info: ModelInfo, embedding_model_info: dict[str, ModelInfo]):
+    shared.opts.sd_model_checkpoint = model_info.title
+
+    if not shared.sd_model or shared.sd_model.sd_checkpoint_info.sha256 != model_info.sha256:
         import modules.sd_models
         # refresh model, unload it from memory to prevent OOM
         modules.sd_models.unload_model_weights()
-        checkpoint = modules.sd_models.get_closet_checkpoint_match(model_title)
-        modules.sd_models.reload_model_weights(info=checkpoint)
+        # checkpoint = modules.sd_models.get_closet_checkpoint_match(model_title)
+        modules.sd_models.reload_model_weights(
+            info=model_info, embedding_model_info=embedding_model_info
+        )
 
     #if shared.sd_model:
     #    vae_file, vae_source = sd_vae.resolve_vae(shared.sd_model.sd_checkpoint_info.filename, vae_title)

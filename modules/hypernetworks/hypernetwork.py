@@ -4,6 +4,7 @@ import html
 import os
 import inspect
 from contextlib import closing
+from typing_extensions import Self
 
 import starlette.requests
 
@@ -15,11 +16,13 @@ from ldm.util import default
 from modules import devices, processing, sd_models, shared, sd_samplers, hashes, sd_hijack_checkpoint, errors
 from modules.textual_inversion import textual_inversion, logger
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
+from modules.model_info import ModelInfo
 from torch import einsum
 from torch.nn.init import normal_, xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_, zeros_
 
 from collections import deque
 from statistics import stdev, mean
+
 
 
 optimizer_dict = {optim_name : cls_obj for optim_name, cls_obj in inspect.getmembers(torch.optim, inspect.isclass) if optim_name != "Optimizer"}
@@ -149,6 +152,7 @@ class Hypernetwork:
     def __init__(self, name=None, enable_sizes=None, layer_structure=None, activation_func=None, weight_init=None, add_layer_norm=False, use_dropout=False, activate_output=False, **kwargs):
         self.filename = None
         self.name = name
+        self.hash = None
         self.layers = {}
         self.step = 0
         self.sd_checkpoint = None
@@ -175,6 +179,13 @@ class Hypernetwork:
                                    self.add_layer_norm, self.activate_output, dropout_structure=self.dropout_structure),
             )
         self.eval()
+
+    @classmethod
+    def from_model_info(cls, model_info: ModelInfo) -> Self:
+        obj = cls(model_info.name_for_extra)
+        obj.hash = model_info.sha256
+        obj.load(model_info.filename)
+        return obj
 
     def weights(self):
         res = []
@@ -305,7 +316,11 @@ class Hypernetwork:
         self.eval()
 
     def shorthash(self):
+        if self.hash is not None:
+            return self.hash[0:10]
+
         sha256 = hashes.sha256(self.filename, f'hypernet/{self.name}')
+        self.hash = sha256
 
         return sha256[0:10] if sha256 else None
 
@@ -320,39 +335,42 @@ def list_hypernetworks(path):
     return res
 
 
-def load_hypernetwork(name):
-    path = shared.hypernetworks.get(name, None)
+def load_hypernetwork(model_info: ModelInfo):
+    # path = shared.hypernetworks.get(name, None)
 
-    if path is None:
-        return None
+    # if path is None:
+    #     return None
 
     try:
-        hypernetwork = Hypernetwork()
-        hypernetwork.load(path)
+        hypernetwork = Hypernetwork.from_model_info(model_info)
         return hypernetwork
     except Exception:
-        errors.report(f"Error loading hypernetwork {path}", exc_info=True)
+        errors.report(f"Error loading hypernetwork {model_info.filename}", exc_info=True)
         return None
 
 
-def load_hypernetworks(names, multipliers=None):
+def load_hypernetworks(names, hypernetwork_model_info: dict[str, ModelInfo], multipliers=None):
+    models_on_disk = [hypernetwork_model_info[name] for name in names]
+    hashes = {item.sha256 for item in models_on_disk}
+
     already_loaded = {}
 
     for hypernetwork in shared.loaded_hypernetworks:
-        if hypernetwork.name in names:
-            already_loaded[hypernetwork.name] = hypernetwork
+        if hypernetwork.hash in hashes:
+            already_loaded[hypernetwork.hash] = hypernetwork
 
     shared.loaded_hypernetworks.clear()
 
-    for i, name in enumerate(names):
-        hypernetwork = already_loaded.get(name, None)
+    for i, model_info in enumerate(models_on_disk):
+        hypernetwork = already_loaded.get(model_info.sha256, None)
         if hypernetwork is None:
-            hypernetwork = load_hypernetwork(name)
+            hypernetwork = load_hypernetwork(model_info)
 
         if hypernetwork is None:
             continue
 
         hypernetwork.set_multiplier(multipliers[i] if multipliers else 1.0)
+        hypernetwork.name = model_info.name_for_extra
         shared.loaded_hypernetworks.append(hypernetwork)
 
 

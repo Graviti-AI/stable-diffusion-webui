@@ -640,7 +640,7 @@ def create_ui():
             txt2img_signature_args, txt2img_params_default_values = build_function_signature(
                 modules.txt2img.txt2img,
                 scripts.scripts_txt2img,
-                extras=["model_title", "vae_title"],
+                extras=["model_title", "vae_title", "all_model_info"],
                 start_from=1)  # Start from 1 to remove request
             txt2img_args = dict(
                 fn=wrap_gradio_gpu_call(
@@ -671,7 +671,7 @@ def create_ui():
                     hr_negative_prompt,
                     restore_faces,
                     override_settings,
-                ] + custom_inputs + [txt2img_model_title, toprow.vae_model_title, txt2img_signature],
+                ] + custom_inputs + [txt2img_model_title, toprow.vae_model_title, dummy_component, txt2img_signature],
 
                 outputs=[
                     txt2img_gallery,

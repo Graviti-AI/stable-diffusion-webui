@@ -22,6 +22,10 @@ class ExtraNetworkLora(extra_networks.ExtraNetwork):
         te_multipliers = []
         unet_multipliers = []
         dyn_dims = []
+
+        if not params_list:
+            return
+
         for params in params_list:
             assert params.items
 
@@ -40,7 +44,8 @@ class ExtraNetworkLora(extra_networks.ExtraNetwork):
             unet_multipliers.append(unet_multiplier)
             dyn_dims.append(dyn_dim)
 
-        networks.load_networks(names, te_multipliers, unet_multipliers, dyn_dims)
+        lora_model_info = p.get_all_model_info().lora_models
+        networks.load_networks(names, lora_model_info, te_multipliers, unet_multipliers, dyn_dims)
 
         if shared.opts.lora_add_hashes_to_infotext:
             network_hashes = []

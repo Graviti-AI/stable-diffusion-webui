@@ -64,6 +64,14 @@ def get_private_tempdir(request: gradio.routes.Request) -> pathlib.Path:
     return paths.private_tempdir()
 
 
+class __FakeP:
+    def __init__(self, req):
+        self.request = req
+
+    def get_request(self):
+        return self.request
+
+
 def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: Image.Image):
     if hasattr(image, 'already_saved_as') and image.already_saved_as:
         return image.already_saved_as
@@ -73,6 +81,9 @@ def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: 
         image_path = image_dir.joinpath(f'{image_id}.png')
         image.save(image_path)
         image.already_saved_as = str(image_path)
+
+        params = modules.script_callbacks.ImageSaveParams(image, __FakeP(request), image_path, "")
+        script_callbacks.image_saved_callback(params)
         return str(image_path)
 
 

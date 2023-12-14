@@ -1058,7 +1058,7 @@ def create_ui():
             img2img_signature_args, img2img_params_default_values = build_function_signature(
                 modules.img2img.img2img,
                 modules.scripts.scripts_img2img,
-                extras=["model_title", "vae_title"],
+                extras=["model_title", "vae_title", "all_model_info"],
                 start_from=1)  # Start from 1 to remove request
             img2img_args = dict(
                 fn=wrap_gradio_gpu_call(
@@ -1103,7 +1103,7 @@ def create_ui():
                     img2img_batch_use_png_info,
                     img2img_batch_png_info_props,
                     img2img_batch_png_info_dir,
-                ] + custom_inputs + [img2img_model_title, toprow.vae_model_title, img2img_signature],
+                ] + custom_inputs + [img2img_model_title, toprow.vae_model_title, dummy_component, img2img_signature],
                 outputs=[
                     img2img_gallery,
                     generation_info,

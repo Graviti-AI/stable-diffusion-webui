@@ -124,6 +124,34 @@ function _get_promot_keys() {
                     ).split("\n"),
             },
         ];
+        for (let axis of ["Z", "Y", "X"]) {
+            keys.push({
+                source: "xyz_plot",
+                flag: (getArg) =>
+                    getArg("Script:script_list:") === "X/Y/Z plot" &&
+                    getArg(
+                        `X/Y/Z plot:${axis} type:script_${mode}_xyz_plot_${axis.toLowerCase()}_type`,
+                    ) === "Prompt S/R",
+                values: (getArg) => {
+                    const input = _parseCSV(
+                        getArg(
+                            `X/Y/Z plot:X values:script_${mode}_xyz_plot_${axis.toLowerCase()}_values`,
+                        ),
+                    )[0].map((item) => item.trim());
+
+                    const src = input[0];
+                    const dsts = input.slice(1);
+                    const results = [];
+
+                    [getArg("prompt"), getArg("negative_prompt")]
+                        .filter(Boolean)
+                        .forEach((prompt) => {
+                            results.push(...dsts.map((dst) => prompt.replaceAll(src, dst)));
+                        });
+                    return results;
+                },
+            });
+        }
         prompt_keys[mode] = keys;
     }
     return prompt_keys;
@@ -136,6 +164,39 @@ const _SIGNATURE = {
     start: "signature(",
     end: ")",
 };
+
+function _parseCSV(data, delimiter, newline) {
+    delimiter = delimiter || ",";
+    newline = newline || "\n";
+    const n_sep = "\x1D";
+    const q_sep = "\x1E";
+    const c_sep = "\x1F";
+    const n_sep_reg = new RegExp(n_sep, "g");
+    const q_sep_reg = new RegExp(q_sep, "g");
+    const c_sep_reg = new RegExp(c_sep, "g");
+    const field_reg = new RegExp(
+        `(?<=(^|[${delimiter}\\n]))"(|[\\s\\S]+?(?<![^"]"))"(?=($|[${delimiter}\\n]))`,
+        "g",
+    );
+
+    return data
+        .replace(/\r/g, "")
+        .replace(/\n+$/, "")
+        .replace(field_reg, (_, __, p2) =>
+            p2.replace(/\n/g, n_sep).replace(/""/g, q_sep).replace(/,/g, c_sep),
+        )
+        .split(/\n/)
+        .map((line) =>
+            line
+                .split(delimiter)
+                .map((cell) =>
+                    cell
+                        .replace(n_sep_reg, newline)
+                        .replace(q_sep_reg, '"')
+                        .replace(c_sep_reg, ","),
+                ),
+        );
+}
 
 function _convertModelInfo(model_info, source) {
     return {

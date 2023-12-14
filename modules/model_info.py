@@ -74,11 +74,11 @@ class AllModelInfo:
                 case "checkpoint":
                     self.checkpoint_models[model_info.title] = model_info
                 case "embedding":
-                    self.embedding_models[model_info.name] = model_info
+                    self.embedding_models[model_info.name_for_extra] = model_info
                 case "hypernetwork":
-                    self.hypernetwork_models[model_info.name] = model_info
+                    self.hypernetwork_models[model_info.name_for_extra] = model_info
                 case "lora":
-                    self.lora_models[model_info.name] = model_info
+                    self.lora_models[model_info.name_for_extra] = model_info
 
     def is_xyz_plot_enabled(self) -> bool:
         return any(item.source == "xyz_plot" for item in self._models)

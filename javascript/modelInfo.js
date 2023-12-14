@@ -58,6 +58,7 @@ function _get_checkpoint_keys() {
             keys.push({
                 source: "xyz_plot",
                 flag: (getArg) =>
+                    getArg("Script:script_list:") === "X/Y/Z plot" &&
                     getArg(
                         `X/Y/Z plot:${axis} type:script_${mode}_xyz_plot_${axis.toLowerCase()}_type`,
                     ) === "Checkpoint name",
@@ -113,6 +114,14 @@ function _get_promot_keys() {
                         `Detection and Inpainting Tool (ADetailer):ad_negative_prompt 2nd:script_${mode}_adetailer_ad_negative_prompt_2nd`,
                     ),
                 ],
+            },
+            {
+                source: "prompts_from_file_or_textbox",
+                flag: (getArg) => getArg("Script:script_list:") === "Prompts from file or textbox",
+                values: (getArg) =>
+                    getArg(
+                        "Prompts from file or textbox:List of prompt inputs:script_txt2img_prompts_from_file_or_textbox_prompt_txt",
+                    ).split("\n"),
             },
         ];
         prompt_keys[mode] = keys;
@@ -177,7 +186,7 @@ function _findCheckpointModel(favoriteModels, title) {
             return _convertModelInfo(model_info, title.source);
         }
     }
-    throw `SD checkpoint model "${title}" not found`;
+    throw `SD checkpoint model "${title.value}" not found`;
 }
 
 function _findExtraNetworkModels(favoriteModels, prompts) {
@@ -273,7 +282,8 @@ async function getAllModelInfo(mode, args) {
             prompts.push(
                 ...key_info
                     .values(getArg)
-                    .map((item) => ({ value: item, source: key_info.source })),
+                    .map((item) => ({ value: item.trim(), source: key_info.source }))
+                    .filter((item) => item.value),
             );
         }
     }

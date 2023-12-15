@@ -226,9 +226,9 @@ async function tierCheckButtonInternal(feature_name) {
 }
 
 function tierCheckButton(feature_name) {
-    return async () => {
-        tierCheckButtonInternal(feature_name);
-        return Array.from(arguments);
+    return async (...args) => {
+        await tierCheckButtonInternal(feature_name);
+        return args;
     }
 }
 

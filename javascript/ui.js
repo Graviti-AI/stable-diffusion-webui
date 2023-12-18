@@ -249,6 +249,9 @@ async function submit() {
     await tierCheckGenerate("txt2img");
     checkSignatureCompatibility();
 
+    var res = create_submit_args(arguments);
+    const [index, all_model_info] = await getAllModelInfo("txt2img", res);
+
     showSubmitButtons('txt2img', false);
 
     var id = randomId();
@@ -260,11 +263,7 @@ async function submit() {
         showRestoreProgressButton('txt2img', false);
     });
 
-    var res = create_submit_args(arguments);
-
     res[0] = id;
-
-    const [index, all_model_info] = await getAllModelInfo("txt2img", res);
     res[index] = all_model_info;
 
     return res;
@@ -273,6 +272,9 @@ async function submit() {
 async function submit_img2img() {
     await tierCheckGenerate("img2img");
     showSubmitButtons('img2img', false);
+
+    var res = create_submit_args(arguments);
+    const [index, all_model_info] = await getAllModelInfo("img2img", res);
 
     var id = randomId();
     localSet("img2img_task_id", id);
@@ -283,12 +285,9 @@ async function submit_img2img() {
         showRestoreProgressButton('img2img', false);
     });
 
-    var res = create_submit_args(arguments);
 
     res[0] = id;
     res[1] = get_tab_index('mode_img2img');
-
-    const [index, all_model_info] = await getAllModelInfo("img2img", res);
     res[index] = all_model_info;
 
     return res;

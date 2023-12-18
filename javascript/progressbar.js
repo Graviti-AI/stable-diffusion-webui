@@ -141,26 +141,7 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 removeProgressBar();
                 return;
             }
-
-            if (onProgress) {
-                onProgress(res);
-            }
-
-            setTimeout(() => {
-                funProgress(id_task, res.id_live_preview);
-            }, opts.live_preview_refresh_period || 500);
-        }, function() {
-            removeProgressBar();
-        });
-    };
-
-    var funLivePreview = function(id_task, id_live_preview) {
-        request("./internal/progress", {id_task: id_task, id_live_preview: id_live_preview}, function(res) {
-            if (!divProgress) {
-                return;
-            }
-
-            if (res.live_preview && gallery) {
+            if (divProgress && res.live_preview && gallery) {
                 var img = new Image();
                 img.onload = function() {
                     if (!livePreview) {
@@ -177,10 +158,14 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 img.src = res.live_preview;
             }
 
+            if (onProgress) {
+                onProgress(res);
+            }
+
             setTimeout(() => {
-                funLivePreview(id_task, res.id_live_preview);
-            }, opts.live_preview_refresh_period || 500);
-        }, function(status){
+                funProgress(id_task, res.id_live_preview);
+            }, opts.live_preview_refresh_period || 1000);
+        }, function() {
             if(lastFailedAt == null) {
                 lastFailedAt = new Date()
             }
@@ -200,12 +185,6 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 removeProgressBar()
             }
         });
-    }
-
+    };
     funProgress(id_task, 0);
-
-    if (gallery) {
-        funLivePreview(id_task, 0);
-    }
-
 }

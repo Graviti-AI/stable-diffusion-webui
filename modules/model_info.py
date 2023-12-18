@@ -2,13 +2,23 @@
 
 import json
 import os
-from typing import Literal
+from typing import Literal, Protocol
 
 from fastapi import Request
 from pydantic import BaseModel
 
 from modules.paths import get_binary_path, get_config_path
 from modules.user import User
+
+
+class ModelInfoProtocal(Protocol):
+    @property
+    def filename(self) -> str:
+        ...
+
+    @property
+    def is_safetensors(self) -> bool:
+        ...
 
 
 class ModelInfo(BaseModel):
@@ -49,11 +59,12 @@ class ModelInfo(BaseModel):
 
         return str(get_config_path(self.config_sha256))
 
-    def calculate_shorthash(self) -> str:
-        return self.shorthash
-
+    @property
     def is_safetensors(self) -> bool:
         return os.path.splitext(self.name)[-1] == ".safetensors"
+
+    def calculate_shorthash(self) -> str:
+        return self.shorthash
 
     def check_file_existence(self) -> None:
         assert os.path.exists(self.filename)

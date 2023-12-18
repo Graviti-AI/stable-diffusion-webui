@@ -21,7 +21,7 @@ from modules import paths, shared, modelloader, devices, script_callbacks, sd_va
 from modules.timer import Timer
 import tomesd
 
-from modules.model_info import ModelInfo
+from modules.model_info import ModelInfo, ModelInfoProtocal
 
 logger = logging.getLogger(__name__)
 
@@ -299,13 +299,15 @@ def read_metadata_from_safetensors(filename):
         return res
 
 
-def read_state_dict(model_info: ModelInfo | str, print_global_state=False, map_location=None):
-    if isinstance(model_info, ModelInfo):
-        filename = model_info.filename
-        is_safetensors = model_info.is_safetensors()
-    else:
+def read_state_dict(
+    model_info: ModelInfoProtocal | str, print_global_state=False, map_location=None
+):
+    if isinstance(model_info, str):
         filename = model_info
         is_safetensors = os.path.splitext(filename)[-1] == ".safetensors"
+    else:
+        filename = model_info.filename
+        is_safetensors = model_info.is_safetensors
 
     if is_safetensors:
         device = map_location or shared.weight_load_location or devices.get_optimal_device_name()

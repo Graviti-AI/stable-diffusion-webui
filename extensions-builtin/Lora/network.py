@@ -20,8 +20,6 @@ class SdVersion(enum.Enum):
 
 
 class NetworkOnDisk:
-    model_info: ModelInfo
-
     def __init__(self, name, filename, metadata: dict = None):
         self.name = name
         self.filename = filename
@@ -66,7 +64,7 @@ class NetworkOnDisk:
         obj.name = model_info.name
         obj.filename = model_info.filename
         obj.metadata = {}
-        obj.is_safetensors = model_info.is_safetensors()
+        obj.is_safetensors = model_info.is_safetensors
         obj.safetensor_metadata = {}
 
         def read_metadata():
@@ -84,7 +82,6 @@ class NetworkOnDisk:
         obj.alias = obj.name
         obj.set_hash(model_info.sha256)
         obj.sd_version = obj.detect_version()
-        obj.model_info = model_info
 
         return obj
 

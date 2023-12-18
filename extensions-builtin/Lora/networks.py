@@ -140,7 +140,7 @@ def load_network(name, network_on_disk):
     net = network.Network(name, network_on_disk)
     net.mtime = os.path.getmtime(network_on_disk.filename)
 
-    sd = sd_models.read_state_dict(network_on_disk.model_info)
+    sd = sd_models.read_state_dict(network_on_disk)
 
     # this should not be needed but is here as an emergency fix for an unknown error people are experiencing in 1.2.0
     if not hasattr(shared.sd_model, 'network_layer_mapping'):
@@ -217,7 +217,9 @@ def load_networks(
     unet_multipliers=None,
     dyn_dims=None
 ):
-    networks_on_disk = [network.NetworkOnDisk.from_model_info(lora_model_info[name]) for name in names]
+    networks_on_disk = [
+        network.NetworkOnDisk.from_model_info(lora_model_info[name]) for name in names
+    ]
     hashes = {item.hash for item in networks_on_disk}
 
     already_loaded = {}

@@ -177,7 +177,7 @@ class EmbeddingDatabase:
         sha256 = model_info.sha256
 
         if sha256 not in self._loaded_embeddings:
-            if not model_info.is_safetensors():
+            if not model_info.is_safetensors:
                 data = torch.load(model_info.filename, map_location="cpu")
             else:
                 data = safetensors.torch.load_file(model_info.filename, device="cpu")

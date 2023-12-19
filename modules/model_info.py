@@ -67,8 +67,10 @@ class ModelInfo(BaseModel):
         return self.shorthash
 
     def check_file_existence(self) -> None:
-        assert os.path.exists(self.filename)
-        assert self.config_filename is None or os.path.exists(self.config_filename)
+        assert os.path.exists(self.filename), f"Model '{self.title}' does not exist"
+        assert self.config_filename is None or os.path.exists(
+            self.config_filename
+        ), f"Config '{self.config_sha256}' for model '{self.title}' does not exist"
 
 
 class AllModelInfo:

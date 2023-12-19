@@ -1,3 +1,8 @@
+function _alert(message) {
+    notifier.alert(message);
+    throw message;
+}
+
 function _get_checkpoint_keys() {
     const checkpoint_keys = {};
     for (let mode of ["txt2img", "img2img"]) {
@@ -247,7 +252,7 @@ function _findCheckpointModel(favoriteModels, title) {
             return _convertModelInfo(model_info, title.source);
         }
     }
-    throw `SD checkpoint model "${title.value}" not found`;
+    _alert(`SD checkpoint model "${title.value}" not found in your workspace`);
 }
 
 function _findExtraNetworkModels(favoriteModels, prompts) {
@@ -264,11 +269,11 @@ function _findExtraNetworkModels(favoriteModels, prompts) {
             const name = result[2].split(":")[0];
             const extra_networks = favoriteExtraNetworks[type];
             if (!extra_networks) {
-                throw `Unknown network type "${type}"`;
+                _alert(`Unknown network type "${type}"`);
             }
             const model_info = extra_networks[name];
             if (!model_info) {
-                throw `SD network "${name}" not found`;
+                _alert(`SD network "${name}" not found in your workspace`);
             }
             models.push(_convertModelInfo(model_info, prompt.source));
         }
@@ -320,7 +325,7 @@ async function getAllModelInfo(mode, args) {
     const signature = getSignature(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
-        throw "all_model_info not found in signature";
+        _alert('"all_model_info" not found in signature');
     }
 
     const getArg = (key) => args[signature.indexOf(key)];
@@ -361,7 +366,7 @@ function getSignature(args) {
             item.endsWith(_SIGNATURE.end),
     );
     if (!arg) {
-        throw "signature not found";
+        _alert("signature not found in the arguments");
     }
     return JSON.parse(arg.slice(_SIGNATURE.start.length, -_SIGNATURE.end.length));
 }

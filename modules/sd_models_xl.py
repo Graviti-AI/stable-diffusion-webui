@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import torch
 
+import gradio as gr
+
 import sgm.models.diffusion
 import sgm.modules.diffusionmodules.denoiser_scaling
 import sgm.modules.diffusionmodules.discretizer
@@ -64,9 +66,9 @@ def tokenize(self: sgm.modules.GeneralConditioner, texts):
 
 
 
-def process_texts(self, texts):
+def process_texts(self, texts, request: gr.Request = None):
     for embedder in [embedder for embedder in self.embedders if hasattr(embedder, 'process_texts')]:
-        return embedder.process_texts(texts)
+        return embedder.process_texts(texts, request)
 
 
 def get_target_prompt_token_count(self, token_count):

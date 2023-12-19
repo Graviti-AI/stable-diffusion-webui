@@ -226,6 +226,7 @@ class Prioritize:
 
 
 def get_binary_path(sha256: str) -> pathlib.Path:
+    sha256 = sha256.lower()
     return pathlib.Path(binary_dir) / sha256[:2] / sha256[2:4] / sha256[4:6] / sha256
 
 

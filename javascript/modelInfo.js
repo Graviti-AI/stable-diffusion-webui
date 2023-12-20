@@ -213,17 +213,40 @@ function _convertModelInfo(model_info, source) {
     };
 }
 
-function _listFavoriteModels(model_type) {
-    return fetchGet(`/internal/favorite_models?model_type=${model_type}&page=1&page_size=100000`);
+function _listFavoriteModels(model_type, page = 1, page_size = 100) {
+    return fetchGet(
+        `/internal/favorite_models?model_type=${model_type}&page=${page}&page_size=${page_size}`,
+    );
+}
+
+async function _listAllFavoriteModels(model_type, page_size = 100) {
+    const response = await _listFavoriteModels(model_type, 1, page_size);
+    const first_page = await response.json();
+    const pages = Math.ceil(first_page.total_count / 100);
+    if (pages <= 1) {
+        return first_page.model_list;
+    }
+
+    const results = await Promise.all(
+        Array.from(PYTHON.range(2, pages + 1)).map((page) =>
+            _listFavoriteModels(model_type, page, page_size),
+        ),
+    );
+
+    const models = first_page.model_list;
+    for (let result of results) {
+        const response = await result.json();
+        models.push(...response.model_list);
+    }
+    return models;
 }
 
 async function _getAllFavoriteModels() {
     const model_types = ["checkpoint", "embedding", "hypernetwork", "lora"];
-    const results = await Promise.all(model_types.map((item) => _listFavoriteModels(item)));
+    const results = await Promise.all(model_types.map((item) => _listAllFavoriteModels(item)));
     const favoriteModels = {};
     for (let [key, value] of PYTHON.zip(model_types, results)) {
-        const response = await value.json();
-        favoriteModels[key] = response.model_list;
+        favoriteModels[key] = value;
     }
     return favoriteModels;
 }

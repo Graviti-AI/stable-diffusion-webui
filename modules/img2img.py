@@ -205,7 +205,9 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
         override_settings=override_settings,
     )
     p.set_request(request)
-    p.set_all_model_info(AllModelInfo(args[-2]))
+    raw_model_info = args[-2]
+    if raw_model_info is not None:
+        p.set_all_model_info(AllModelInfo(args[-2]))
 
     p.scripts = modules.scripts.scripts_img2img
     p.script_args = args

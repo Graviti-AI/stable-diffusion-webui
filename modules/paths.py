@@ -231,4 +231,5 @@ def get_binary_path(sha256: str) -> pathlib.Path:
 
 
 def get_config_path(sha256: str) -> pathlib.Path:
+    sha256 = sha256.lower()
     return pathlib.Path(configs_dir) / sha256

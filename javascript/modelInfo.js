@@ -164,6 +164,7 @@ function _get_promot_keys() {
 
 const _CHECKPOINT_KEYS = _get_checkpoint_keys();
 const _PROMPT_KEYS = _get_promot_keys();
+const _REQUEST_FAILED = "REQUEST FAILED";
 const _NETWORK_REG = /<(\w+):([^>]+)>/g;
 const _SIGNATURE = {
     start: "signature(",
@@ -213,10 +214,22 @@ function _convertModelInfo(model_info, source) {
     };
 }
 
-function _listFavoriteModels(model_type, page = 1, page_size = 100) {
-    return fetchGet(
-        `/internal/favorite_models?model_type=${model_type}&page=${page}&page_size=${page_size}`,
-    );
+async function _listFavoriteModels(model_type, page = 1, page_size = 100) {
+    const url = `/internal/favorite_models?model_type=${model_type}&page=${page}&page_size=${page_size}`;
+    try {
+        const response = await fetchGet(url);
+        if (!response.ok) {
+            console.error(
+                `Request favorite models failed, url: "${url}", reason: "${response.status} ${response.statusText}"`,
+            );
+            throw _REQUEST_FAILED;
+        }
+        return response;
+    } catch (error) {
+        console.error(`Request favorite models failed due to exception, url: "${url}"`);
+        console.error(error);
+        throw _REQUEST_FAILED;
+    }
 }
 
 async function _listAllFavoriteModels(model_type, page_size = 100) {
@@ -377,8 +390,16 @@ async function getAllModelInfo(mode, args) {
         }
     }
 
-    const model_info = await _getAllModelInfo(checkpoint_titles, prompts);
-    return [index, JSON.stringify(model_info)];
+    try {
+        const model_info = await _getAllModelInfo(checkpoint_titles, prompts);
+        return [index, JSON.stringify(model_info)];
+    } catch (error) {
+        if (error === _REQUEST_FAILED) {
+            console.error('Set "model_info" to null due to request fail');
+            return [index, null];
+        }
+        throw error;
+    }
 }
 
 function getSignature(args) {

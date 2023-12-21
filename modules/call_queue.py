@@ -27,7 +27,7 @@ from modules import shared, progress, errors, script_callbacks, devices
 from modules import sd_vae
 from modules.timer import Timer
 from modules.paths import Paths
-from modules.model_info import ModelInfo, AllModelInfo
+from modules.model_info import DatabaseAllModelInfo, ModelInfo, AllModelInfo
 
 gpu_worker_pool: ThreadPoolExecutor | None = None
 
@@ -116,8 +116,14 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
 
         # log all gpu calls with monitor, we should log it before task begin
         if func_name in ('txt2img', 'img2img'):
-            all_model_info = AllModelInfo(args[-2])
-            all_model_info.check_file_existence()
+            raw_model_info = args[-2]
+            if raw_model_info is None:
+                logger.info("'model_info' is None, searching model by legacy logic")
+                all_model_info = DatabaseAllModelInfo(request)
+            else:
+                all_model_info = AllModelInfo(raw_model_info)
+                all_model_info.check_file_existence()
+
             model_title = args[-4]
         else:
             all_model_info = None

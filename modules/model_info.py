@@ -22,7 +22,7 @@ class ModelInfoProtocal(Protocol):
 
 
 class ModelInfo(BaseModel):
-    model_type: Literal["checkpoint", "embedding", "hypernetwork", "lora"]
+    model_type: Literal["checkpoint", "embedding", "hypernetwork", "lora", "lycoris"]
     source: str | None
     name: str
     sha256: str
@@ -90,7 +90,7 @@ class AllModelInfo:
                     self.embedding_models[model_info.name_for_extra] = model_info
                 case "hypernetwork":
                     self.hypernetwork_models[model_info.name_for_extra] = model_info
-                case "lora":
+                case "lora" | "lycoris":
                     self.lora_models[model_info.name_for_extra] = model_info
 
     def is_xyz_plot_enabled(self) -> bool:

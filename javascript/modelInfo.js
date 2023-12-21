@@ -171,6 +171,18 @@ const _SIGNATURE = {
     end: ")",
 };
 
+function _getValue(item) {
+    return item.value;
+}
+
+function _getStem(filename) {
+    const index = filename.lastIndexOf(".");
+    if (index === -1) {
+        return filename;
+    }
+    return filename.slice(0, index);
+}
+
 function _parseCSV(data, delimiter, newline) {
     delimiter = delimiter || ",";
     newline = newline || "\n";
@@ -206,7 +218,7 @@ function _parseCSV(data, delimiter, newline) {
 
 function _convertModelInfo(model_info, source) {
     return {
-        model_type: model_info.model_type === "lycoris" ? "lora" : model_info.model_type,
+        model_type: model_info.model_type,
         source: source,
         name: model_info.name,
         sha256: model_info.sha256,
@@ -214,118 +226,91 @@ function _convertModelInfo(model_info, source) {
     };
 }
 
-async function _listFavoriteModels(model_type, page = 1, page_size = 100) {
-    const url = `/internal/favorite_models?model_type=${model_type}&page=${page}&page_size=${page_size}`;
+async function _listCandidateModels(all_model_names) {
+    const params = new URLSearchParams();
+    for (let [model_type, model_names] of Object.entries(all_model_names)) {
+        model_names.forEach((model_name) => params.append(model_type, model_name));
+    }
+    const url = `/internal/candidate_models?${params.toString()}`;
     try {
         const response = await fetchGet(url);
         if (!response.ok) {
             console.error(
-                `Request favorite models failed, url: "${url}", reason: "${response.status} ${response.statusText}"`,
+                `Request candidate models failed, url: "${url}", reason: "${response.status} ${response.statusText}"`,
             );
             throw _REQUEST_FAILED;
         }
-        return response;
+        const content = await response.json();
+        return content.models;
     } catch (error) {
-        console.error(`Request favorite models failed due to exception, url: "${url}"`);
+        console.error(`Request candidate models failed due to exception, url: "${url}"`);
         console.error(error);
         throw _REQUEST_FAILED;
     }
 }
 
-async function _listAllFavoriteModels(model_type, page_size = 100) {
-    const response = await _listFavoriteModels(model_type, 1, page_size);
-    const first_page = await response.json();
-    const pages = Math.ceil(first_page.total_count / 100);
-    if (pages <= 1) {
-        return first_page.model_list;
-    }
-
-    const results = await Promise.all(
-        Array.from(PYTHON.range(2, pages + 1)).map((page) =>
-            _listFavoriteModels(model_type, page, page_size),
-        ),
-    );
-
-    const models = first_page.model_list;
-    for (let result of results) {
-        const response = await result.json();
-        models.push(...response.model_list);
-    }
-    return models;
-}
-
-async function _getAllFavoriteModels() {
-    const model_types = ["checkpoint", "embedding", "hypernetwork", "lora"];
-    const results = await Promise.all(model_types.map((item) => _listAllFavoriteModels(item)));
-    const favoriteModels = {};
-    for (let [key, value] of PYTHON.zip(model_types, results)) {
-        favoriteModels[key] = value;
-    }
-    return favoriteModels;
-}
-
-function _getAllFavoriteExtraNetworks(favoriteModels) {
-    const type_mapping = {
-        lora: "lora",
-        hypernetwork: "hypernet",
-    };
-    const extra_networks = {
+function _buildModelTree(models) {
+    const results = {
+        checkpoint: {},
+        embedding: {},
+        hypernetwork: {},
         lora: {},
-        hypernet: {},
     };
+    for (let model of models) {
+        const model_type = model.model_type === "lycoris" ? "lora" : model.model_type;
+        const key =
+            model_type === "checkpoint"
+                ? `${model.name} [${model.sha256.slice(0, 10)}]`
+                : _getStem(model.name);
 
-    for (let [type, short_type] of Object.entries(type_mapping)) {
-        for (let model_info of favoriteModels[type]) {
-            extra_networks[short_type][model_info.name_for_extra] = model_info;
-        }
+        results[model_type][key] = model;
     }
-    return extra_networks;
+    return results;
 }
 
-function _findCheckpointModel(favoriteModels, title) {
-    for (let model_info of favoriteModels.checkpoint) {
-        if (model_info.title === title.value) {
-            return _convertModelInfo(model_info, title.source);
-        }
+function _getModel(model_tree, model_type, key) {
+    const model = model_tree[model_type][key.value];
+    if (!model) {
+        _alert(`${model_type} model "${key.value}" not found in your workspace`);
     }
-    _alert(`SD checkpoint model "${title.value}" not found in your workspace`);
+    return _convertModelInfo(model, key.source);
 }
 
-function _findExtraNetworkModels(favoriteModels, prompts) {
-    const favoriteExtraNetworks = _getAllFavoriteExtraNetworks(favoriteModels);
-    const models = [];
+function _findExtraNetworkModelKeys(prompts) {
+    const network_keys = {
+        lora: [],
+        lyco: [],
+        hypernet: [],
+    };
 
     for (let prompt of prompts) {
         const results = prompt.value.matchAll(_NETWORK_REG);
         for (let result of results) {
             let type = result[1];
-            if (type === "lyco") {
-                type = "lora";
-            }
-            const name = result[2].split(":")[0];
-            const extra_networks = favoriteExtraNetworks[type];
-            if (!extra_networks) {
+            const keys = network_keys[type];
+            if (!keys) {
                 _alert(`Unknown network type "${type}"`);
             }
-            const model_info = extra_networks[name];
-            if (!model_info) {
-                _alert(`SD network "${name}" not found in your workspace`);
-            }
-            models.push(_convertModelInfo(model_info, prompt.source));
+
+            const key = result[2].split(":")[0];
+            keys.push({ value: key, source: prompt.source });
         }
     }
-    return models;
+    return {
+        lora: [...network_keys.lora, ...network_keys.lyco],
+        hypernetwork: network_keys.hypernet,
+    };
 }
 
-function _findEmbeddingModels(favoriteModels, prompts) {
+function _findEmbeddingModels(model_tree, prompts) {
     const models = [];
     const processed_prompts = prompts.map((item) => ({
         value: item.value.replace(_NETWORK_REG, ""),
         source: item.source,
     }));
 
-    for (let model_info of favoriteModels.embedding) {
-        const reg = new RegExp(`\\b${model_info.name_for_extra}\\b`);
+    for (let [key, model_info] of Object.entries(model_tree.embedding)) {
+        const reg = new RegExp(`\\b${key}\\b`);
 
         for (let prompt of processed_prompts) {
             if (reg.test(prompt.value)) {
@@ -337,28 +322,41 @@ function _findEmbeddingModels(favoriteModels, prompts) {
     return models;
 }
 
-async function _getAllModelInfo(checkpoint_titles, prompts) {
-    const favoriteModels = await _getAllFavoriteModels();
+function _getSignature(args) {
+    const arg = args.findLast(
+        (item) =>
+            typeof item === "string" &&
+            item.startsWith(_SIGNATURE.start) &&
+            item.endsWith(_SIGNATURE.end),
+    );
+    if (!arg) {
+        _alert("signature not found in the arguments");
+    }
+    return JSON.parse(arg.slice(_SIGNATURE.start.length, -_SIGNATURE.end.length));
+}
+
+function _getAllModelInfo(checkpoint_titles, prompts, network_keys, model_tree) {
+    const all_keys = {
+        checkpoint: checkpoint_titles,
+        lora: network_keys.lora,
+        hypernetwork: network_keys.hypernetwork,
+    };
     const all_model_info = [];
 
-    for (let checkpoint_title of checkpoint_titles) {
-        if (!checkpoint_title.value || checkpoint_title.value === "Use same checkpoint") {
-            continue;
+    for (let [model_type, keys] of Object.entries(all_keys)) {
+        for (let key of keys) {
+            all_model_info.push(_getModel(model_tree, model_type, key));
         }
-        all_model_info.push(_findCheckpointModel(favoriteModels, checkpoint_title));
     }
 
-    const extra_networks = _findExtraNetworkModels(favoriteModels, prompts);
-    all_model_info.push(...extra_networks);
-
-    const embedding_models = _findEmbeddingModels(favoriteModels, prompts);
+    const embedding_models = _findEmbeddingModels(model_tree, prompts);
     all_model_info.push(...embedding_models);
 
     return all_model_info;
 }
 
 async function getAllModelInfo(mode, args) {
-    const signature = getSignature(args);
+    const signature = _getSignature(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
         _alert('"all_model_info" not found in signature');
@@ -366,7 +364,7 @@ async function getAllModelInfo(mode, args) {
 
     const getArg = (key) => args[signature.indexOf(key)];
 
-    const checkpoint_titles = [];
+    let checkpoint_titles = [];
     const prompts = [];
 
     for (let key_info of _CHECKPOINT_KEYS[mode]) {
@@ -378,6 +376,9 @@ async function getAllModelInfo(mode, args) {
             );
         }
     }
+    checkpoint_titles = checkpoint_titles.filter(
+        (title) => title.value && title.value !== "Use same checkpoint",
+    );
 
     for (let key_info of _PROMPT_KEYS[mode]) {
         if (key_info.flag(getArg)) {
@@ -390,27 +391,28 @@ async function getAllModelInfo(mode, args) {
         }
     }
 
+    const network_keys = _findExtraNetworkModelKeys(prompts);
+    const all_model_names = {
+        checkpoint: checkpoint_titles.map((item) => _getStem(_getValue(item).split(" [")[0])),
+        hypernetwork: network_keys.hypernetwork.map(_getValue),
+        lora: network_keys.lora.map(_getValue),
+    };
+
     try {
-        const model_info = await _getAllModelInfo(checkpoint_titles, prompts);
-        return [index, JSON.stringify(model_info)];
+        const candidate_models = await _listCandidateModels(all_model_names);
+        const model_tree = _buildModelTree(candidate_models);
+        const all_model_info = _getAllModelInfo(
+            checkpoint_titles,
+            prompts,
+            network_keys,
+            model_tree,
+        );
+        return [index, JSON.stringify(all_model_info)];
     } catch (error) {
         if (error === _REQUEST_FAILED) {
-            console.error('Set "model_info" to null due to request fail');
+            console.error('Set "all_model_info" to null due to request fail');
             return [index, null];
         }
         throw error;
     }
-}
-
-function getSignature(args) {
-    const arg = args.findLast(
-        (item) =>
-            typeof item === "string" &&
-            item.startsWith(_SIGNATURE.start) &&
-            item.endsWith(_SIGNATURE.end),
-    );
-    if (!arg) {
-        _alert("signature not found in the arguments");
-    }
-    return JSON.parse(arg.slice(_SIGNATURE.start.length, -_SIGNATURE.end.length));
 }

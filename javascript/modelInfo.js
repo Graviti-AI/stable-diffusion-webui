@@ -216,6 +216,18 @@ function _parseCSV(data, delimiter, newline) {
         );
 }
 
+function _findLast(array, callbackFn) {
+    if (typeof array.findLast === "function") {
+        return array.findLast(callbackFn);
+    }
+    for (let item of PYTHON.reversed(array)) {
+        if (callbackFn(item)) {
+            return item;
+        }
+    }
+    return undefined;
+}
+
 function _convertModelInfo(model_info, source) {
     return {
         model_type: model_info.model_type,
@@ -323,7 +335,8 @@ function _findEmbeddingModels(model_tree, prompts) {
 }
 
 function _getSignature(args) {
-    const arg = args.findLast(
+    const arg = _findLast(
+        args,
         (item) =>
             typeof item === "string" &&
             item.startsWith(_SIGNATURE.start) &&

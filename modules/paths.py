@@ -76,6 +76,7 @@ class Paths:
     def __init__(self, request: gr.Request | None):
         import hashlib
         user = modules.user.User.current_user(request)
+        self.user = user
 
         base_dir = pathlib.Path(data_path)
 
@@ -101,12 +102,7 @@ class Paths:
 
         # output dir save user generated files
         self._private_output_dir = self._work_dir.joinpath('outputs')
-        if not user.tire or user.tire.lower() == 'free':
-            # free users use same output dir
-            self._output_dir = base_dir.joinpath(WORKDIR_NAME, 'public', 'outputs')
-        else:
-            # other users use their own dir
-            self._output_dir = self._private_output_dir
+        self._output_dir = self._private_output_dir
 
         # favorite dir
         self._favorite_dir = self._work_dir.joinpath('favorites')
@@ -195,17 +191,11 @@ class Paths:
         return self._check_dir(self._work_dir.joinpath("model_previews"))
 
     def save_image(self, filename: str):
-        if self._private_output_dir == self._output_dir:
-            # image file generated in private output dir, do nothing
-            pass
-        elif filename.startswith(str(self._work_dir)):
-            # image file is already in work dir, do nothing
-            pass
-        else:
-            # image is generated at public folder, make a symlink to src image
+        # copy the generated image to public dir if user is free tier.
+        if not self.user.tire or self.user.tire.lower() == 'free':
             src_path = pathlib.Path(filename)
             relative_to = src_path.relative_to(self._output_dir)
-            dst_path = self._private_output_dir.joinpath(relative_to)
+            dst_path = self.public_outdir().joinpath(relative_to)
             if not dst_path.parent.exists():
                 dst_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(src_path, dst_path)

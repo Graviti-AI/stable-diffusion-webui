@@ -71,6 +71,37 @@ function randomId() {
     }
 }
 
+function checkQueue(response) {
+    if (userTier != "Free") {
+        return false;
+    }
+    if (!response.queued) {
+        return false;
+    }
+    let result = response.textinfo.match(/^In queue\((\d+) ahead\)/);
+    if (!result) {
+        return false;
+    }
+
+    let ahead = Number(result[1]);
+    if (ahead <= 0) {
+        return false;
+    }
+    let text = ahead === 1 ? `${ahead} task` : `${ahead} tasks`;
+    notifier.confirm(
+        `Your task is in queue and ${text} ahead, upgrade to shorten the queue and get faster service.`,
+        () => {window.open("/user#/subscription?type=subscription", "_blank")},
+        () => {},
+        {
+            labels: {
+                confirm: 'Upgrade Now',
+                confirmOk: 'Upgrade'
+            }
+        }
+    );
+    return true;
+}
+
 // starts sending progress requests to "/internal/progress" uri, creating progressbar above progressbarContainer element and
 // preview inside gallery element. Cleans up all created stuff when the task is over and calls atEnd.
 // calls onProgress every time there is a progress update
@@ -102,6 +133,7 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
     };
 
     var lastFailedAt = null;
+    let is_queue_checked = false;
     var funProgress = function(id_task, id_live_preview=false) {
         request("./internal/progress", {id_task: id_task, id_live_preview: id_live_preview}, function(res) {
             lastFailedAt = null;
@@ -109,6 +141,10 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
                 removeProgressBar();
                 console.log("remove progress bar: res.completed");
                 return;
+            }
+
+            if (!is_queue_checked) {
+                is_queue_checked = checkQueue(res);
             }
 
             let progressText = "";

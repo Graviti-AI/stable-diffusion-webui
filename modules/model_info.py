@@ -61,7 +61,7 @@ class ModelInfo(BaseModel):
 
     @property
     def is_safetensors(self) -> bool:
-        return os.path.splitext(self.name)[-1] == ".safetensors"
+        return os.path.splitext(self.name)[-1].lower() == ".safetensors"
 
     def calculate_shorthash(self) -> str:
         return self.shorthash

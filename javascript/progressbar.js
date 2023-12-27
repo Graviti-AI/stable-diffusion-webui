@@ -84,12 +84,11 @@ function checkQueue(response) {
     }
 
     let ahead = Number(result[1]);
-    if (ahead <= 0) {
+    if (ahead <= 1) {
         return false;
     }
-    let text = ahead === 1 ? `${ahead} task` : `${ahead} tasks`;
     notifier.confirm(
-        `Your task is in queue and ${text} ahead, upgrade to shorten the queue and get faster service.`,
+        `Your task is in queue and ${ahead} tasks ahead, upgrade to shorten the queue and get faster service.`,
         () => {window.open("/user#/subscription?type=subscription", "_blank")},
         () => {},
         {

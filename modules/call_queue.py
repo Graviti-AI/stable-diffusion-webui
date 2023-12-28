@@ -92,6 +92,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     monitor_log_id = None
     status = ''
     task_failed = True
+    is_nsfw = False
     log_message = ''
     res = list()
     time_consumption = {}
@@ -203,6 +204,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 else:
                     if len(res) > 0 and res[0] and len(res[0]) > 0 and isinstance(res[0][0], Image.Image):
                         # First element in res is gallery
+                        is_nsfw = any(getattr(item, "is_nsfw", False) for item in res[0])
                         image_paths = [extract_image_path_or_save_if_needed(request, item) for item in res[0] if isinstance(item, Image.Image)]
                         log_message = json.dumps([image_paths] + list(res[1:]))
                     else:
@@ -215,7 +217,11 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 logging.warning(f'send task finished event to monitor failed: {str(e)}')
 
     if add_monitor_state:
-        return res, json.dumps({"need_upgrade": False})
+        state = {"need_upgrade": False}
+        if is_nsfw:
+            state["is_nsfw"] = True
+
+        return res, json.dumps(state)
     return res
 
 

@@ -996,7 +996,9 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
                 image = apply_overlay(image, p.paste_to, i, p.overlay_images)
 
-                if save_samples:
+                image = images.nsfw_blur(image, p)
+
+                if save_samples and not getattr(image, "is_nsfw", False):
                     images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p)
 
                 text = infotext(i)
@@ -1032,6 +1034,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         unwanted_grid_because_of_img_count = len(output_images) < 2 and opts.grid_only_if_multiple
         if (opts.return_grid or opts.grid_save) and not p.do_not_save_grid and not unwanted_grid_because_of_img_count:
             grid = images.image_grid(output_images, p.batch_size)
+            setattr(grid, "is_nsfw", any(getattr(image, "is_nsfw", False) for image in output_images))
 
             if opts.return_grid:
                 text = infotext(use_main_prompt=True)
@@ -1040,7 +1043,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     grid.info["parameters"] = text
                 output_images.insert(0, grid)
                 index_of_first_image = 1
-            if opts.grid_save:
+            if opts.grid_save and not getattr(grid, "is_nsfw", False):
                 images.save_image(grid, p.outpath_grids, "grid", p.all_seeds[0], p.all_prompts[0], opts.grid_format, info=infotext(use_main_prompt=True), short_filename=not opts.grid_extended_filename, p=p, grid=True)
 
     if not p.disable_extra_networks and p.extra_network_data:

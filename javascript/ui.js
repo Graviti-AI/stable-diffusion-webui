@@ -518,6 +518,28 @@ function restart_reload() {
     return [];
 }
 
+function check_nsfw(obj, boxId) {
+    if (!obj.is_nsfw) {
+        return;
+    }
+    notifier.confirm(
+        `Potential NSFW content was detected in the generated image, upgrade to enable your private image storage.`,
+        () => {
+            update_textbox_by_id(boxId, "");
+            window.open("/user#/subscription?type=subscription", "_blank");
+        },
+        () => {
+            update_textbox_by_id(boxId, "");
+        },
+        {
+            labels: {
+                confirm: 'Upgrade Now',
+                confirmOk: 'Upgrade'
+            }
+        }
+    );
+}
+
 function update_textbox_by_id(id, value) {
     const box = gradioApp().querySelector(`#${id} textarea`);
     if (box) {
@@ -530,6 +552,7 @@ function redirect_to_payment_factory(boxId) {
   function redirect_to_payment(need_upgrade){
       if (need_upgrade) {
           const need_upgrade_obj = JSON.parse(need_upgrade);
+          check_nsfw(need_upgrade_obj, boxId);
           if (need_upgrade_obj.hasOwnProperty("need_upgrade") && need_upgrade_obj.need_upgrade) {
               const message = need_upgrade_obj.hasOwnProperty("message")? need_upgrade_obj.message: "Upgrade to unlock more credits.";
               let onOk = () => {

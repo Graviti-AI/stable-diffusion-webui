@@ -194,6 +194,10 @@ class Paths:
         # copy the generated image to public dir if user is free tier.
         if not self.user.tire or self.user.tire.lower() == 'free':
             src_path = pathlib.Path(filename)
+
+            if not src_path.is_relative_to(self._output_dir):
+                return
+
             relative_to = src_path.relative_to(self._output_dir)
             dst_path = self.public_outdir().joinpath(relative_to)
             if not dst_path.parent.exists():

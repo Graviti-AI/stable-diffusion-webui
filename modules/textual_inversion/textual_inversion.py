@@ -41,10 +41,6 @@ def list_textual_inversion_templates():
     return textual_inversion_templates
 
 
-def is_embedding_in_workspace(request, embedding):
-    return True
-
-
 class Embedding:
     def __init__(self, vec, name, step=None):
         self.vec = vec
@@ -286,7 +282,7 @@ class EmbeddingDatabase:
 
         self._embedding_model_info = embedding_model_info
 
-    def find_embedding_at_position(self, tokens, offset, request=None):
+    def find_embedding_at_position(self, tokens, offset):
         token = tokens[offset]
         possible_matches = self.ids_lookup.get(token, None)
 
@@ -294,8 +290,6 @@ class EmbeddingDatabase:
             return None, None
 
         for ids, embedding in possible_matches:
-            if not is_embedding_in_workspace(request, embedding):
-                continue
             if tokens[offset:offset + len(ids)] == ids:
                 return embedding, len(ids)
 

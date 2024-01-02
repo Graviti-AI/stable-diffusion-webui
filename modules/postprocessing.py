@@ -52,6 +52,8 @@ def run_postprocessing(
 
     for image_data, name in get_images(extras_mode, image, image_folder, input_dir):
         image_data: Image.Image
+        if image_data.width > 2048 or image_data.height > 2048:
+            raise Exception(f'image oversize: maximum weight/height is 4096')
 
         shared.state.textinfo = name
 

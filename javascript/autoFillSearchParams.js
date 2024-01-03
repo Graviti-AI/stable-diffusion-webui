@@ -50,13 +50,19 @@ class AutoFillSearchParams {
     }
 
     initSearchParams() {
+        const params = [];
         for (const [key, value] of this.searchParams.entries()) {
             if (!this.excludeKeys.includes(key.toLowerCase())) {
-                this.joinParams(key.toLowerCase(), value);
+                params.push([key, value]);
             }
         }
-        if (this.hasWidthOrHeightParam) {
-            this.result += `Size: ${this.defaultWidth}x${this.defaultHeight},`;
+        if (params.length >= 2) {
+            for (const [key, value] of params) {
+                this.joinParams(key.toLowerCase(), value);
+            }
+            if (this.hasWidthOrHeightParam) {
+                this.result += `Size: ${this.defaultWidth}x${this.defaultHeight},`;
+            }
         }
         this.result = this.result.replace('__prompt__', '').replace('__negative_prompt__', '');
         return this.result;

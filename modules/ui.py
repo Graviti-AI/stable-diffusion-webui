@@ -1669,10 +1669,12 @@ def create_ui():
                             if ckpt_info is not None:
                                 return ckpt_info.title
 
-                        ckpt_info = sd_models.get_closet_checkpoint_match(params["Model"])
+                        if "Model" in params:
+                            ckpt_info = sd_models.get_closet_checkpoint_match(params["Model"])
 
-                        if ckpt_info is not None:
-                            return ckpt_info.title
+                            if ckpt_info is not None:
+                                return ckpt_info.title
+
                         return checkpoint_tiles[0]
                     txt2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
                     img2img_paste_fields.append((sd_model_selection, get_model_title_from_params))

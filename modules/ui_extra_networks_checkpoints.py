@@ -5,7 +5,7 @@ import os
 from modules import shared, ui_extra_networks, sd_models
 from modules.ui_extra_networks import quote_js
 from modules.ui_extra_networks_checkpoints_user_metadata import CheckpointUserMetadataEditor
-from fastapi import Request
+import gradio as gr
 
 
 class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
@@ -13,6 +13,8 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
         super().__init__('Checkpoints')
         self.min_model_size_mb = 1e3
         self.max_model_size_mb = 15e3
+
+        self.allow_prompt = False
 
     def refresh_metadata(self):
         for name, checkpoint in sd_models.checkpoints_list.items():
@@ -22,7 +24,7 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
             if metadata is not None:
                 self.metadata[checkpoint.name_for_extra] = metadata
 
-    def refresh(self, request: Request):
+    def refresh(self, request: gr.Request):
         shared.refresh_checkpoints(request)
         self.refresh_metadata()
 

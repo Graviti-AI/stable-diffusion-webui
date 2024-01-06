@@ -5,17 +5,22 @@ import re
 import lora_patches
 import network
 import network_lora
+import network_glora
 import network_hada
 import network_ia3
 import network_lokr
 import network_full
 import network_norm
+import network_oft
 
 import torch
 from typing import Union
 
 from modules import shared, devices, sd_models, errors, scripts, sd_hijack
 from modules.model_info import ModelInfo
+import modules.textual_inversion.textual_inversion as textual_inversion
+
+from lora_logger import logger
 
 module_types = [
     network_lora.ModuleTypeLora(),
@@ -24,6 +29,8 @@ module_types = [
     network_lokr.ModuleTypeLokr(),
     network_full.ModuleTypeFull(),
     network_norm.ModuleTypeNorm(),
+    network_glora.ModuleTypeGLora(),
+    network_oft.ModuleTypeOFT(),
 ]
 
 
@@ -150,9 +157,20 @@ def load_network(name, network_on_disk):
     is_sd2 = 'model_transformer_resblocks' in shared.sd_model.network_layer_mapping
 
     matched_networks = {}
+    bundle_embeddings = {}
 
     for key_network, weight in sd.items():
-        key_network_without_network_parts, network_part = key_network.split(".", 1)
+        key_network_without_network_parts, _, network_part = key_network.partition(".")
+
+        if key_network_without_network_parts == "bundle_emb":
+            emb_name, vec_name = network_part.split(".", 1)
+            emb_dict = bundle_embeddings.get(emb_name, {})
+            if vec_name.split('.')[0] == 'string_to_param':
+                _, k2 = vec_name.split('.', 1)
+                emb_dict['string_to_param'] = {k2: weight}
+            else:
+                emb_dict[vec_name] = weight
+            bundle_embeddings[emb_name] = emb_dict
 
         key = convert_diffusers_name_to_compvis(key_network_without_network_parts, is_sd2)
         sd_module = shared.sd_model.network_layer_mapping.get(key, None)
@@ -175,6 +193,17 @@ def load_network(name, network_on_disk):
                 key = key_network_without_network_parts.replace("lora_te1_text_model", "transformer_text_model")
                 sd_module = shared.sd_model.network_layer_mapping.get(key, None)
 
+        # kohya_ss OFT module
+        elif sd_module is None and "oft_unet" in key_network_without_network_parts:
+            key = key_network_without_network_parts.replace("oft_unet", "diffusion_model")
+            sd_module = shared.sd_model.network_layer_mapping.get(key, None)
+
+        # KohakuBlueLeaf OFT module
+        if sd_module is None and "oft_diag" in key:
+            key = key_network_without_network_parts.replace("lora_unet", "diffusion_model")
+            key = key_network_without_network_parts.replace("lora_te1_text_model", "0_transformer_text_model")
+            sd_module = shared.sd_model.network_layer_mapping.get(key, None)
+
         if sd_module is None:
             keys_failed_to_match[key_network] = key
             continue
@@ -195,6 +224,14 @@ def load_network(name, network_on_disk):
             raise AssertionError(f"Could not find a module type (out of {', '.join([x.__class__.__name__ for x in module_types])}) that would accept those keys: {', '.join(weights.w)}")
 
         net.modules[key] = net_module
+
+    embeddings = {}
+    for emb_name, data in bundle_embeddings.items():
+        embedding = textual_inversion.create_embedding_from_data(data, emb_name, filename=network_on_disk.filename + "/" + emb_name)
+        embedding.loaded = None
+        embeddings[emb_name] = embedding
+
+    net.bundle_embeddings = embeddings
 
     if keys_failed_to_match:
         logging.debug(f"Network {network_on_disk.filename} didn't match keys: {keys_failed_to_match}")
@@ -222,11 +259,16 @@ def load_networks(
     ]
     hashes = {item.hash for item in networks_on_disk}
 
+    emb_db = sd_hijack.model_hijack.embedding_db
     already_loaded = {}
 
     for net in loaded_networks:
         if net.network_on_disk.hash in hashes:
             already_loaded[net.network_on_disk.hash] = net
+        # TODO: Test with Bulding embedding, the current logic seems to load embedding even when the lora isn't used
+        for emb_name, embedding in net.bundle_embeddings.items():
+            if embedding.loaded:
+                emb_db.register_embedding_by_name(None, shared.sd_model, emb_name)
 
     loaded_networks.clear()
 
@@ -270,6 +312,21 @@ def load_networks(
         net.dyn_dim = dyn_dims[i] if dyn_dims else 1.0
         net.network_on_disk = network_on_disk
         loaded_networks.append(net)
+
+        for emb_name, embedding in net.bundle_embeddings.items():
+            if embedding.loaded is None and emb_name in emb_db.word_embeddings:
+                logger.warning(
+                    f'Skip bundle embedding: "{emb_name}"'
+                    ' as it was already loaded from embeddings folder'
+                )
+                continue
+
+            embedding.loaded = False
+            if emb_db.expected_shape == -1 or emb_db.expected_shape == embedding.shape:
+                embedding.loaded = True
+                emb_db.register_embedding(embedding, shared.sd_model)
+            else:
+                emb_db.skipped_embeddings[name] = embedding
 
     if failed_to_load_networks:
         sd_hijack.model_hijack.comments.append("Networks not found: " + ", ".join(failed_to_load_networks))
@@ -432,6 +489,7 @@ def network_forward(module, input, original_forward):
 def network_reset_cached_weight(self: Union[torch.nn.Conv2d, torch.nn.Linear]):
     self.network_current_names = ()
     self.network_weights_backup = None
+    self.network_bias_backup = None
 
 
 def network_Linear_forward(self, input):
@@ -578,6 +636,7 @@ extra_network_lora = None
 available_networks = {}
 available_network_aliases = {}
 loaded_networks = []
+loaded_bundle_embeddings = {}
 networks_in_memory = {}
 available_network_hash_lookup = {}
 forbidden_network_aliases = {}

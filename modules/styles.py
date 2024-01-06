@@ -1,4 +1,5 @@
 import csv
+import fnmatch
 import os
 import os.path
 import pathlib
@@ -32,38 +33,61 @@ def apply_styles_to_prompt(prompt, styles):
     return prompt
 
 
-re_spaces = re.compile("  +")
+def unwrap_style_text_from_prompt(style_text, prompt):
+    """
+    Checks the prompt to see if the style text is wrapped around it. If so,
+    returns True plus the prompt text without the style text. Otherwise, returns
+    False with the original prompt.
 
-
-def extract_style_text_from_prompt(style_text, prompt):
-    stripped_prompt = re.sub(re_spaces, " ", prompt.strip())
-    stripped_style_text = re.sub(re_spaces, " ", style_text.strip())
+    Note that the "cleaned" version of the style text is only used for matching
+    purposes here. It isn't returned; the original style text is not modified.
+    """
+    stripped_prompt = prompt
+    stripped_style_text = style_text
     if "{prompt}" in stripped_style_text:
-        left, right = stripped_style_text.split("{prompt}", 2)
+        # Work out whether the prompt is wrapped in the style text. If so, we
+        # return True and the "inner" prompt text that isn't part of the style.
+        try:
+            left, right = stripped_style_text.split("{prompt}", 2)
+        except ValueError as e:
+            # If the style text has multple "{prompt}"s, we can't split it into
+            # two parts. This is an error, but we can't do anything about it.
+            print(f"Unable to compare style text to prompt:\n{style_text}")
+            print(f"Error: {e}")
+            return False, prompt
         if stripped_prompt.startswith(left) and stripped_prompt.endswith(right):
-            prompt = stripped_prompt[len(left):len(stripped_prompt)-len(right)]
+            prompt = stripped_prompt[len(left) : len(stripped_prompt) - len(right)]
             return True, prompt
     else:
+        # Work out whether the given prompt ends with the style text. If so, we
+        # return True and the prompt text up to where the style text starts.
         if stripped_prompt.endswith(stripped_style_text):
-            prompt = stripped_prompt[:len(stripped_prompt)-len(stripped_style_text)]
-
-            if prompt.endswith(', '):
+            prompt = stripped_prompt[: len(stripped_prompt) - len(stripped_style_text)]
+            if prompt.endswith(", "):
                 prompt = prompt[:-2]
-
             return True, prompt
 
     return False, prompt
 
 
-def extract_style_from_prompts(style: PromptStyle, prompt, negative_prompt):
+def extract_original_prompts(style: PromptStyle, prompt, negative_prompt):
+    """
+    Takes a style and compares it to the prompt and negative prompt. If the style
+    matches, returns True plus the prompt and negative prompt with the style text
+    removed. Otherwise, returns False with the original prompt and negative prompt.
+    """
     if not style.prompt and not style.negative_prompt:
         return False, prompt, negative_prompt
 
-    match_positive, extracted_positive = extract_style_text_from_prompt(style.prompt, prompt)
+    match_positive, extracted_positive = unwrap_style_text_from_prompt(
+        style.prompt, prompt
+    )
     if not match_positive:
         return False, prompt, negative_prompt
 
-    match_negative, extracted_negative = extract_style_text_from_prompt(style.negative_prompt, negative_prompt)
+    match_negative, extracted_negative = unwrap_style_text_from_prompt(
+        style.negative_prompt, negative_prompt
+    )
     if not match_negative:
         return False, prompt, negative_prompt
 
@@ -78,6 +102,9 @@ def _load_styles_from_file(filename):
     with open(p, "r", encoding="utf-8-sig", newline='') as file:
         reader = csv.DictReader(file, skipinitialspace=True)
         for row in reader:
+            # Ignore empty rows or rows starting with a comment
+            if not row or row["name"].startswith("#"):
+                continue
             # Support loading old CSV format with "name, text"-columns
             prompt = row["prompt"] if "prompt" in row else row["text"]
             negative_prompt = row.get("negative_prompt", "")
@@ -93,6 +120,12 @@ class StyleDatabase:
         self._user_styles = {}
         self._styles = {}
         self.path = path
+
+        folder, file = os.path.split(self.path)
+        filename, _, ext = file.partition('*')
+        self.default_path = os.path.join(folder, filename + ext)
+
+        self.prompt_fields = [field for field in PromptStyle._fields if field != "path"]
 
         self.reload()
 
@@ -115,10 +148,14 @@ class StyleDatabase:
         return [self.styles.get(x, self.no_style).negative_prompt for x in styles]
 
     def apply_styles_to_prompt(self, prompt, styles):
-        return apply_styles_to_prompt(prompt, [self.styles.get(x, self.no_style).prompt for x in styles])
+        return apply_styles_to_prompt(
+            prompt, [self.styles.get(x, self.no_style).prompt for x in styles]
+        )
 
     def apply_negative_styles_to_prompt(self, prompt, styles):
-        return apply_styles_to_prompt(prompt, [self.styles.get(x, self.no_style).negative_prompt for x in styles])
+        return apply_styles_to_prompt(
+            prompt, [self.styles.get(x, self.no_style).negative_prompt for x in styles]
+        )
 
     def save_styles(self, style: Optional[PromptStyle] = None) -> None:
         # Always keep a backup file around
@@ -150,7 +187,9 @@ class StyleDatabase:
             found_style = None
 
             for style in applicable_styles:
-                is_match, new_prompt, new_neg_prompt = extract_style_from_prompts(style, prompt, negative_prompt)
+                is_match, new_prompt, new_neg_prompt = extract_original_prompts(
+                    style, prompt, negative_prompt
+                )
                 if is_match:
                     found_style = style
                     prompt = new_prompt

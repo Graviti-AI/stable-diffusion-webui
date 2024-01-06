@@ -1,3 +1,4 @@
+import functools
 import os.path
 import urllib.parse
 from pathlib import Path
@@ -29,6 +30,17 @@ model_list_refresh_lock = Lock()
 
 up_down_symbol = '\u2195\ufe0f' # ↕️
 
+default_allowed_preview_extensions = ["png", "jpg", "jpeg", "webp", "gif"]
+
+
+@functools.cache
+def allowed_preview_extensions_with_extra(extra_extensions=None):
+    return set(default_allowed_preview_extensions) | set(extra_extensions or [])
+
+
+def allowed_preview_extensions():
+    return allowed_preview_extensions_with_extra((shared.opts.samples_format, ))
+
 
 def fetch_file(request: Request, filename: str = "", model_type: str = ""):
     from starlette.responses import FileResponse
@@ -40,8 +52,9 @@ def fetch_file(request: Request, filename: str = "", model_type: str = ""):
     if not any(Path(x).absolute() in Path(filename).absolute().parents for x in allowed_dirs):
         return FileResponse(no_preview_background_path, headers={"Accept-Ranges": "bytes"})
 
-    ext = os.path.splitext(filename)[1].lower()
-    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+    ext = os.path.splitext(filename)[1].lower()[1:]
+    if ext not in allowed_preview_extensions():
+        #raise ValueError(f"File cannot be fetched: {filename}. Extensions allowed: {allowed_preview_extensions()}.")
         return FileResponse(no_preview_background_path, headers={"Accept-Ranges": "bytes"})
 
     paths = Paths(gr.Request(request=request))
@@ -196,6 +209,7 @@ class ExtraNetworksPage:
         self.name = title.lower()
         self.id_page = self.name.replace(" ", "_")
         self.card_page = shared.html("extra-networks-card.html")
+        self.allow_prompt = True
         self.allow_negative_prompt = False
         self.metadata = {}
         self.max_model_size_mb = None  # If `None`, there is no limitation
@@ -262,8 +276,13 @@ class ExtraNetworksPage:
                         continue
 
                     subdir = os.path.abspath(x)[len(parentdir):].replace("\\", "/")
-                    while subdir.startswith("/"):
-                        subdir = subdir[1:]
+
+                    if shared.opts.extra_networks_dir_button_function:
+                        if not subdir.startswith("/"):
+                            subdir = "/" + subdir
+                    else:
+                        while subdir.startswith("/"):
+                            subdir = subdir[1:]
 
                     is_empty = len(os.listdir(x)) == 0
                     if not is_empty and not subdir.endswith("/"):
@@ -392,9 +411,9 @@ class ExtraNetworksPage:
         metadata_button = ""
         metadata = item.get("metadata")
         if metadata:
-            metadata_button = f"<div class='metadata-button card-button' title='Show internal metadata' onclick='extraNetworksRequestMetadata(event, {quote_js(self.name)}, {quote_js(item['name'])})'></div>"
+            metadata_button = f"<div class='metadata-button card-button' title='Show internal metadata' onclick='extraNetworksRequestMetadata(event, {quote_js(self.name)}, {quote_js(html.escape(item['name']))})'></div>"
 
-        edit_button = f"<div class='edit-button card-button' title='Edit metadata' onclick='extraNetworksEditUserMetadata(event, {quote_js(tabname)}, {quote_js(self.id_page)}, {quote_js(item['name'])})'></div>"
+        edit_button = f"<div class='edit-button card-button' title='Edit metadata' onclick='extraNetworksEditUserMetadata(event, {quote_js(tabname)}, {quote_js(self.id_page)}, {quote_js(html.escape(item['name']))})'></div>"
 
         local_path = ""
         filename = item.get("filename", "")
@@ -414,7 +433,7 @@ class ExtraNetworksPage:
         if search_only and shared.opts.extra_networks_hidden_models == "Never":
             return ""
 
-        sort_keys = " ".join([html.escape(f'data-sort-{k}={v}') for k, v in item.get("sort_keys", {}).items()]).strip()
+        sort_keys = " ".join([f'data-sort-{k}="{html.escape(str(v))}"' for k, v in item.get("sort_keys", {}).items()]).strip()
 
         font_scale = 1 if not shared.opts.extra_networks_card_text_scale else shared.opts.extra_networks_card_text_scale
         args = {
@@ -446,6 +465,7 @@ class ExtraNetworksPage:
             "date_created": int(stat.st_ctime or 0),
             "date_modified": int(stat.st_mtime or 0),
             "name": pth.name.lower(),
+            "path": str(pth.parent).lower(),
         }
 
     def find_preview(self, path):
@@ -454,11 +474,7 @@ class ExtraNetworksPage:
         """
         assert shared.opts is not None, "shared.opts is not initialized"
 
-        preview_extensions = ["png", "jpg", "jpeg", "webp"]
-        if shared.opts.samples_format not in preview_extensions:
-            preview_extensions.append(shared.opts.samples_format)
-
-        potential_files = sum([[path + "." + ext, path + ".preview." + ext] for ext in preview_extensions], [])
+        potential_files = sum([[path + "." + ext, path + ".preview." + ext] for ext in allowed_preview_extensions()], [])
 
         for file in potential_files:
             if os.path.isfile(file):

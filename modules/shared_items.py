@@ -47,9 +47,9 @@ def refresh_unet_list():
     modules.sd_unet.list_unets()
 
 
-def list_checkpoint_tiles(request: Optional[gr.Request] = None):
+def list_checkpoint_tiles(request: Optional[gr.Request] = None, use_short=False):
     import modules.sd_models
-    return modules.sd_models.checkpoint_tiles(request)
+    return modules.sd_models.checkpoint_tiles(request, use_short=use_short)
 
 
 def refresh_checkpoints(request: gr.Request):
@@ -69,7 +69,25 @@ def reload_hypernetworks():
     shared.hypernetworks = hypernetwork.list_hypernetworks(cmd_opts.hypernetwork_dir)
 
 
+def get_infotext_names():
+    from modules import generation_parameters_copypaste, shared
+    res = {}
+
+    for info in shared.opts.data_labels.values():
+        if info.infotext:
+            res[info.infotext] = 1
+
+    for tab_data in generation_parameters_copypaste.paste_fields.values():
+        for _, name in tab_data.get("fields") or []:
+            if isinstance(name, str):
+                res[name] = 1
+
+    return list(res)
+
+
 ui_reorder_categories_builtin_items = [
+    "prompt",
+    "image",
     "inpaint",
     "sampler",
     "accordions",

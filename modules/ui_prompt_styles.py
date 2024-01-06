@@ -4,6 +4,7 @@ from modules import shared, ui_common, ui_components, styles
 
 styles_edit_symbol = '\U0001f58c\uFE0F'  # 🖌️
 styles_materialize_symbol = '\U0001f4cb'  # 📋
+styles_copy_symbol = '\U0001f4dd'  # 📝
 
 
 def select_style(request: gr.Request, name):
@@ -53,6 +54,8 @@ def refresh_styles(request: gr.Request):
 class UiPromptStyles:
     def __init__(self, tabname, main_ui_prompt, main_ui_negative_prompt):
         self.tabname = tabname
+        self.main_ui_prompt = main_ui_prompt
+        self.main_ui_negative_prompt = main_ui_negative_prompt
 
         with gr.Row(elem_id=f"{tabname}_styles_row"):
             self.dropdown = gr.Dropdown(label="Styles", show_label=False, elem_id=f"{tabname}_styles", choices=list(), value=[], multiselect=True, tooltip="Styles")
@@ -67,12 +70,13 @@ class UiPromptStyles:
                     return {"choices": list(shared.prompt_styles(request).styles.keys())}
 
                 ui_common.create_refresh_button([self.dropdown, self.selection], shared.reload_style, current_prompt_styles, f"refresh_{tabname}_styles")
+                self.copy = ui_components.ToolButton(value=styles_copy_symbol, elem_id=f"{tabname}_style_copy", tooltip="Copy main UI prompt to style.")
 
             with gr.Row():
-                self.prompt = gr.Textbox(label="Prompt", show_label=True, elem_id=f"{tabname}_edit_style_prompt", lines=3)
+                self.prompt = gr.Textbox(label="Prompt", show_label=True, elem_id=f"{tabname}_edit_style_prompt", lines=3, elem_classes=["prompt"])
 
             with gr.Row():
-                self.neg_prompt = gr.Textbox(label="Negative prompt", show_label=True, elem_id=f"{tabname}_edit_style_neg_prompt", lines=3)
+                self.neg_prompt = gr.Textbox(label="Negative prompt", show_label=True, elem_id=f"{tabname}_edit_style_neg_prompt", lines=3, elem_classes=["prompt"])
 
             with gr.Row():
                 self.save = gr.Button('Save', variant='primary', elem_id=f'{tabname}_edit_style_save', visible=False)
@@ -103,15 +107,21 @@ class UiPromptStyles:
             show_progress="hidden",
         ).then(refresh_styles, outputs=[self.dropdown, self.selection], show_progress="hidden")
 
-        self.materialize.click(
-            fn=materialize_styles,
-            inputs=[main_ui_prompt, main_ui_negative_prompt, self.dropdown],
-            outputs=[main_ui_prompt, main_ui_negative_prompt, self.dropdown],
-            show_progress="hidden",
-        ).then(fn=None, _js="function(){update_"+tabname+"_tokens(); closePopup();}", show_progress="hidden")
+        self.setup_apply_button(self.materialize)
+
+        self.copy.click(
+            fn=lambda p, n: (p, n),
+            inputs=[main_ui_prompt, main_ui_negative_prompt],
+            outputs=[self.prompt, self.neg_prompt],
+            show_progress=False,
+        )
 
         ui_common.setup_dialog(button_show=edit_button, dialog=styles_dialog, button_close=self.close)
 
-
-
-
+    def setup_apply_button(self, button):
+        button.click(
+            fn=materialize_styles,
+            inputs=[self.main_ui_prompt, self.main_ui_negative_prompt, self.dropdown],
+            outputs=[self.main_ui_prompt, self.main_ui_negative_prompt, self.dropdown],
+            show_progress=False,
+        ).then(fn=None, _js="function(){update_"+self.tabname+"_tokens(); closePopup();}", show_progress=False)

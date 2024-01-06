@@ -2,7 +2,7 @@ import os
 import pathlib
 import shutil
 import sys
-from modules.paths_internal import models_path, script_path, data_path, binary_dir, configs_dir, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME  # noqa: F401
+from modules.paths_internal import models_path, script_path, data_path, binary_dir, configs_dir, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME, cwd  # noqa: F401
 
 import modules.safe  # noqa: F401
 import modules.user

@@ -4,7 +4,6 @@ import gradio.routes
 import gradio as gr
 
 import modules.textual_inversion.textual_inversion
-import modules.textual_inversion.preprocess
 from modules import sd_hijack, shared
 import modules.call_utils
 

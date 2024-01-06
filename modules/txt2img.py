@@ -4,7 +4,7 @@ import gradio as gr
 import modules.scripts
 from modules import processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
-from modules.shared import opts, cmd_opts
+from modules.shared import opts
 import modules.shared as shared
 from modules.ui import plaintext_to_html
 from modules.paths import Paths
@@ -66,7 +66,7 @@ def txt2img(request: gr.Request, id_task: str, prompt: str, negative_prompt: str
 
     p.user = request.username
 
-    if cmd_opts.enable_console_prompts:
+    if shared.opts.enable_console_prompts:
         print(f"\ntxt2img: {prompt}", file=shared.progress_print_out)
 
     with closing(p):

@@ -73,13 +73,14 @@ onUiLoaded(function(){
    const resultPromots = new AutoFillSearchParams().initSearchParams();
    const txt2imgDom = gradioApp().querySelector("#txt2img_prompt");
    const textareaDom = txt2imgDom.querySelector("textarea");
-   textareaDom.value = resultPromots;
-   // need to dispatch
-   const event = new Event("input");
-   textareaDom.dispatchEvent(event);
-   resultPromots && setTimeout(() => {
-     const event = new Event("click");
-     document.querySelector("#paste").dispatchEvent(event);
-   })
-   
+   if(resultPromots.trim().length > 0) {
+       textareaDom.value = resultPromots;
+       // need to dispatch
+       const event = new Event("input");
+       textareaDom.dispatchEvent(event);
+       resultPromots && setTimeout(() => {
+           const event = new Event("click");
+           document.querySelector("#paste").dispatchEvent(event);
+       })
+   }
 })

@@ -47,14 +47,19 @@ function extract_image_from_gallery(gallery) {
 
 window.args_to_array = Array.from; // Compatibility with e.g. extensions that may expect this to be around
 
-function switch_to_txt2img() {
-    gradioApp().querySelector('#tabs').querySelectorAll('button')[0].click();
+function switchToTab(tab_id) {
+    const tabItems = gradioApp().querySelectorAll('#tabs > .tabitem');
+    const buttons = gradioApp().querySelectorAll("#tabs > div.tab-nav > button")
+    buttons[Array.from(tabItems).findIndex(el => el.id === tab_id)].click();
+}
 
+function switch_to_txt2img() {
+    switchToTab("tab_txt2img");
     return Array.from(arguments);
 }
 
 function switch_to_img2img_tab(no) {
-    gradioApp().querySelector('#tabs').querySelectorAll('button')[1].click();
+    switchToTab("tab_img2img");
     gradioApp().getElementById('mode_img2img').querySelectorAll('button')[no].click();
 }
 function switch_to_img2img() {
@@ -78,7 +83,7 @@ function switch_to_inpaint_sketch() {
 }
 
 function switch_to_extras() {
-    gradioApp().querySelector('#tabs').querySelectorAll('button')[2].click();
+    switchToTab("tab_extras");
 
     return Array.from(arguments);
 }

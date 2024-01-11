@@ -17,9 +17,6 @@ class ExtraNetworkHypernet(extra_networks.ExtraNetwork):
         names = []
         multipliers = []
 
-        if not params_list:
-            return
-
         for params in params_list:
             assert params.items
 
@@ -27,7 +24,7 @@ class ExtraNetworkHypernet(extra_networks.ExtraNetwork):
             multipliers.append(float(params.items[1]) if len(params.items) > 1 else 1.0)
 
 
-        hypernetwork_model_info = p.get_all_model_info().hypernetwork_models
+        hypernetwork_model_info = p.get_all_model_info().hypernetwork_models if names else {}
         hypernetwork.load_hypernetworks(names, hypernetwork_model_info, multipliers)
 
         network_hashes = []

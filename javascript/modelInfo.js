@@ -15,7 +15,10 @@ function _get_checkpoint_keys() {
             {
                 source: "hr",
                 flag: (getArg) => getArg("enable_hr"),
-                values: (getArg) => [getArg("hr_checkpoint_name")],
+                values: (getArg) => {
+                    const arg = getArg("hr_checkpoint_name");
+                    return typeof arg === "object" ? arg : [arg];
+                },
             },
             {
                 source: "refiner",

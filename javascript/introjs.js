@@ -115,12 +115,14 @@ async function loadIntroJS() {
 
     const introjs_button = gradioApp().getElementById("introjs_button");
     introjs_button.addEventListener("click", startIntroJS);
+    introjs_button.disabled = true;
+    introjs_button.style.color = "#404040";
 
-    const tab = _registered_tabs["tab_txt2img"];
+    // const tab = _registered_tabs["tab_txt2img"];
 
-    if (!window.Cookies.get(tab.cookie_key)) {
-        tab.introjs.start();
-    }
+    // if (!window.Cookies.get(tab.cookie_key)) {
+    //     tab.introjs.start();
+    // }
 }
 
 onNotificationComplete(loadIntroJS);

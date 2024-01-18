@@ -33,3 +33,5 @@ torchdiffeq
 torchsde
 transformers==4.30.2
 redis
+opennsfw2
+tensorflow

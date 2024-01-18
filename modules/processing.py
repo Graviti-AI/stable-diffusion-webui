@@ -22,6 +22,7 @@ from modules.sd_hijack import model_hijack
 from modules.sd_samplers_common import images_tensor_to_samples, decode_first_stage, approximation_indexes
 from modules.shared import opts, cmd_opts, state
 from modules.model_info import AllModelInfo, ModelInfo, DatabaseAllModelInfo
+from modules.nsfw import nsfw_blur
 import modules.shared as shared
 import modules.paths as paths
 import modules.face_restoration
@@ -998,7 +999,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
                 image = apply_overlay(image, p.paste_to, i, p.overlay_images)
 
-                image = images.nsfw_blur(image, p)
+                image = nsfw_blur(image, p)
 
                 if save_samples and not getattr(image, "is_nsfw", False):
                     images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p)

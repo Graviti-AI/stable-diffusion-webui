@@ -13,7 +13,7 @@ import re
 import numpy as np
 import piexif
 import piexif.helper
-from PIL import Image, ImageFont, ImageDraw, ImageColor, PngImagePlugin, ImageFilter
+from PIL import Image, ImageFont, ImageDraw, ImageColor, PngImagePlugin
 import string
 import json
 import hashlib
@@ -793,20 +793,3 @@ def flatten(img, bgcolor):
         img = background
 
     return img.convert('RGB')
-
-
-def nsfw_blur(image: Image.Image, p) -> Image.Image:
-    request = p.get_request()
-    if request.headers["user-tire"].lower() != "free":
-        return image
-
-    from scripts.gallery_api.safety_checker import check_safety
-
-    results = check_safety([image])
-    if not results[0]:
-        return image
-
-    image = image.filter(ImageFilter.BoxBlur(10))
-    setattr(image, "is_nsfw", True)
-
-    return image

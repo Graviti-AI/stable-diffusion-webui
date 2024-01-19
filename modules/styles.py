@@ -138,6 +138,12 @@ class StyleDatabase:
                     self._styles[k] = v
         return self._styles
 
+    def get_styles(self, skip_built_in: bool = False):
+        if skip_built_in:
+            return self._user_styles
+        else:
+            return self.styles
+
     def reload(self):
         self._user_styles = _load_styles_from_file(self.path)
 
@@ -157,12 +163,16 @@ class StyleDatabase:
             prompt, [self.styles.get(x, self.no_style).negative_prompt for x in styles]
         )
 
-    def save_styles(self, style: Optional[PromptStyle] = None) -> None:
+    def save_styles(self, style: PromptStyle | list[PromptStyle] | None = None) -> None:
         # Always keep a backup file around
         if os.path.exists(self.path):
             shutil.copy(self.path, f"{self.path}.bak")
         if style:
-            self._user_styles[style.name] = style
+            if isinstance(style, list):
+                for s in style:
+                    self._user_styles[s.name] = s
+            else:
+                self._user_styles[style.name] = style
         with open(self.path, 'w', encoding="utf-8-sig", newline='') as file:
             # _fields is actually part of the public API: typing.NamedTuple is a replacement for collections.NamedTuple,
             # and collections.NamedTuple has explicit documentation for accessing _fields. Same goes for _asdict()

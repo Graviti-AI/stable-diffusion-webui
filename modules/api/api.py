@@ -19,6 +19,7 @@ from fastapi.encoders import jsonable_encoder
 from secrets import compare_digest
 
 import modules.shared as shared
+import modules.styles
 from modules import sd_samplers, deepbooru, sd_hijack, images, scripts, ui, postprocessing, errors, restart, shared_items, script_callbacks, generation_parameters_copypaste, sd_models
 from modules.api import models
 from modules.shared import opts
@@ -234,6 +235,7 @@ class Api:
         self.add_api_route("/sdapi/v1/face-restorers", self.get_face_restorers, methods=["GET"], response_model=list[models.FaceRestorerItem])
         self.add_api_route("/sdapi/v1/realesrgan-models", self.get_realesrgan_models, methods=["GET"], response_model=list[models.RealesrganItem])
         self.add_api_route("/sdapi/v1/prompt-styles", self.get_prompt_styles, methods=["GET"], response_model=list[models.PromptStyleItem])
+        self.add_api_route("/sdapi/v1/prompt-styles", self.save_prompt_styles, methods=["POST"])
         self.add_api_route("/sdapi/v1/embeddings", self.get_embeddings, methods=["GET"], response_model=models.EmbeddingsResponse)
         self.add_api_route("/sdapi/v1/refresh-checkpoints", self.refresh_checkpoints, methods=["POST"])
         self.add_api_route("/sdapi/v1/refresh-vae", self.refresh_vae, methods=["POST"])
@@ -642,14 +644,20 @@ class Api:
     def get_realesrgan_models(self):
         return [{"name":x.name,"path":x.data_path, "scale":x.scale} for x in get_realesrgan_models(None)]
 
-    def get_prompt_styles(self, request: Request):
+    def get_prompt_styles(self, request: Request, skip_built_in: bool = False):
         styleList = []
         prompt_styles = shared.prompt_styles(request)
-        for k in prompt_styles.styles:
+        for k in prompt_styles.get_styles(skip_built_in):
             style = prompt_styles.styles[k]
             styleList.append({"name":style[0], "prompt": style[1], "negative_prompt": style[2]})
 
         return styleList
+
+    def save_prompt_styles(self, request: Request, style_items: list[models.PromptStyleItem]):
+        styles = [modules.styles.PromptStyle(item.name, item.prompt, item.negative_prompt) for item in style_items]
+        prompt_styles = shared.prompt_styles(request)
+        prompt_styles.save_styles(styles)
+        return self.get_prompt_styles(request)
 
     def get_embeddings(self):
         db = sd_hijack.model_hijack.embedding_db

@@ -117,7 +117,7 @@ parser.add_argument('--add-stop-route', action='store_true', help='does not do a
 parser.add_argument('--api-server-stop', action='store_true', help='enable server stop/restart/kill via api')
 parser.add_argument('--timeout-keep-alive', type=int, default=30, help='set timeout_keep_alive for uvicorn')
 parser.add_argument("--disable-all-extensions", action='store_true', help="prevent all extensions from running regardless of any other settings", default=False)
-parser.add_argument("--disable-extra-extensions", action='store_true', help=" prevent all extensions except built-in from running regardless of any other settings", default=False)
+parser.add_argument("--disable-extra-extensions", action='store_true', help="prevent all extensions except built-in from running regardless of any other settings", default=False)
 parser.add_argument("--monitor-system-calls", action='store_true', help="monitor and log system calls or not", default=False)
 parser.add_argument("--system-monitor-addr", type=str,  help="a remote server who can monitor gpu calls", default='')
 parser.add_argument("--system-monitor-api-secret", type=str,  help="api secret fo calling monitor api", default='')
@@ -131,4 +131,3 @@ parser.add_argument("--model-cache-max-size", type=int,  help="The maximum disk 
 parser.add_argument("--model-cache-src", type=str,  help="comma split dir name list for model cache to copy model file", default='')
 parser.add_argument("--predict-timeout", type=int,  help="Timeout in second of /predict.", default=1800)
 parser.add_argument("--settings-not-interactive", action='store_true', help="Make settings not interactive, but still could be manipulate with program.", default=False)
-parser.add_argument("--disable-extra-extensions", action='store_true', help="prevent all extensions except built-in from running regardless of any other settings", default=False)

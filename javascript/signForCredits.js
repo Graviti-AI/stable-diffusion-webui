@@ -18,9 +18,13 @@ class SignForCredits {
         );
       } else {
         notifier.success(
-          `Congratulations! Extra ${gained_inference_count} Credits today,Earn extra 30 credits daily<p><a href="/user#/billing">See Details</a></p>`
+          `Congratulations! Extra ${gained_inference_count} Credits today! Earn extra 30 credits daily<p><a href="/user#/billing">See Details</a></p>`
         );
       }
+      gtag("event", "earn_virtual_currency", {
+        virtual_currency_name: "credits",
+        value: 20 + gained_inference_count,
+      });
       signNode.style.display = 'none';
     } catch (e) {
       notifier.alert('check in error');

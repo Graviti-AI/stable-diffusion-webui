@@ -1,8 +1,10 @@
+import base64
 import os
 import gradio as gr
 
 from modules import localization, shared, scripts
 from modules.paths import script_path, data_path
+import modules.user
 
 
 def webpath(fn):
@@ -15,6 +17,8 @@ def webpath(fn):
 
 
 def javascript_html(request: gr.Request):
+    user = modules.user.User.current_user(request)
+    base64_encoded_user_id = base64.b64encode(user.uid.encode('utf-8')).decode('utf-8')
     # Ensure localization is in `window` before scripts
     head = f'<script type="text/javascript">{localization.localization_js(request.cookies.get("localization", "None"))}</script>\n'
 
@@ -34,14 +38,16 @@ def javascript_html(request: gr.Request):
     head += "<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='//www.googletagmanager​.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NJBVS8D');</script>\n"
     # These two lines of code are added for the original account, should be removed in the future TODO: EdC
     head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
-    head += """
+    head += f"""
         <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag(){{dataLayer.push(arguments);}}
         gtag('js', new Date());
 
-        gtag('config', 'G-6SKEYMGQ07');
-        gtag('event', 'conversion', {'send_to': 'AW-347751974/bf1-CL-J5c0YEKaM6aUB'});
+        gtag('config', 'G-6SKEYMGQ07', {{'user_id': '{base64_encoded_user_id}'}});
+        gtag('config', 'G-649WH3932W', {{'user_id': '{base64_encoded_user_id}'}});
+        gtag('event', 'login');
+        gtag('event', 'conversion', {{'send_to': 'AW-347751974/bf1-CL-J5c0YEKaM6aUB'}});
         </script>\n
     """
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'

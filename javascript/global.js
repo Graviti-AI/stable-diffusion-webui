@@ -106,14 +106,38 @@ function changeCreditsPackageLink() {
 function supportDifferentPriceType(priceType, linkNode) {
   const priceInfo = channelResult && channelResult.prices[priceType];
   if (orderInfoResult) {
+    let itemInfo = {};
     if (priceInfo && priceInfo.price_link) {
       const resultInfo = { user_id: orderInfoResult.user_id };
       const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
       linkNode.href = `${priceInfo.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+      itemInfo = {
+        item_id: priceInfo.price_link,
+        item_name: priceType
+      };
     } else if (priceInfo && priceInfo.pricing_table_id) {
       linkNode.href = `/user#/subscription?priceType=${priceType}`
+      itemInfo = {
+        item_id: priceInfo.pricing_table_id,
+        item_name: priceType
+      };
     } else {
       linkNode.href = (priceInfo && priceInfo.link) || '';
+      itemInfo = {
+        item_id: priceInfo.link,
+        item_name: priceType
+      };
+    }
+    if (linkNode.href) {
+      linkNode.addEventListener('click', (e) => {
+        e.preventDefault();
+        gtag("event", "begin_checkout", {
+          items: [itemInfo],
+          event_callback: function () {
+            window.location.href = linkNode.href;
+          }
+        });
+      });
     }
   }
 }

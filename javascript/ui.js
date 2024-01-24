@@ -250,17 +250,8 @@ function showRestoreProgressButton(tabname, show) {
     button.style.display = show ? "flex" : "none";
 }
 
-function extractNumberFromGenerateButton(str) {
-  const matches = str.match(/\d+/);
-
-  if (matches && matches.length > 0) {
-    return parseInt(matches[0], 10); // Convert the string to an integer
-  }
-
-  return null;
-}
-
 async function submit() {
+    addGenerateGtagEvent("#txt2img_generate > span", "txt2img_generation_button");
     await tierCheckGenerate("txt2img");
     checkSignatureCompatibility();
 
@@ -268,15 +259,6 @@ async function submit() {
     const [index, all_model_info] = await getAllModelInfo("txt2img", res);
 
     showSubmitButtons('txt2img', false);
-    const creditsInfoStr= document.querySelector("#txt2img_generate > span");
-    const credits = extractNumberFromGenerateButton(creditsInfoStr.textContent);
-    if (credits) {
-      gtag("event", "spend_virtual_currency", {
-        value: credits,
-        virtual_currency_name: "credits",
-        item_name: "txt2img_generation_button"
-      });
-    }
 
     var id = randomId();
     localSet("txt2img_task_id", id);
@@ -294,17 +276,9 @@ async function submit() {
 }
 
 async function submit_img2img() {
+    addGenerateGtagEvent("#img2img_generate > span", "img2img_generation_button");
     await tierCheckGenerate("img2img");
     showSubmitButtons('img2img', false);
-    const creditsInfoStr= document.querySelector("#img2img_generate > span");
-    const credits = extractNumberFromGenerateButton(creditsInfoStr.textContent);
-    if (credits) {
-      gtag("event", "spend_virtual_currency", {
-        value: credits,
-        virtual_currency_name: "credits",
-        item_name: "img2img_generation_button"
-      });
-    }
 
     var res = create_submit_args(arguments);
     const [index, all_model_info] = await getAllModelInfo("img2img", res);

@@ -89,7 +89,10 @@ function checkQueue(response) {
     }
     notifier.confirm(
         `Your task is in queue and ${ahead} tasks ahead, upgrade to shorten the queue and get faster service.`,
-        () => {window.open("/user#/subscription?type=subscription", "_blank")},
+        () => {
+            addUpgradeGtagEvent(SUBSCRIPTION_URL, "free_queue");
+            window.open(SUBSCRIPTION_URL, "_blank");
+        },
         () => {},
         {
             labels: {

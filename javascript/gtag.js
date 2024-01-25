@@ -20,6 +20,17 @@ function addGenerateGtagEvent(selector, itemName) {
     }
 }
 
+function addUpgradeGtagEvent(itemId, itemName) {
+    gtag("event", "begin_checkout", {
+        items: [
+            {
+                item_id: itemId,
+                item_name: itemName,
+            },
+        ],
+    });
+}
+
 function sendPurchaseEvent(callback = null) {
     fetch(
       '/api/payments/latest',

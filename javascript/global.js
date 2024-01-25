@@ -1,4 +1,5 @@
 const PRICING_URL = 'https://www.diffus.graviti.com/pricing';
+const SUBSCRIPTION_URL = "/user#/subscription?type=subscription"
 let galleryModelTotalPage = {
   personal: {
     checkpoints: 1,

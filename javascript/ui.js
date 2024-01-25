@@ -1375,6 +1375,21 @@ async function updateOrderInfo() {
                         const upgradeContent = userContent.querySelector("#upgrade");
                         if (upgradeContent) {
                             upgradeContent.style.display = "flex";
+                            const linkNode = upgradeContent.querySelector("a");
+                            if (linkNode && linkNode.href) {
+                              linkNode.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                gtag("event", "begin_checkout", {
+                                  items: [{
+                                    item_id: linkNode.href,
+                                    item_name: "free user webui upgrade link"
+                                  }],
+                                  event_callback: function () {
+                                    window.location.href = linkNode.href;
+                                  }
+                                });
+                              });
+                            }
                         }
                     }
                     changeFreeCreditLink();

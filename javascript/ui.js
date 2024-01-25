@@ -158,6 +158,7 @@ function _joinTiers(tiers) {
 }
 
 function _tierCheckFailed(features, allowed_tiers) {
+    addPopupGtagEvent(SUBSCRIPTION_URL, "tier_checker");
     notifier.confirm(
         `${features} is not available in the current plan. Please upgrade to ${allowed_tiers} to use it.`,
         () => {
@@ -559,6 +560,7 @@ function check_nsfw(obj, boxId) {
     if (!obj.is_nsfw) {
         return;
     }
+    addPopupGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
     notifier.confirm(
         `Potential NSFW content was detected in the generated image, upgrade to enable your private image storage.`,
         () => {
@@ -601,6 +603,7 @@ function redirect_to_payment_factory(boxId) {
               let onCancel = () => {
                 update_textbox_by_id(boxId, "");
               };
+              addPopupGtagEvent(SUBSCRIPTION_URL, "insufficient_credits");
               notifier.confirm(
                 message,
                 onOk,

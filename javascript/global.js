@@ -122,9 +122,9 @@ function supportDifferentPriceType(priceType, linkNode) {
         item_name: priceType
       };
     } else {
-      linkNode.href = (priceInfo && priceInfo.link) || '';
+      linkNode.href = (priceInfo && priceInfo.link) || '/user#/subscription?type=subscription';
       itemInfo = {
-        item_id: priceInfo.link,
+        item_id: linkNode.href,
         item_name: priceType
       };
     }

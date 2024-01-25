@@ -44,8 +44,8 @@ def javascript_html(request: gr.Request):
         function gtag(){{dataLayer.push(arguments);}}
         gtag('js', new Date());
 
-        gtag('config', 'G-6SKEYMGQ07', {{'user_id': '{base64_encoded_user_id}'}});
-        gtag('config', 'G-649WH3932W', {{'user_id': '{base64_encoded_user_id}'}});
+        gtag('config', 'G-6SKEYMGQ07', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
+        gtag('config', 'G-649WH3932W', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
         gtag('event', 'login');
         gtag('event', 'conversion', {{'send_to': 'AW-347751974/bf1-CL-J5c0YEKaM6aUB'}});
         </script>\n

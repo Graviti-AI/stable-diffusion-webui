@@ -160,7 +160,10 @@ function _joinTiers(tiers) {
 function _tierCheckFailed(features, allowed_tiers) {
     notifier.confirm(
         `${features} is not available in the current plan. Please upgrade to ${allowed_tiers} to use it.`,
-        () => {window.open("/user#/subscription?type=subscription", "_blank")},
+        () => {
+            addUpgradeGtagEvent(SUBSCRIPTION_URL, "tier_checker");
+            window.open(SUBSCRIPTION_URL, "_blank");
+        },
         () => {},
         {
             labels: {
@@ -532,8 +535,9 @@ function check_nsfw(obj, boxId) {
     notifier.confirm(
         `Potential NSFW content was detected in the generated image, upgrade to enable your private image storage.`,
         () => {
+            addUpgradeGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
             update_textbox_by_id(boxId, "");
-            window.open("/user#/subscription?type=subscription", "_blank");
+            window.open(SUBSCRIPTION_URL, "_blank");
         },
         () => {
             update_textbox_by_id(boxId, "");
@@ -563,8 +567,9 @@ function redirect_to_payment_factory(boxId) {
           if (need_upgrade_obj.hasOwnProperty("need_upgrade") && need_upgrade_obj.need_upgrade) {
               const message = need_upgrade_obj.hasOwnProperty("message")? need_upgrade_obj.message: "Upgrade to unlock more credits.";
               let onOk = () => {
+                addUpgradeGtagEvent(SUBSCRIPTION_URL, "insufficient_credits");
                 update_textbox_by_id(boxId, "");
-                window.location.href = "/user#/subscription?type=subscription";
+                window.open(SUBSCRIPTION_URL, "_blank");
               };
               let onCancel = () => {
                 update_textbox_by_id(boxId, "");

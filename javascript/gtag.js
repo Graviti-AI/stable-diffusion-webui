@@ -31,6 +31,17 @@ function addUpgradeGtagEvent(itemId, itemName) {
     });
 }
 
+function addPopupGtagEvent(itemId, itemName) {
+    gtag("event", "view_item", {
+        items: [
+            {
+                item_id: itemId,
+                item_name: itemName,
+            },
+        ],
+    });
+}
+
 function sendPurchaseEvent(callback = null) {
     fetch(
       '/api/payments/latest',

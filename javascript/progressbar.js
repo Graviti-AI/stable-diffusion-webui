@@ -87,6 +87,7 @@ function checkQueue(response) {
     if (ahead <= 1) {
         return false;
     }
+    addPopupGtagEvent(SUBSCRIPTION_URL, "free_queue");
     notifier.confirm(
         `Your task is in queue and ${ahead} tasks ahead, upgrade to shorten the queue and get faster service.`,
         () => {

@@ -50,10 +50,6 @@ def run_postprocessing(
     shared.state.job_count = len(data_to_process)
 
     for image_placeholder, name in data_to_process:
-        image_data: Image.Image
-        if image_data.width > 2048 or image_data.height > 2048:
-            raise Exception(f'image oversize: maximum weight/height is 4096')
-
         shared.state.nextjob()
         shared.state.textinfo = name
         shared.state.skipped = False
@@ -68,6 +64,9 @@ def run_postprocessing(
                 continue
         else:
             image_data = image_placeholder
+
+        if image_data.width > 2048 or image_data.height > 2048:
+            raise Exception(f'image oversize: maximum weight/height is 2048')
 
         shared.state.assign_current_image(image_data)
 

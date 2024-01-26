@@ -122,6 +122,8 @@ class ScriptPostprocessingRunner:
 
             if script.name == "Simple Upscale":
                 continue
+            if script.name in shared.opts.disabled_extras_scripts:
+                continue
 
             self.scripts.append(script)
 

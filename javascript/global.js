@@ -132,6 +132,10 @@ function supportDifferentPriceType(priceType, linkNode) {
     if (linkNode.href) {
       linkNode.addEventListener('click', (e) => {
         e.preventDefault();
+        if (window.gaIsBlocked) {
+            window.location.href = linkNode.href;
+            return;
+        }
         gtag("event", "begin_checkout", {
           items: [itemInfo],
           event_callback: function () {

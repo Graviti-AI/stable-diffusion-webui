@@ -1388,6 +1388,10 @@ async function updateOrderInfo() {
                             if (linkNode && linkNode.href) {
                               linkNode.addEventListener('click', (e) => {
                                 e.preventDefault();
+                                if (window.gaIsBlocked) {
+                                    window.location.href = linkNode.href;
+                                    return;
+                                }
                                 gtag("event", "begin_checkout", {
                                   items: [{
                                     item_id: linkNode.href,

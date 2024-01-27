@@ -78,6 +78,12 @@ function sendPurchaseEvent(callback = null) {
                 });
             });
         });
+        if (window.gaIsBlocked) {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
 
         Promise.all(promises).then(() => {
             if (typeof callback === 'function') {
@@ -122,5 +128,5 @@ function sendPurchaseEvent(callback = null) {
 }
 
 onUiLoaded(function(){
-    sendPurchaseEvent();
+    setTimeout(sendPurchaseEvent, 1000);
 });

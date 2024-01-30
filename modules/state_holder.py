@@ -12,13 +12,23 @@ _logger = logging.getLogger(__name__)
 
 def _get_redis_address(redis_address: str = ''):
     if not redis_address:
+        redis_address = os.getenv('REDIS_ADDRESS_STATE', '')
+    if not redis_address:
         redis_address = os.getenv('REDIS_ADDRESS', '')
+
     return redis_address
 
 
 def _get_redis_client(redis_address):
     import redis
-    return redis.Redis.from_url(url=redis_address)
+    while True:
+        try:
+            redis_client = redis.Redis.from_url(url=redis_address)
+            redis_client.ping()
+            return redis_client
+        except Exception as e:
+            _logger.exception(f'failed to get redis client from {redis_address}: {e.__str__()}')
+            time.sleep(1)
 
 
 class _RedisBasedSessionStateHolder:
@@ -110,7 +120,11 @@ class _RedisBasedSessionStateHolder:
             self._state_cache[session_hash] = state
 
     def __contains__(self, session_hash):
-        return self._redis_client.expire(self._key_name(session_hash), self.SESSION_HASH_TTL) > 0
+        try:
+            return self._redis_client.expire(self._key_name(session_hash), self.SESSION_HASH_TTL) > 0
+        except Exception as e:
+            _logger.exception(f"failed to get session from redis for '{session_hash}': {e.__str__()}")
+            return False
 
     def __delitem__(self, session_hash):
         with self._recycle_locker:

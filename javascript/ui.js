@@ -1392,14 +1392,8 @@ async function updateOrderInfo() {
                                     window.location.href = linkNode.href;
                                     return;
                                 }
-                                gtag("event", "begin_checkout", {
-                                  items: [{
-                                    item_id: linkNode.href,
-                                    item_name: "free user webui upgrade link"
-                                  }],
-                                  event_callback: function () {
+                                addUpgradeGtagEvent(linkNode.href, "free_user_webui_upgrade_link", callback = () => {
                                     window.location.href = linkNode.href;
-                                  }
                                 });
                               });
                             }

@@ -314,6 +314,7 @@ class GetTaskCountResponse(BaseModel):
     queued_tasks: dict = Field(title="QueuedTasks")
     finished_task_count: int = Field(title="FinishedTaskCount")
     failed_task_count: int = Field(title="FailedTaskCount")
+    consecutive_failed_task_count: int = Field(title="ConsecutiveFailedTaskCount")
 
 
 class ExtensionItem(BaseModel):

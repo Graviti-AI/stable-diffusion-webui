@@ -158,11 +158,15 @@ function _joinTiers(tiers) {
 }
 
 function _tierCheckFailed(features, allowed_tiers) {
-    addPopupGtagEvent(SUBSCRIPTION_URL, "tier_checker");
+    const features_message = _joinWords(features);
+    const allowed_tiers_message = _joinTiers(allowed_tiers);
+    const list_name = `${features.join("_").toLowerCase()}_tier_checker`;
+
+    addPopupGtagEvent(SUBSCRIPTION_URL, list_name);
     notifier.confirm(
-        `${features} is not available in the current plan. Please upgrade to ${allowed_tiers} to use it.`,
+        `${features_message} is not available in the current plan. Please upgrade to ${allowed_tiers_message} to use it.`,
         () => {
-            addUpgradeGtagEvent(SUBSCRIPTION_URL, "tier_checker");
+            addUpgradeGtagEvent(SUBSCRIPTION_URL, list_name);
             window.open(SUBSCRIPTION_URL, "_blank");
         },
         () => {},
@@ -173,7 +177,7 @@ function _tierCheckFailed(features, allowed_tiers) {
             }
         }
     );
-    throw `${features} is not available for current tier.`;
+    throw `${features_message} is not available for current tier.`;
 }
 
 async function tierCheckGenerate(tabname) {
@@ -216,7 +220,7 @@ async function tierCheckGenerate(tabname) {
     if (features.length == 0) {
         return;
     }
-    _tierCheckFailed(_joinWords(features), _joinTiers(allowed_tiers));
+    _tierCheckFailed(features, allowed_tiers);
 }
 
 
@@ -231,7 +235,7 @@ async function tierCheckButtonInternal(feature_name) {
     if (permission.allowed_tiers.includes(userTier)) {
         return;
     }
-    _tierCheckFailed(`"${feature_name}"`, _joinTiers(permission.allowed_tiers));
+    _tierCheckFailed([feature_name], permission.allowed_tiers);
 }
 
 function tierCheckButton(feature_name) {

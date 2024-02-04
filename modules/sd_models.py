@@ -879,6 +879,9 @@ def _reload_model_weights(
 
 
 def unload_model_weights(sd_model=None, info=None):
+    if (sd_model or shared.sd_model) is None:
+        return
+
     timer = Timer('sd_model.unload_model_weights')
     send_model_to_cpu(sd_model or shared.sd_model)
     #sd_hijack.model_hijack.undo_hijack(model_data.sd_model)

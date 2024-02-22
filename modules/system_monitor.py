@@ -1,5 +1,4 @@
 import os
-import copy
 import tempfile
 import time
 import uuid
@@ -17,6 +16,7 @@ from typing import Optional, Protocol, Union, Any, Callable
 from contextlib import contextmanager
 
 import gradio as gr
+import torch
 
 import modules.user
 import modules.shared
@@ -548,11 +548,13 @@ def monitor_call_context(
     try:
         task_id = before_task_started(
             request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)
+        logger.info(f"before step {function_name}: {task_id} Free VRAM: %.2f MB, Total VRAM: %.2f MB" % tuple(number / 1e6 for number in torch.cuda.mem_get_info()))
         yield result_encoder
         if task_is_failed:
             status = 'failed'
         else:
             status = 'finished'
+        logger.info(f"after step {function_name}: {task_id} {status} Free VRAM: %.2f MB, Total VRAM: %.2f MB" % tuple(number / 1e6 for number in torch.cuda.mem_get_info()))
     except Exception as e:
         status = 'failed'
         message = f'{type(e).__name__}: {str(e)}'

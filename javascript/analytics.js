@@ -83,6 +83,20 @@ function addGenerateGtagEvent(selector, itemName) {
             virtual_currency_name: "credits",
             item_name: itemName,
         });
+        if (typeof ttq.track === "function") {
+            const domain = window.location.hostname;
+            ttq.track('ClickButton', {
+              "contents": [
+                {
+                  "content_id": domain + ":" + itemName,
+                  "content_type": "product_group",
+                  "content_name": itemName,
+                  "content_category": "generate_button"
+                }
+              ],
+              "query": selector
+            });
+        }
     }
 }
 
@@ -136,6 +150,35 @@ function addUpgradeGtagEvent(listId, listName, callback = null) {
             reportCheckout(listUniqueId, listName, domain, callback=callback);
         }
     });
+    if (typeof ttq.track === "function") {
+        const contents = items.map(item => {
+            return {
+                "content_id": item.item_id,
+                "content_type": "product",
+                "content_name": item.item_name,
+                "content_category": item.item_category,
+                "quantity": item.quantity,
+                "price": item.price
+            };
+        });
+        const total_value = items.reduce((total, item) => {
+            if (item.price && item.quantity) {
+                return total + item.price * item.quantity;
+            } else {
+                return total;
+            }
+        }, 0);
+        try {
+            ttq.track('InitiateCheckout', {
+                "contents": contents,
+                "value": total_value,
+                "currency": "USD",
+                "query": "pricing_table"
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
 }
 
 function addPopupGtagEvent(listId, listName, callback = null) {
@@ -150,6 +193,35 @@ function addPopupGtagEvent(listId, listName, callback = null) {
             }
         }
     });
+    if (typeof ttq.track === "function") {
+        const contents = items.map(item => {
+            return {
+                "content_id": item.item_id,
+                "content_type": "product",
+                "content_name": item.item_name,
+                "content_category": item.item_category,
+                "quantity": item.quantity,
+                "price": item.price
+            };
+        });
+        const total_value = items.reduce((total, item) => {
+            if (item.price && item.quantity) {
+                return total + item.price * item.quantity;
+            } else {
+                return total;
+            }
+        }, 0);
+        try {
+            ttq.track('AddToCart', {
+                "contents": contents,
+                "value": total_value,
+                "currency": "USD",
+                "query": "upgrade_popup"
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
 }
 
 function sendPurchaseEvent(callback = null) {
@@ -200,6 +272,27 @@ function sendPurchaseEvent(callback = null) {
                           resolve();
                       }
                   });
+                  if (typeof ttq.track === "function") {
+                      try {
+                          ttq.track('CompletePayment', {
+                              "contents": [
+                                  {
+                                    "content_id": item.product_id,
+                                    "content_type": "product",
+                                    "content_name": item.product_name,
+                                    "content_category": item.product_category,
+                                    "quantity": item.quantity,
+                                    "price": item.price
+                                  }
+                                ],
+                              "value": item.payment_value,
+                              "currency": "USD",
+                              "query": listInfo.list_name || "unknown"
+                          });
+                      } catch (error) {
+                          console.error(error);
+                      }
+                  }
               });
           });
         } else {
@@ -222,6 +315,27 @@ function sendPurchaseEvent(callback = null) {
                           resolve();
                       }
                   });
+                  if (typeof ttq.track === "function") {
+                      try {
+                          ttq.track('CompletePayment', {
+                              "contents": [
+                                  {
+                                    "content_id": item.product_id,
+                                    "content_type": "product",
+                                    "content_name": item.product_name,
+                                    "content_category": item.product_category,
+                                    "quantity": item.quantity,
+                                    "price": item.price
+                                  }
+                                ],
+                              "value": item.payment_value,
+                              "currency": "USD",
+                              "query": "unknown"
+                          });
+                      } catch (error) {
+                          console.error(error);
+                      }
+                  }
               });
           });
         }
@@ -274,8 +388,74 @@ function sendPurchaseEvent(callback = null) {
     });
 }
 
-onUiLoaded(function(){
+async function reportIdentity(userId, userEmail) {
+    if (typeof ttq.identify === "function") {
+        try {
+            ttq.identify({
+                "email": await sha256(userEmail),
+                "external_id": await sha256(userId)
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+}
+
+async function reportViewContent() {
+    const domain = window.location.hostname;
+    const path = window.location.pathname;
+    const queryString = window.location.search;
+    const pageFull = domain + "/" + path;
+    const page_id = await sha256(pageFull);
+    if (typeof ttq.track === "function") {
+        try {
+            ttq.track('ViewContent', {
+              "contents": [
+                  {
+                      "content_id": page_id,
+                      "content_type": "product_group",
+                      "content_name": path,
+                      "content_category": domain
+                  }
+              ],
+              "query": queryString
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+}
+
+
+async function reportCompleteRegistration() {
+    const domain = window.location.hostname;
+    const path = window.location.pathname;
+    const queryString = window.location.search;
+    const pageFull = domain + "/" + path;
+    const page_id = await sha256(pageFull);
+    if (typeof ttq.track === "function") {
+        try {
+            ttq.track('CompleteRegistration', {
+              "contents": [
+                  {
+                      "content_id": page_id,
+                      "content_type": "product_group",
+                      "content_name": path,
+                      "content_category": domain
+                  }
+              ],
+              "query": queryString
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+}
+
+onUiLoaded(async function(){
     getItemsMapping(callback = function() {
         setTimeout(sendPurchaseEvent, 1000);
     });
+    await reportViewContent();
+    await reportCompleteRegistration();
 });

@@ -1359,8 +1359,9 @@ async function updateOrderInfo() {
                 return res.json();
             }
         })
-        .then((result) => {
+        .then(async (result) => {
             if (result) {
+                await reportIdentity(result.user_id, result.email);
                 const userContent = gradioApp().querySelector(".user-content");
                 const userInfo = userContent.querySelector(".user_info");
                 if (userInfo) {

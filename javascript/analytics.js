@@ -426,7 +426,6 @@ async function reportViewContent() {
     }
 }
 
-
 async function reportCompleteRegistration() {
     const domain = window.location.hostname;
     const path = window.location.pathname;

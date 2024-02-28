@@ -35,9 +35,98 @@ def javascript_html(request: gr.Request):
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
     head += '<script type="text/javascript" src="/components/js/share/shareon.iife.js" defer init></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
-    head += "<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='//www.googletagmanager​.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NJBVS8D');</script>\n"
-    # These two lines of code are added for the original account, should be removed in the future TODO: EdC
+    head += """
+    <script>
+        async function isUserInEEA() {
+            try {
+                // Fetch the user's IP address information
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+
+                // Check if the country is in the EEA
+                // The list of EEA country codes might need updating from time to time
+                const eeaCountries = [
+                    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR',
+                    'HU', 'IS', 'IE', 'IT', 'LV', 'LI', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL',
+                    'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', 'GF', 'GP', 'MQ', 'ME', 'YT',
+                    'RE', 'MF', 'GI', 'AX', 'PM', 'GL', 'BL', 'SX', 'AW', 'CW', 'WF', 'PF',
+                    'NC', 'TF', 'AI', 'BM', 'IO', 'VG', 'KY', 'FK', 'MS', 'PN', 'SH', 'GS',
+                    'TC', 'AD', 'SM', 'VA', 'JE', 'GG', 'SJ'
+                ];
+
+                return eeaCountries.includes(data.country_code);
+            } catch (error) {
+                console.error('Error determining user location:', error);
+                return false; // Or handle the error as appropriate for your application
+            }
+        }
+    </script>
+    """
+    head += """
+    <script>
+        // Define dataLayer and the gtag function.
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        const adStorageConsent = Cookies.get('_ad_consent_ad_storage');
+        const adUserDataConsent = Cookies.get('_ad_consent_user_data');
+        const adPersonalizationConsent = Cookies.get('_ad_consent_personalization');
+        const adAnalyticsStorageConsent = Cookies.get('_ad_consent_analytics_storage');
+
+        if (
+            typeof adStorageConsent === 'undefined' ||
+            typeof adUserDataConsent === 'undefined' ||
+            typeof adPersonalizationConsent === 'undefined' ||
+            typeof adAnalyticsStorageConsent === 'undefined'
+        ) {
+            isUserInEEA().then(isInEEA => {
+                if (isInEEA) {
+                    gtag('consent', 'default', {
+                        'ad_storage': adStorageConsent == null? 'denied' : adStorageConsent,
+                        'ad_user_data': adUserDataConsent == null? 'denied' : adUserDataConsent,
+                        'ad_personalization': adPersonalizationConsent == null? 'denied' : adPersonalizationConsent,
+                        'analytics_storage': adAnalyticsStorageConsent == null? 'denied' : adAnalyticsStorageConsent,
+                        'wait_for_update': 500
+                    });
+                    gtag("set", "ads_data_redaction", true);
+                } else {
+                    gtag('consent', 'default', {
+                        'ad_storage': adStorageConsent == null? 'granted' : adStorageConsent,
+                        'ad_user_data': adUserDataConsent == null? 'granted' : adUserDataConsent,
+                        'ad_personalization': adPersonalizationConsent == null? 'granted' : adPersonalizationConsent,
+                        'analytics_storage': adAnalyticsStorageConsent == null? 'granted' : adAnalyticsStorageConsent,
+                        'wait_for_update': 500
+                    });
+                    gtag("set", "ads_data_redaction", true);
+                    if (adStorageConsent == null) {
+                        Cookies.set('_ad_consent_ad_storage', 'granted', { expires: 730 });
+                    }
+                    if (adUserDataConsent == null) {
+                        Cookies.set('_ad_consent_user_data', 'granted', { expires: 730 });
+                    }
+                    if (adPersonalizationConsent == null) {
+                        Cookies.set('_ad_consent_personalization', 'granted', { expires: 730 });
+                    }
+                    if (adAnalyticsStorageConsent == null) {
+                        Cookies.set('_ad_consent_analytics_storage', 'granted', { expires: 730 });
+                    }
+
+                }
+            });
+        } else {
+            gtag('consent', 'default', {
+                'ad_storage': adStorageConsent,
+                'ad_user_data': adUserDataConsent,
+                'ad_personalization': adPersonalizationConsent,
+                'analytics_storage': adAnalyticsStorageConsent,
+                'wait_for_update': 500
+            });
+            gtag("set", "ads_data_redaction", true);
+        }
+
+    </script>
+    """
     head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
+
     head += f"""
         <script>
         window.dataLayer = window.dataLayer || [];
@@ -95,6 +184,7 @@ def css_html():
     head += '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">\n'
     head += '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">\n'
+    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@v3.0.0/dist/cookieconsent.css">\n'
 
     def stylesheet(fn):
         return f'<link rel="stylesheet" property="stylesheet" href="{webpath(fn)}">\n'

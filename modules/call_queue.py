@@ -195,7 +195,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
         exception_str = traceback.format_exc()
     finally:
-        progress.finish_task(id_task, task_failed)
+        progress.finish_task(id_task, task_failed, exception_str or '')
         shared.state.end()
         if monitor_log_id:
             try:

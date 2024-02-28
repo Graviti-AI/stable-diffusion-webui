@@ -26,13 +26,14 @@ class DaemonApi:
 
     @staticmethod
     def get_task_count():
-        current_task, pending_tasks, _, finished_task_count, failed_task_count, consecutive_failed_task_count = modules.progress.get_task_queue_info()
+        current_task, pending_tasks, _, finished_task_count, failed_task_count, consecutive_failed_task_count, last_error_message = modules.progress.get_task_queue_info()
         return GetTaskCountResponse(
             current_task=current_task if current_task else '',
             queued_tasks=pending_tasks,
             finished_task_count=finished_task_count,
             failed_task_count=failed_task_count,
             consecutive_failed_task_count=consecutive_failed_task_count,
+            last_error_message=last_error_message,
         )
 
     def _add_api_route(self, path: str, endpoint, **kwargs):

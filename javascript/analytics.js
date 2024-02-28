@@ -445,7 +445,7 @@ async function reportCompleteRegistration() {
         ],
         "query": queryString
       });
-      Cookie.set('_complete_registration', 'true', { expires: 365 });
+      Cookies.set('_complete_registration', 'true', { expires: 365 });
     } catch (error) {
       console.error(error);
     }

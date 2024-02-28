@@ -1362,7 +1362,7 @@ async function updateOrderInfo() {
         .then(async (result) => {
             if (result) {
                 await reportIdentity(result.user_id, result.email);
-                const completeRegistration = Cookie.get('_complete_registration');
+                const completeRegistration = Cookies.get('_complete_registration');
                 if (!completeRegistration) {
                     await reportCompleteRegistration();
                 }

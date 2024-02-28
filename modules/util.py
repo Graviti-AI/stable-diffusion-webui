@@ -1,5 +1,9 @@
+import hashlib
 import os
 import re
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+from fastapi import Request
 
 from modules import shared
 from modules.paths_internal import script_path
@@ -63,3 +67,35 @@ def ldm_print(*args, **kwargs):
         return
 
     print(*args, **kwargs)
+
+
+_SHARE_ID_PREFIX = "af_"
+_SHARE_ID_LENGTH = 10
+
+
+def get_share_url(url: str, request: Request) -> str:
+    user_id = request.headers["user-id"]
+    sha256 = hashlib.sha256(user_id.encode("utf-8")).hexdigest()
+    full_share_id = f"{_SHARE_ID_PREFIX}{sha256[:_SHARE_ID_LENGTH]}"
+
+    return add_params_to_url(
+        url,
+        {
+            "utm_source": full_share_id,
+            "utm_medium": full_share_id,
+            "utm_campaign": full_share_id,
+        },
+    )
+
+
+def add_params_to_url(url: str, params: dict[str, str | None]) -> str:
+    parts = list(urlparse(url))
+
+    query = dict(parse_qsl(parts[4]))
+    for key, value in params.items():
+        if key not in query and value is not None:
+            query[key] = value
+
+    parts[4] = urlencode(query)
+
+    return urlunparse(parts)

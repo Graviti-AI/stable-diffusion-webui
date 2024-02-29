@@ -1362,10 +1362,6 @@ async function updateOrderInfo() {
         .then(async (result) => {
             if (result) {
                 await reportIdentity(result.user_id, result.email);
-                const completeRegistration = Cookies.get('_complete_registration');
-                if (!completeRegistration) {
-                    await reportCompleteRegistration();
-                }
                 const userContent = gradioApp().querySelector(".user-content");
                 const userInfo = userContent.querySelector(".user_info");
                 if (userInfo) {

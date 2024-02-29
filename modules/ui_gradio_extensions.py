@@ -132,9 +132,12 @@ def javascript_html(request: gr.Request):
         window.dataLayer = window.dataLayer || [];
         function gtag(){{dataLayer.push(arguments);}}
         gtag('js', new Date());
-
-        gtag('config', 'G-6SKEYMGQ07', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
-        gtag('config', 'G-649WH3932W', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
+        const domain = window.location.hostname;
+        if (domain.includes("diffus.me")) {{
+            gtag('config', 'G-649WH3932W', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
+        }} else {{
+            gtag('config', 'G-6SKEYMGQ07', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
+        }}
         window.gaIsBlocked = true;
         gtag('event', 'login', {{
             event_callback: function() {{

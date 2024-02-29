@@ -2,7 +2,7 @@ class AutoFillSearchParams {
     searchParams = new URLSearchParams(location.search);
     result = '__prompt__ __negative_prompt__';
     paramsKeys = ['prompt', 'negative_prompt', 'width', 'height', 'seed', 'steps', 'sampler', 'cfg', 'clip_skip', 'batch_size', 'ensd'];
-    excludeKeys = ['utm_source', 'utm_medium', 'utm_content', 'utm_campaign', '__theme', 'lora', 'l', 'ti', 't', 'hn', 'h', 'lycoris', 'y', 'share_id'];
+    excludeKeys = ['utm_source', 'utm_medium', 'utm_content', 'utm_campaign', '__theme', 'lora', 'l', 'ti', 't', 'hn', 'h', 'lycoris', 'y', 'share_id', 'ttclid'];
     defaultWidth = 512;
     defaultHeight = 512;
     hasWidthOrHeightParam = false;

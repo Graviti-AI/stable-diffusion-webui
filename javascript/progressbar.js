@@ -63,12 +63,16 @@ function uuidv4() {
   );
 }
 
-function randomId() {
+function randomUUID() {
     if (typeof crypto.randomUUID == "function") {
-        return "task(" + crypto.randomUUID() +")";
+        return crypto.randomUUID();
     } else {
-        return "task(" + uuidv4() +")";
+        return uuidv4();
     }
+}
+
+function randomId() {
+    return `task(${randomUUID()})`;
 }
 
 function checkQueue(response) {

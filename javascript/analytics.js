@@ -29,7 +29,7 @@ function getItemsMapping(callback = null) {
 
 function ttqTrack(event, data) {
   const date = new Date();
-  const eventId = crypto.randomUUID().replace(/-/g, '');
+  const eventId = randomUUID().replace(/-/g, '');
   const urlSearchParams = new URLSearchParams(window.location.search);
   const ttclidValue = urlSearchParams.get("ttclid");
   let url = "/api/analytics/ttq";

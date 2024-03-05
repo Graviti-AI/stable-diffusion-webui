@@ -8,6 +8,8 @@ function set_theme(theme) {
     }
 }
 
+_AFFILIATE_PROGRAM = '<a href="/affiliate/everyone" target="_blank" style="text-wrap: nowrap">Affiliate Program</a>';
+
 function all_gallery_buttons() {
     var allGalleryButtons = gradioApp().querySelectorAll('[style="display: block;"].tabitem div[id$=_gallery].gradio-gallery .thumbnails > .thumbnail-item.thumbnail-small');
     var visibleGalleryButtons = [];
@@ -566,7 +568,9 @@ function check_nsfw(obj, boxId) {
     }
     addPopupGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
     notifier.confirm(
-        `Potential NSFW content was detected in the generated image, upgrade to enable your private image storage.`,
+        `Potential NSFW content was detected in the generated image, \
+        upgrade to enable your private image storage. Or join our ${_AFFILIATE_PROGRAM} \
+        to earn cash or credits and use it to upgrade to <b>Basic</b> plan.`,
         () => {
             addUpgradeGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
             update_textbox_by_id(boxId, "");
@@ -609,7 +613,7 @@ function redirect_to_payment_factory(boxId) {
               };
               addPopupGtagEvent(SUBSCRIPTION_URL, "insufficient_credits");
               notifier.confirm(
-                message,
+                `${message} Join our ${_AFFILIATE_PROGRAM} to earn cash or credits.`,
                 onOk,
                 onCancel,
                 {

@@ -38,6 +38,9 @@ def update_generation_info(generation_info, html_info, img_index):
 
 
 def plaintext_to_html(text, classname=None):
+    if text is None:
+        text = ""
+
     content = "<br>\n".join(html.escape(x) for x in text.split('\n'))
 
     return f"<p class='{classname}'>{content}</p>" if classname else f"<p>{content}</p>"

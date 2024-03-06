@@ -705,6 +705,10 @@ def program_version():
 
 def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iteration=0, position_in_batch=0, use_main_prompt=False, index=None, all_negative_prompts=None):
     assert opts, "opts is not initialized"
+
+    if "x-diffus-disable-pnginfo" in p.get_request().headers:
+        return None
+
     if index is None:
         index = position_in_batch + iteration * p.batch_size
 
@@ -920,10 +924,10 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             # infotext could be modified by that callback
             # Example: a wildcard processed by process_batch sets an extra model
             # strength, which is saved as "Model Strength: 1.0" in the infotext
-            if n == 0:
-                with open(os.path.join(paths.data_path, "params.txt"), "w", encoding="utf8") as file:
-                    processed = Processed(p, [])
-                    file.write(processed.infotext(p, 0))
+            # if n == 0:
+            #     with open(os.path.join(paths.data_path, "params.txt"), "w", encoding="utf8") as file:
+            #         processed = Processed(p, [])
+            #         file.write(processed.infotext(p, 0))
 
             p.setup_conds()
 

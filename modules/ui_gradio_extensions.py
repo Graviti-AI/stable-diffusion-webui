@@ -1,5 +1,6 @@
 import base64
 import os
+import time
 import gradio as gr
 
 from modules import localization, shared, scripts
@@ -35,131 +36,19 @@ def javascript_html(request: gr.Request):
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
     head += '<script type="text/javascript" src="/components/js/share/shareon.iife.js" defer init></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
-    head += """
-    <script>
-        async function isUserInEEA() {
-            try {
-                // Fetch the user's IP address information
-                const response = await fetch('https://ipapi.co/json/');
-                const data = await response.json();
-
-                // Check if the country is in the EEA
-                // The list of EEA country codes might need updating from time to time
-                const eeaCountries = [
-                    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR',
-                    'HU', 'IS', 'IE', 'IT', 'LV', 'LI', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL',
-                    'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', 'GF', 'GP', 'MQ', 'ME', 'YT',
-                    'RE', 'MF', 'GI', 'AX', 'PM', 'GL', 'BL', 'SX', 'AW', 'CW', 'WF', 'PF',
-                    'NC', 'TF', 'AI', 'BM', 'IO', 'VG', 'KY', 'FK', 'MS', 'PN', 'SH', 'GS',
-                    'TC', 'AD', 'SM', 'VA', 'JE', 'GG', 'SJ'
-                ];
-
-                return eeaCountries.includes(data.country_code);
-            } catch (error) {
-                console.error('Error determining user location:', error);
-                return false; // Or handle the error as appropriate for your application
-            }
-        }
-    </script>
-    """
-    head += """
-    <script>
-        // Define dataLayer and the gtag function.
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        const adStorageConsent = Cookies.get('_ad_consent_ad_storage');
-        const adUserDataConsent = Cookies.get('_ad_consent_user_data');
-        const adPersonalizationConsent = Cookies.get('_ad_consent_personalization');
-        const adAnalyticsStorageConsent = Cookies.get('_ad_consent_analytics_storage');
-
-        if (
-            typeof adStorageConsent === 'undefined' ||
-            typeof adUserDataConsent === 'undefined' ||
-            typeof adPersonalizationConsent === 'undefined' ||
-            typeof adAnalyticsStorageConsent === 'undefined'
-        ) {
-            isUserInEEA().then(isInEEA => {
-                if (isInEEA) {
-                    gtag('consent', 'default', {
-                        'ad_storage': adStorageConsent == null? 'denied' : adStorageConsent,
-                        'ad_user_data': adUserDataConsent == null? 'denied' : adUserDataConsent,
-                        'ad_personalization': adPersonalizationConsent == null? 'denied' : adPersonalizationConsent,
-                        'analytics_storage': adAnalyticsStorageConsent == null? 'denied' : adAnalyticsStorageConsent,
-                        'wait_for_update': 500
-                    });
-                    gtag("set", "ads_data_redaction", true);
-                } else {
-                    gtag('consent', 'default', {
-                        'ad_storage': adStorageConsent == null? 'granted' : adStorageConsent,
-                        'ad_user_data': adUserDataConsent == null? 'granted' : adUserDataConsent,
-                        'ad_personalization': adPersonalizationConsent == null? 'granted' : adPersonalizationConsent,
-                        'analytics_storage': adAnalyticsStorageConsent == null? 'granted' : adAnalyticsStorageConsent,
-                        'wait_for_update': 500
-                    });
-                    gtag("set", "ads_data_redaction", true);
-                    if (adStorageConsent == null) {
-                        Cookies.set('_ad_consent_ad_storage', 'granted', { expires: 730 });
-                    }
-                    if (adUserDataConsent == null) {
-                        Cookies.set('_ad_consent_user_data', 'granted', { expires: 730 });
-                    }
-                    if (adPersonalizationConsent == null) {
-                        Cookies.set('_ad_consent_personalization', 'granted', { expires: 730 });
-                    }
-                    if (adAnalyticsStorageConsent == null) {
-                        Cookies.set('_ad_consent_analytics_storage', 'granted', { expires: 730 });
-                    }
-
-                }
-            });
-        } else {
-            gtag('consent', 'default', {
-                'ad_storage': adStorageConsent,
-                'ad_user_data': adUserDataConsent,
-                'ad_personalization': adPersonalizationConsent,
-                'analytics_storage': adAnalyticsStorageConsent,
-                'wait_for_update': 500
-            });
-            gtag("set", "ads_data_redaction", true);
-        }
-
-    </script>
-    """
+    head += f'<script type="text/javascript" src="/public/js/analytics/consent.js?version={time.time()}"></script>\n'
     head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
-
+    head += f'<script type="text/javascript" src="/public/js/analytics/init.js?version={time.time()}"></script>\n'
     head += f"""
-        <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){{dataLayer.push(arguments);}}
-        gtag('js', new Date());
-        const domain = window.location.hostname;
-        if (domain.includes("diffus.me")) {{
-            gtag('config', 'G-649WH3932W', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
-        }} else {{
-            gtag('config', 'G-6SKEYMGQ07', {{'user_id': '{base64_encoded_user_id}', 'user_properties': {{'user_tier': '{user.tire}'}}}});
-        }}
-        window.gaIsBlocked = true;
-        gtag('event', 'login', {{
-            event_callback: function() {{
-                window.gaIsBlocked = false;
-            }},
-        }});
-        gtag('event', 'conversion', {{'send_to': 'AW-347751974/bf1-CL-J5c0YEKaM6aUB'}});
-        </script>\n
+    <script>
+        configGtag('{base64_encoded_user_id}', {{'user_tier': '{user.tire}'}});
+    </script>
     """
-    head += """
-        <script>
-        !function (w, d, t) {
-        w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
-
-        ttq.load('CNEPRBJC77UAB35RF8C0');
-        ttq.page();
-        }(window, document, 'ttq');
-        </script>
-    """
+    head += f'<script type="module" src="/public/js/analytics/cookieconsent-config.mjs?version={time.time()}"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
     head += '<script src="/components/js/scrollload/index.js"></script>\n'
     head += '<script src=" https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
+    head += f'<script type="text/javascript" src="/public/js/analytics/events.js?version={time.time()}"></script>\n'
 
     for script in scripts.list_scripts("javascript", ".js"):
         head += f'<script type="text/javascript" src="{webpath(script.path)}"></script>\n'

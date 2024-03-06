@@ -749,8 +749,9 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
         "Version": program_version() if opts.add_version_to_infotext else None,
         "User": p.user if opts.add_user_name_to_info else None,
         "Diffus task ID": p.task_id,
-        "Image created at": get_share_url(p.origin, p.get_request()),
     }
+    if p.origin is not None:
+        generation_params["Image created at"] = get_share_url(p.origin, p.get_request())
 
     generation_params_text = ", ".join([k if k == v else f'{k}: {generation_parameters_copypaste.quote(v)}' for k, v in generation_params.items() if v is not None])
 

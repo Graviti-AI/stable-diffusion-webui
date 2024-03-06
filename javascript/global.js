@@ -85,11 +85,6 @@ let orderInfoResult = null;
 function changeCreditsPackageLink() {
   if (orderInfoResult) {
     if (["basic", "plus", "pro", "api"].includes(orderInfoResult.tier.toLowerCase())) {
-      gtag("event", "conversion", {
-          send_to: "AW-347751974/EiR7CPWfu88YEKaM6aUB",
-          value: 12.0,
-          currency: "USD",
-      });
       const packageIcon = gradioApp().querySelector("#package");
       if (packageIcon) {
           packageIcon.style.display = "flex";
@@ -132,10 +127,6 @@ function supportDifferentPriceType(priceType, linkNode) {
     if (linkNode.href) {
       linkNode.addEventListener('click', (e) => {
         e.preventDefault();
-        if (window.gaIsBlocked) {
-            window.location.href = linkNode.href;
-            return;
-        }
         addUpgradeGtagEvent(itemListInfo.item_id, itemListInfo.item_name, callback = () => {
             window.location.href = linkNode.href;
         });

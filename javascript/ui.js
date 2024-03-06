@@ -260,6 +260,22 @@ function showRestoreProgressButton(tabname, show) {
     button.style.display = show ? "flex" : "none";
 }
 
+function extractNumberFromGenerateButton(str) {
+  const matches = str.match(/\d+/);
+
+  if (matches && matches.length > 0) {
+    return parseInt(matches[0], 10); // Convert the string to an integer
+  }
+
+  return null;
+}
+
+function addGenerateGtagEvent(selector, itemName) {
+    const creditsInfo = document.querySelector(selector);
+    const credits = extractNumberFromGenerateButton(creditsInfo.textContent);
+    reportSpendCreditsEvent(itemName, credits);
+}
+
 async function submit() {
     addGenerateGtagEvent("#txt2img_generate > span", "txt2img_generation_button");
     await tierCheckGenerate("txt2img");
@@ -1397,10 +1413,6 @@ async function updateOrderInfo() {
                             if (linkNode && linkNode.href) {
                               linkNode.addEventListener('click', (e) => {
                                 e.preventDefault();
-                                if (window.gaIsBlocked) {
-                                    window.location.href = linkNode.href;
-                                    return;
-                                }
                                 addUpgradeGtagEvent(linkNode.href, "free_user_webui_upgrade_link", callback = () => {
                                     window.location.href = linkNode.href;
                                 });

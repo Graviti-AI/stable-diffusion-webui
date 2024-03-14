@@ -121,7 +121,7 @@
 }
 #awn-popup-wrapper .awn-popup-body.awn-popup-confirm .fa {
   font-size: 44px;
-  color: hsl(32, 100%, 38%);
+  color: hsl(44.91, 87.43%, 62.55%);
 }
 #awn-popup-wrapper .awn-popup-body.awn-popup-async-block {
   background: transparent;
@@ -156,16 +156,16 @@
   width: 100%;
 }
 #awn-popup-wrapper .awn-buttons .awn-btn-success {
-  background: hsl(249, 100%, 62%);
+  background: hsl(147.38, 64.52%, 48.63%);
 }
 #awn-popup-wrapper .awn-buttons .awn-btn-success:hover {
-  background: #4524ff;
+  background: #27b769;
 }
 #awn-popup-wrapper .awn-buttons .awn-btn-cancel {
-  background: hsl(211, 31%, 78%);
+  background: hsl(211, 1.77%, 34.14%);
 }
 #awn-popup-wrapper .awn-buttons .awn-btn-cancel:hover {
-  background: #253546;
+  background: #a9d6ff;
 }
 
 #awn-toast-container {
@@ -207,10 +207,10 @@
   overflow: hidden;
   opacity: 0;
   width: 320px;
-  background: hsl(0, 0%, 100%);
+  background: hsla(0, 0%, 16%, 0.9);
   margin-top: 16px;
   border-radius: 0.45rem;
-  color: hsl(247, 100%, 69%);
+  color: hsl(0, 0%, 96.47%);
   font-size: 14px;
   animation-timing-function: linear;
   animation-fill-mode: both;
@@ -221,7 +221,7 @@
 .awn-toast-label {
   display: block;
   text-transform: uppercase;
-  color: hsl(247, 100%, 69%);
+  color: hsl(0, 0%, 96.47%);
   font-size: 18px;
 }
 .awn-toast-icon {
@@ -235,11 +235,11 @@
 }
 .awn-toast-icon .fa {
   font-size: 44px;
-  color: hsl(247, 100%, 69%);
+  color: hsl(0, 0%, 96.47%);
 }
 .awn-toast-wrapper {
-  padding: 22px 88px 16px 16px;
-  border: 1px solid hsl(210, 17%, 95%);
+  padding: 22px 16px 16px 16px;
+  border: 1px solid hsl(211, 1.77%, 34.14%);
   border-radius: 0.45rem;
 }
 .awn-toast-progress-bar {
@@ -251,7 +251,7 @@
 }
 .awn-toast-progress-bar:after {
   content: " ";
-  background: hsl(247, 100%, 69%);
+  background: hsl(0, 0%, 96.47%);
   position: absolute;
   width: 100%;
   right: 100%;
@@ -269,60 +269,60 @@
   animation-name: awn-fade-out !important;
 }
 .awn-toast.awn-toast-success {
-  background: hsl(0, 0%, 100%);
-  color: hsl(249, 100%, 62%);
+  background: hsla(0, 0%, 16%, 0.9);
+  color: hsl(147.38, 64.52%, 48.63%);
 }
 .awn-toast.awn-toast-success .awn-toast-wrapper {
-  border-color: hsl(249, 100%, 85%);
+  border-color: hsl(211, 1.77%, 34.14%);
 }
 .awn-toast.awn-toast-success b,
 .awn-toast.awn-toast-success .fa {
-  color: hsl(249, 100%, 62%);
+  color: hsl(147.38, 64.52%, 48.63%);
 }
 .awn-toast.awn-toast-success .awn-toast-progress-bar:after {
-  background: hsl(249, 100%, 62%);
+  background: hsl(147.38, 64.52%, 48.63%);
 }
 .awn-toast.awn-toast-info {
-  background: hsl(0, 0%, 100%);
-  color: hsl(211, 31%, 26%);
+  background: hsla(0, 0%, 16%, 0.9);
+  color: hsl(208.52, 100%, 88.04%);
 }
 .awn-toast.awn-toast-info .awn-toast-wrapper {
-  border-color: hsl(211, 31%, 78%);
+  border-color: hsl(211, 1.77%, 34.14%);
 }
 .awn-toast.awn-toast-info b,
 .awn-toast.awn-toast-info .fa {
-  color: hsl(211, 31%, 26%);
+  color: hsl(208.52, 100%, 88.04%);
 }
 .awn-toast.awn-toast-info .awn-toast-progress-bar:after {
-  background: hsl(211, 31%, 26%);
+  background: hsl(208.52, 100%, 88.04%);
 }
 .awn-toast.awn-toast-alert {
-  background: hsl(0, 0%, 100%);
-  color: hsl(3, 82%, 50%);
+  background: hsla(0, 0%, 16%, 0.9);
+  color: hsl(344.25, 72.07%, 56.47%);
 }
 .awn-toast.awn-toast-alert .awn-toast-wrapper {
-  border-color: hsl(3, 82%, 78%);
+  border-color: hsl(211, 1.77%, 34.14%);
 }
 .awn-toast.awn-toast-alert b,
 .awn-toast.awn-toast-alert .fa {
-  color: hsl(3, 82%, 50%);
+  color: hsl(344.25, 72.07%, 56.47%);
 }
 .awn-toast.awn-toast-alert .awn-toast-progress-bar:after {
-  background: hsl(3, 82%, 50%);
+  background: hsl(344.25, 72.07%, 56.47%);
 }
 .awn-toast.awn-toast-warning {
-  background: hsl(0, 0%, 100%);
-  color: hsl(32, 100%, 38%);
+  background: hsla(0, 0%, 16%, 0.9);
+  color: hsl(44.91, 87.43%, 62.55%);
 }
 .awn-toast.awn-toast-warning .awn-toast-wrapper {
-  border-color: hsl(32, 100%, 75%);
+  border-color: hsl(211, 1.77%, 34.14%);
 }
 .awn-toast.awn-toast-warning b,
 .awn-toast.awn-toast-warning .fa {
-  color: hsl(32, 100%, 38%);
+  color: hsl(44.91, 87.43%, 62.55%);
 }
 .awn-toast.awn-toast-warning .awn-toast-progress-bar:after {
-  background: hsl(32, 100%, 38%);
+  background: hsl(44.91, 87.43%, 62.55%);
 }
 
 [class^=awn-] {

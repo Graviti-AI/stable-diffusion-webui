@@ -306,6 +306,8 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         task_start_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
         logger.info(f"task({task_id}) begin memory: {task_start_system_memory:.2f} GB")
 
+        task_failed = False
+        error_message = ''
         try:
             with monitor_call_context(
                     request,
@@ -326,7 +328,11 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
                         str(private_tempdir),
                         save_image_callback=save_image_if_not_saved_already),
                     task_failed=progress.is_task_failed(f"task({task_id})" if task_id else ""))
+            devices.torch_gc()
         except MonitorTierMismatchedException as e:
+            task_failed = True
+            error_message = f"This feature is available for {', '.join(e.allowed_tiers)} users, please upgrade to access it."
+
             shared.state.job = ""
             shared.state.job_count = 0
             if extra_outputs_array is None:
@@ -334,8 +340,11 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             res = extra_outputs_array + [f"<div class='error'>{html.escape(repr(e))}</div>"]
             monitor_state = json.dumps({
                 "need_upgrade": True,
-                "message": f"This feature is available for {', '.join(e.allowed_tiers)} users, please upgrade to access it."})
+                "message": error_message})
         except Exception as e:
+            task_failed = True
+            error_message = f'{type(e).__name__}: {e}'
+
             # When printing out our debug argument list, do not print out more than a MB of text
             max_debug_str_len = 131072  # (1024*1024)/8
             message = "Error completing request"
@@ -354,10 +363,14 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '']
 
-            error_message = f'{type(e).__name__}: {e}'
             res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
-
-        devices.torch_gc()
+        finally:
+            if task_failed and task_id:
+                # NOTE: only report to progress after task_failed.
+                progress.finish_task(task_id, task_failed, error_message)
+            else:
+                # the wrapped func will report to progress if not task_failed.
+                pass
 
         shared.state.skipped = False
         shared.state.interrupted = False

@@ -45,7 +45,6 @@ mute_sdxl_imports()
 path_dirs = [
     (sd_path, 'ldm', 'Stable Diffusion', []),
     (os.path.join(sd_path, '../generative-models'), 'sgm', 'Stable Diffusion XL', ["sgm"]),
-    (os.path.join(sd_path, '../CodeFormer'), 'inference_codeformer.py', 'CodeFormer', []),
     (os.path.join(sd_path, '../BLIP'), 'models/blip.py', 'BLIP', []),
     (os.path.join(sd_path, '../k-diffusion'), 'k_diffusion/sampling.py', 'k_diffusion', ["atstart"]),
 ]
@@ -227,3 +226,13 @@ def get_binary_path(sha256: str) -> pathlib.Path:
 def get_config_path(sha256: str) -> pathlib.Path:
     sha256 = sha256.lower()
     return pathlib.Path(configs_dir) / sha256
+
+
+import ldm_patched.utils.path_utils as ldm_patched_path_utils
+
+ldm_patched_path_utils.base_path = data_path
+ldm_patched_path_utils.models_dir = models_path
+ldm_patched_path_utils.output_directory = os.path.join(data_path, "output")
+ldm_patched_path_utils.temp_directory = os.path.join(data_path, "temp")
+ldm_patched_path_utils.input_directory = os.path.join(data_path, "input")
+ldm_patched_path_utils.user_directory = os.path.join(data_path, "user")

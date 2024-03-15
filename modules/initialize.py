@@ -1,11 +1,24 @@
 import importlib
 import logging
+import os
 import sys
 import warnings
+import os
+
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 
 from modules.launch_utils import startup_timer
+
+
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
 
 
 def imports():
@@ -19,17 +32,20 @@ def imports():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning, module="pytorch_lightning")
     warnings.filterwarnings(action="ignore", category=UserWarning, module="torchvision")
 
+    os.environ.setdefault('GRADIO_ANALYTICS_ENABLED', 'False')
     import gradio  # noqa: F401
     startup_timer.record("import gradio")
 
-    from modules import paths, timer, import_hook, errors  # noqa: F401
-    startup_timer.record("setup paths")
+    with HiddenPrints():
+        from modules import paths, timer, import_hook, errors  # noqa: F401
+        startup_timer.record("setup paths")
 
-    import ldm.modules.encoders.modules  # noqa: F401
-    startup_timer.record("import ldm")
+        import ldm.modules.encoders.modules  # noqa: F401
+        import ldm.modules.diffusionmodules.model
+        startup_timer.record("import ldm")
 
-    import sgm.modules.encoders.modules  # noqa: F401
-    startup_timer.record("import sgm")
+        import sgm.modules.encoders.modules  # noqa: F401
+        startup_timer.record("import sgm")
 
     from modules import shared_init
     shared_init.initialize()
@@ -90,9 +106,6 @@ def initialize():
     initialize_util.validate_tls_options()
     initialize_util.configure_sigint_handler()
     initialize_util.configure_opts_onchange()
-
-    from modules import modelloader
-    modelloader.cleanup_models()
 
     from modules import sd_models
     sd_models.setup_model()
@@ -171,28 +184,10 @@ def initialize_rest(*, reload_script_modules=False):
     sd_unet.list_unets()
     startup_timer.record("scripts list_unets")
 
-
     if not cmd_opts.skip_load_default_model:
-        from modules import shared_items
-        shared_items.reload_hypernetworks()
-        startup_timer.record("reload hypernetworks")
-        def load_model():
-            """
-            Accesses shared.sd_model property to load model.
-            After it's available, if it has been loaded before this access by some extension,
-            its optimization may be None because the list of optimizaers has neet been filled
-            by that time, so we apply optimization again.
-            """
-
-            shared.sd_model  # noqa: B018
-
-            if sd_hijack.current_optimizer is None:
-                sd_hijack.apply_optimizations()
-
-            from modules import devices
-            devices.first_time_calculation()
-
-        Thread(target=load_model).start()
+        from modules_forge import main_thread
+        import modules.sd_models
+        main_thread.async_run(modules.sd_models.model_data.get_sd_model)
 
     from modules import ui_extra_networks
     ui_extra_networks.initialize()

@@ -7,6 +7,8 @@ from modules.script_callbacks import ExtraNoiseParams, extra_noise_callback
 
 from modules.shared import opts
 import modules.shared as shared
+from modules_forge.forge_sampler import sampling_prepare, sampling_cleanup
+
 
 from tqdm.auto import trange
 
@@ -207,11 +209,18 @@ class KDiffusionSampler(sd_samplers_common.Sampler):
         return sigmas
 
     def sample_img2img(self, p, x, noise, conditioning, unconditional_conditioning, steps=None, image_conditioning=None):
+        unet_patcher = self.model_wrap.inner_model.forge_objects.unet
+        sampling_prepare(self.model_wrap.inner_model.forge_objects.unet, x=x)
+
+        self.model_wrap.log_sigmas = self.model_wrap.log_sigmas.to(x.device)
+        self.model_wrap.sigmas = self.model_wrap.sigmas.to(x.device)
+
         steps, t_enc = sd_samplers_common.setup_img2img_steps(p, steps)
 
-        sigmas = self.get_sigmas(p, steps)
+        sigmas = self.get_sigmas(p, steps).to(x.device)
         sigma_sched = sigmas[steps - t_enc - 1:]
 
+        x = x.to(noise)
         xi = x + noise * sigma_sched[0]
 
         if opts.img2img_extra_noise > 0:
@@ -255,15 +264,22 @@ class KDiffusionSampler(sd_samplers_common.Sampler):
 
         samples = self.launch_sampling(t_enc + 1, lambda: self.func(self.model_wrap_cfg, xi, extra_args=self.sampler_extra_args, disable=False, callback=self.callback_state, **extra_params_kwargs))
 
-        if self.model_wrap_cfg.padded_cond_uncond:
-            p.extra_generation_params["Pad conds"] = True
+        self.add_infotext(p)
+
+        sampling_cleanup(unet_patcher)
 
         return samples
 
     def sample(self, p, x, conditioning, unconditional_conditioning, steps=None, image_conditioning=None):
+        unet_patcher = self.model_wrap.inner_model.forge_objects.unet
+        sampling_prepare(self.model_wrap.inner_model.forge_objects.unet, x=x)
+
+        self.model_wrap.log_sigmas = self.model_wrap.log_sigmas.to(x.device)
+        self.model_wrap.sigmas = self.model_wrap.sigmas.to(x.device)
+
         steps = steps or p.steps
 
-        sigmas = self.get_sigmas(p, steps)
+        sigmas = self.get_sigmas(p, steps).to(x.device)
 
         if opts.sgm_noise_multiplier:
             p.extra_generation_params["SGM noise multiplier"] = True
@@ -302,8 +318,9 @@ class KDiffusionSampler(sd_samplers_common.Sampler):
 
         samples = self.launch_sampling(steps, lambda: self.func(self.model_wrap_cfg, x, extra_args=self.sampler_extra_args, disable=False, callback=self.callback_state, **extra_params_kwargs))
 
-        if self.model_wrap_cfg.padded_cond_uncond:
-            p.extra_generation_params["Pad conds"] = True
+        self.add_infotext(p)
+
+        sampling_cleanup(unet_patcher)
 
         return samples
 

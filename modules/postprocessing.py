@@ -3,7 +3,7 @@ import os
 import gradio as gr
 from PIL import Image
 
-from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, generation_parameters_copypaste
+from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
 
 
@@ -92,11 +92,13 @@ def run_postprocessing(
                 basename = ''
                 forced_filename = None
 
-            infotext = ", ".join([k if k == v else f'{k}: {generation_parameters_copypaste.quote(v)}' for k, v in pp.info.items() if v is not None])
+            infotext = ", ".join([k if k == v else f'{k}: {infotext_utils.quote(v)}' for k, v in pp.info.items() if v is not None])
 
             if opts.enable_pnginfo:
                 pp.image.info = existing_pnginfo
                 pp.image.info["postprocessing"] = infotext
+
+            shared.state.assign_current_image(pp.image)
 
             if save_output:
                 from modules.processing import get_fixed_seed
@@ -108,11 +110,12 @@ def run_postprocessing(
 
                 if pp.caption:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"
-                    if os.path.isfile(caption_filename):
+                    existing_caption = ""
+                    try:
                         with open(caption_filename, encoding="utf8") as file:
                             existing_caption = file.read().strip()
-                    else:
-                        existing_caption = ""
+                    except FileNotFoundError:
+                        pass
 
                     action = shared.opts.postprocessing_existing_caption_action
                     if action == 'Prepend' and existing_caption:

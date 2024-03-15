@@ -2,7 +2,6 @@ import gradio as gr
 
 from modules import shared, ui_prompt_styles
 import modules.images
-from modules.shared import opts
 
 from modules.ui_components import ToolButton
 
@@ -18,6 +17,7 @@ class Toprow:
     button_deepbooru = None
 
     interrupt = None
+    interrupting = None
     skip = None
     submit = None
 
@@ -80,11 +80,11 @@ class Toprow:
     def create_prompts(self):
         with gr.Column(elem_id=f"{self.id_part}_prompt_container", elem_classes=["prompt-container-compact"] if self.is_compact else [], scale=6):
             with gr.Row(elem_id=f"{self.id_part}_prompt_row", elem_classes=["prompt-row"]):
-                self.prompt = gr.Textbox(label="Prompt", elem_id=f"{self.id_part}_prompt", show_label=False, lines=3, placeholder="Prompt (press Ctrl+Enter or Alt+Enter to generate)", elem_classes=["prompt"])
+                self.prompt = gr.Textbox(label="Prompt", elem_id=f"{self.id_part}_prompt", show_label=False, lines=3, placeholder="Prompt\n(Press Ctrl+Enter to generate, Alt+Enter to skip, Esc to interrupt)", elem_classes=["prompt"])
                 self.prompt_img = gr.File(label="", elem_id=f"{self.id_part}_prompt_image", file_count="single", type="binary", visible=False)
 
             with gr.Row(elem_id=f"{self.id_part}_neg_prompt_row", elem_classes=["prompt-row"]):
-                self.negative_prompt = gr.Textbox(label="Negative prompt", elem_id=f"{self.id_part}_neg_prompt", show_label=False, lines=3, placeholder="Negative prompt (press Ctrl+Enter or Alt+Enter to generate)", elem_classes=["prompt"])
+                self.negative_prompt = gr.Textbox(label="Negative prompt", elem_id=f"{self.id_part}_neg_prompt", show_label=False, lines=3, placeholder="Negative prompt\n(Press Ctrl+Enter to generate, Alt+Enter to skip, Esc to interrupt)", elem_classes=["prompt"])
 
         self.prompt_img.change(
             fn=modules.images.image_data,
@@ -97,22 +97,19 @@ class Toprow:
         with gr.Row(elem_id=f"{self.id_part}_generate_box", elem_classes=["generate-box"] + (["generate-box-compact"] if self.is_compact else []), render=not self.is_compact) as submit_box:
             self.submit_box = submit_box
 
-            self.interrupt = gr.Button('Interrupt', elem_id=f"{self.id_part}_interrupt", elem_classes="generate-box-interrupt")
-            self.skip = gr.Button('Skip', elem_id=f"{self.id_part}_skip", elem_classes="generate-box-skip")
-            self.submit = gr.Button('Generate', elem_id=f"{self.id_part}_generate", variant='primary')
+            self.interrupt = gr.Button('Interrupt', elem_id=f"{self.id_part}_interrupt", elem_classes="generate-box-interrupt", tooltip="End generation immediately or after completing current batch")
+            self.skip = gr.Button('Skip', elem_id=f"{self.id_part}_skip", elem_classes="generate-box-skip", tooltip="Stop generation of current batch and continues onto next batch")
+            self.interrupting = gr.Button('Interrupting...', elem_id=f"{self.id_part}_interrupting", elem_classes="generate-box-interrupting", tooltip="Interrupting generation...")
+            self.submit = gr.Button('Generate', elem_id=f"{self.id_part}_generate", variant='primary', tooltip="Right click generate forever menu")
             self.tab_name = gr.Textbox(elem_id=f"{self.id_part}_tab_name", value=self.id_part, visible=False)
             self.id_task = gr.Textbox(elem_id=f"{self.id_part}_id_task", value='', visible=False)
-            def get_sd_model_title_from_setting():
-                assert opts is not None, "opts is not initialized"
-                key = 'sd_model_checkpoint'
-                return opts.data[key] if key in opts.data else opts.data_labels[key].default
 
-            def get_sd_vae_title_from_setting():
-                assert opts is not None, "opts is not initialized"
-                key = 'sd_vae'
-                return opts.data[key] if key in opts.data else opts.data_labels[key].default
-            self.model_title = gr.Textbox(elem_id=f"{self.id_part}_model_title", value=get_sd_model_title_from_setting(), visible=False)
-            self.vae_model_title = gr.Textbox(elem_id=f"{self.id_part}_vae_model_title", value=get_sd_vae_title_from_setting(), visible=False)
+            def interrupt_function():
+                if not shared.state.stopping_generation and shared.state.job_count > 1 and shared.opts.interrupt_after_current:
+                    shared.state.stop_generating()
+                    gr.Info("Generation will stop after finishing this image, click again to stop immediately.")
+                else:
+                    shared.state.interrupt()
 
             def _make_interrupt_cb(cb):
                 from modules import progress
@@ -135,6 +132,21 @@ class Toprow:
                 outputs=[],
             )
 
+            self.interrupting.click(fn=interrupt_function)
+
+            def get_sd_model_title_from_setting():
+                assert shared.opts is not None, "opts is not initialized"
+                key = 'sd_model_checkpoint'
+                return shared.opts.data[key] if key in shared.opts.data else shared.opts.data_labels[key].default
+
+            def get_sd_vae_title_from_setting():
+                assert shared.opts is not None, "opts is not initialized"
+                key = 'sd_vae'
+                return shared.opts.data[key] if key in shared.opts.data else shared.opts.data_labels[key].default
+
+            self.model_title = gr.Textbox(elem_id=f"{self.id_part}_model_title", value=get_sd_model_title_from_setting(), visible=False)
+            self.vae_model_title = gr.Textbox(elem_id=f"{self.id_part}_vae_model_title", value=get_sd_vae_title_from_setting(), visible=False)
+
     def create_tools_row(self):
         with gr.Row(elem_id=f"{self.id_part}_tools"):
             from modules.ui import paste_symbol, clear_prompt_symbol, restore_progress_symbol
@@ -149,9 +161,9 @@ class Toprow:
 
             self.restore_progress_button = ToolButton(value=restore_progress_symbol, elem_id=f"{self.id_part}_restore_progress", visible=False, tooltip="Restore progress")
 
-            self.token_counter = gr.HTML(value="<span>0/75</span>", elem_id=f"{self.id_part}_token_counter", elem_classes=["token-counter"])
+            self.token_counter = gr.HTML(value="<span>0/75</span>", elem_id=f"{self.id_part}_token_counter", elem_classes=["token-counter"], visible=False)
             self.token_button = gr.Button(visible=False, elem_id=f"{self.id_part}_token_button")
-            self.negative_token_counter = gr.HTML(value="<span>0/75</span>", elem_id=f"{self.id_part}_negative_token_counter", elem_classes=["token-counter"])
+            self.negative_token_counter = gr.HTML(value="<span>0/75</span>", elem_id=f"{self.id_part}_negative_token_counter", elem_classes=["token-counter"], visible=False)
             self.negative_token_button = gr.Button(visible=False, elem_id=f"{self.id_part}_negative_token_button")
 
             self.clear_prompt_button.click(

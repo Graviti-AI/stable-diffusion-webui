@@ -1,9 +1,8 @@
 import html
-import json
 import os
+import json
 
 from modules import shared, ui_extra_networks, sd_models
-from modules.ui_extra_networks import quote_js
 from modules.ui_extra_networks_checkpoints_user_metadata import CheckpointUserMetadataEditor
 import gradio as gr
 
@@ -47,11 +46,11 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
                 metadata["model_name"]])
         return {
             "name": checkpoint.name_for_extra,
-            "filename": path,
+            "filename": checkpoint.filename,
             "shorthash": checkpoint.shorthash,
             "preview": self.find_preview(path),
             "description": self.find_description(path),
-            "search_term": search_term,
+            "search_terms": [search_term],
             "onclick": '"' + html.escape(f"""return selectCheckpoint({json.dumps(name)})""") + '"',
             "local_preview": f"{path}.{shared.opts.samples_format}",
             "metadata": checkpoint.metadata,

@@ -337,8 +337,6 @@ class UiSettings:
 
         for _i, k, _item in self.quicksettings_list:
             component = self.component_dict[k]
-            info = opts.data_labels[k]
-            outputs = [component, self.text_settings]
 
             if isinstance(component, gr.Textbox):
                 methods = [component.submit, component.blur]
@@ -348,11 +346,16 @@ class UiSettings:
                 methods = [component.change]
 
             for method in methods:
-                method(
+                handler = method(
                     fn=make_run_settings_single(k),
                     inputs=[component],
-                    outputs=outputs,
-                    show_progress=info.refresh is not None,
+                    outputs=[component, self.text_settings],
+                    show_progress=False,
+                )
+                script_callbacks.setting_updated_event_subscriber_chain(
+                    handler=handler,
+                    component=component,
+                    setting_name=k,
                 )
 
         button_set_checkpoint = gr.Button('Change checkpoint', elem_id='change_checkpoint', visible=False)
@@ -364,11 +367,16 @@ class UiSettings:
                 return ckpt_info.title
             return current_checkpoint
 
-        button_set_checkpoint.click(
+        handler = button_set_checkpoint.click(
             fn=set_checkpoint_when_click_on_card,
             _js="function(current, dummy){ var res = desiredCheckpointName; desiredCheckpointName = ''; return [res || current, current]; }",
             inputs=[sd_model_selection, self.dummy_component],
             outputs=[sd_model_selection],
+        )
+        script_callbacks.setting_updated_event_subscriber_chain(
+            handler=handler,
+            component=self.component_dict['sd_model_checkpoint'],
+            setting_name="sd_model_checkpoint"
         )
 
         component_keys = [k for k in opts.data_labels.keys() if k in self.component_dict]

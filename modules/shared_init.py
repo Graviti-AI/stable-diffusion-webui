@@ -18,16 +18,12 @@ def initialize():
     shared.options_templates = shared_options.options_templates
     shared.opts = options.Options(shared_options.options_templates, shared_options.restricted_opts)
     shared.restricted_opts = shared_options.restricted_opts
-    if os.path.exists(shared.config_filename):
+    try:
         shared.opts.load(shared.config_filename)
+    except FileNotFoundError:
+        pass
 
     from modules import devices
-    devices.device, devices.device_interrogate, devices.device_gfpgan, devices.device_esrgan, devices.device_codeformer = \
-        (devices.cpu if any(y in cmd_opts.use_cpu for y in [x, 'all']) else devices.get_optimal_device() for x in ['sd', 'interrogate', 'gfpgan', 'esrgan', 'codeformer'])
-
-    devices.dtype = torch.float32 if cmd_opts.no_half else torch.float16
-    devices.dtype_vae = torch.float32 if cmd_opts.no_half or cmd_opts.no_half_vae else torch.float16
-
     shared.device = devices.device
     shared.weight_load_location = None if cmd_opts.lowram else "cpu"
 

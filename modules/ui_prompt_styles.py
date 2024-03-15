@@ -23,8 +23,9 @@ def save_style(request: gr.Request, name, prompt, negative_prompt):
         return gr.update(visible=False)
 
     style = styles.PromptStyle(name, prompt, negative_prompt)
-    shared.prompt_styles(request).styles[style.name] = style
-    shared.prompt_styles(request).save_styles(style)
+    prompt_styles = shared.prompt_styles(request)
+    prompt_styles.styles[style.name] = style
+    prompt_styles.save_styles()
 
     return gr.update(visible=True)
 
@@ -33,7 +34,9 @@ def delete_style(request: gr.Request, name, prompt, negative_prompt):
     if not name or (not prompt and not negative_prompt):
         return name, prompt, negative_prompt
 
-    style = shared.prompt_styles(request).delete_style(name)
+    prompt_styles = shared.prompt_styles(request)
+    prompt_styles.styles.pop(name, None)
+    prompt_styles.save_styles()
 
     if style:
         return '', '', ''

@@ -1,7 +1,4 @@
 import os
-import json
-
-import gradio as gr
 
 from modules import shared, ui_extra_networks
 from modules.ui_extra_networks import quote_js
@@ -22,7 +19,7 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
             if metadata is not None:
                 self.metadata[name] = metadata
 
-    def refresh(self, request: gr.Request):
+    def refresh(self, _):
         shared.reload_hypernetworks()
         self.refresh_metadata()
 
@@ -31,11 +28,11 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
 
     def create_item(self, name, index=None, model=None, enable_filter=True):
         if model is None:
-            path = shared.hypernetworks[name]
+            full_path = shared.hypernetworks[name]
         else:
-            path = model
-        path, ext = os.path.splitext(path)
-        search_term = self.search_terms_from_path(path)
+            full_path = model
+        full_path, ext = os.path.splitext(full_path)
+        search_term = self.search_terms_from_path(full_path)
         metadata = self.metadata.get(name, None)
         if metadata is not None:
             search_term = " ".join([
@@ -47,15 +44,14 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
 
         return {
             "name": name,
-            "filename": path,
+            "filename": full_path,
             "shorthash": metadata.get("sha256", "")[0:10] if metadata else "",
-            "preview": self.find_preview(path),
-            "description": self.find_description(path),
-            "search_term": search_term,
-            "prompt": quote_js(
-                f"<hypernet:{name}:") + " + opts.extra_networks_default_multiplier + " + quote_js(">"),
-            "local_preview": f"{path}.preview.{shared.opts.samples_format}",
-            "sort_keys": {'default': index, **self.get_sort_keys(path + ext)},
+            "preview": self.find_preview(full_path),
+            "description": self.find_description(full_path),
+            "search_terms": [search_term],
+            "prompt": quote_js(f"<hypernet:{name}:") + " + opts.extra_networks_default_multiplier + " + quote_js(">"),
+            "local_preview": f"{full_path}.preview.{shared.opts.samples_format}",
+            "sort_keys": {'default': index, **self.get_sort_keys(full_path + ext)},
             "metadata": metadata,
         }
 

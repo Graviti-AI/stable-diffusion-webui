@@ -10,10 +10,14 @@ from pydantic import BaseModel, Field
 from modules.shared import opts
 
 import modules.shared as shared
+from collections import OrderedDict
+import string
+import random
+from typing import List
 
 current_task = None
 current_task_step = ''
-pending_tasks = {}
+pending_tasks = OrderedDict()
 finished_tasks = []
 failed_tasks = []
 recorded_results = []
@@ -95,6 +99,11 @@ def finish_task(id_task, task_failed=False, error_message=''):
 def is_task_failed(id_task: str) -> bool:
     return id_task in failed_tasks
 
+def create_task_id(task_type):
+    N = 7
+    res = ''.join(random.choices(string.ascii_uppercase +
+    string.digits, k=N))
+    return f"task({task_type}-{res})"
 
 def record_results(id_task, res):
     recorded_results.append((id_task, res))
@@ -146,6 +155,9 @@ def _pop_task_from_queue(id_task):
             logger.error(f'pop current task from queue failed, id_task: {id_task}, error: {e.__init__()}')
     return task_info
 
+class PendingTasksResponse(BaseModel):
+    size: int = Field(title="Pending task size")
+    tasks: List[str] = Field(title="Pending task ids")
 
 class ProgressRequest(BaseModel):
     id_task: str = Field(default=None, title="Task ID", description="id of the task to get progress for")
@@ -166,7 +178,14 @@ class ProgressResponse(BaseModel):
 
 
 def setup_progress_api(app):
+    app.add_api_route("/internal/pending-tasks", get_pending_tasks, methods=["GET"])
     return app.add_api_route("/internal/progress", progressapi, methods=["POST"], response_model=ProgressResponse)
+
+
+def get_pending_tasks():
+    pending_tasks_ids = list(pending_tasks)
+    pending_len = len(pending_tasks_ids)
+    return PendingTasksResponse(size=pending_len, tasks=pending_tasks_ids)
 
 
 def progressapi(req: ProgressRequest):

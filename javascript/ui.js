@@ -90,6 +90,11 @@ function switch_to_extras() {
     return Array.from(arguments);
 }
 
+function switch_to_svd() {
+    gradioApp().querySelector('#tabs').querySelectorAll('button')[6].click();
+    return Array.from(arguments);
+}
+
 function get_tab_index(tabId) {
     let buttons = gradioApp().getElementById(tabId).querySelector('div').querySelectorAll('button');
     for (let i = 0; i < buttons.length; i++) {
@@ -248,9 +253,18 @@ function tierCheckButton(feature_name) {
 }
 
 
+function setSubmitButtonsVisibility(tabname, showInterrupt, showSkip, showInterrupting) {
+    gradioApp().getElementById(tabname + '_interrupt').style.display = showInterrupt ? "block" : "none";
+    gradioApp().getElementById(tabname + '_skip').style.display = showSkip ? "block" : "none";
+    gradioApp().getElementById(tabname + '_interrupting').style.display = showInterrupting ? "block" : "none";
+}
+
 function showSubmitButtons(tabname, show) {
-    gradioApp().getElementById(tabname + '_interrupt').style.display = show ? "none" : "block";
-    gradioApp().getElementById(tabname + '_skip').style.display = show ? "none" : "block";
+    setSubmitButtonsVisibility(tabname, !show, !show, false);
+}
+
+function showSubmitInterruptingPlaceholder(tabname) {
+    setSubmitButtonsVisibility(tabname, false, true, true);
 }
 
 function showRestoreProgressButton(tabname, show) {
@@ -297,6 +311,14 @@ async function submit() {
 
     res[0] = id;
     res[index] = all_model_info;
+
+    return res;
+}
+
+function submit_txt2img_upscale() {
+    var res = submit(...arguments);
+
+    res[2] = selected_gallery_index();
 
     return res;
 }
@@ -544,8 +566,6 @@ onAfterUiUpdate(function() {
     });
 
     json_elem.parentElement.style.display = "none";
-
-    setupTokenCounters();
 });
 
 onOptionsChanged(function() {

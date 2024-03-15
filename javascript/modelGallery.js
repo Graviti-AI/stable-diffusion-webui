@@ -120,7 +120,7 @@ async function handleModelData({init, response, model_type, model_workspace, swi
         }
     }
     const operateButtonName = model_workspace === 'personal' ? "Remove from workspace" : "Add to workspace";
-    const matureLevel = gradioApp().querySelector('#model-gallery-meture-level');
+    const matureLevel = gradioApp().querySelector('#model-gallery-mature-level');
     
     // add new child
     model_list.forEach(item => {
@@ -189,7 +189,7 @@ function initDomPage() {
                 <span>Personal Workspace</span>
                 <div class="personal-workspace-top-mature">
                     <span>Mature Content</span>
-                    <select onchange="changeMatureLevel(this)" id="model-gallery-meture-level">
+                    <select onchange="changeMatureLevel(this)" id="model-gallery-mature-level">
                         <option value="None">None</option>
                         <option value="Soft">Soft</option>
                         <option value="Mature">Mature</option>
@@ -204,10 +204,10 @@ function initDomPage() {
                     <li><a lora href="#personal-lora">Lora/Lycoris</a></li>
                 </ul>
                 <div class="gallery-cards">
-                    <ul id="personal-checkpoints" class="gallery-cards extra-network-cards" id="personal-checkpoints-cards"></li></ul>
-                    <ul id="personal-textual_inversion" class="gallery-cards extra-network-cards" id="personal-textual_inversion-cards"></li></ul>
-                    <ul id="personal-hypernetworks" class="gallery-cards extra-network-cards" id="personal-hypernetworks-cards"></li></ul>
-                    <ul id="personal-lora" class="gallery-cards extra-network-cards" id="personal-lora-cards"></li></ul>
+                    <ul id="personal-checkpoints" class="gallery-cards extra-network-pane" id="personal-checkpoints-cards"></li></ul>
+                    <ul id="personal-textual_inversion" class="gallery-cards extra-network-pane" id="personal-textual_inversion-cards"></li></ul>
+                    <ul id="personal-hypernetworks" class="gallery-cards extra-network-pane" id="personal-hypernetworks-cards"></li></ul>
+                    <ul id="personal-lora" class="gallery-cards extra-network-pane" id="personal-lora-cards"></li></ul>
                 </div>
             </div>
         </div>
@@ -230,44 +230,44 @@ function initDomPage() {
                 <div class="gallery-cards">
                     <p id="private-model-title">Private Models</p>
                     <div id="private-checkpoints" >
-                        <ul id="private-checkpoints-cards" class="gallery-cards extra-network-cards scrollload-content">
+                        <ul id="private-checkpoints-cards" class="gallery-cards extra-network-pane scrollload-content">
                         </ul>
                     </div>
                     <div id="private-textual_inversion" hidden="hidden">
-                        <ul id="private-textual_inversion-cards" class="gallery-cards extra-network-cards scrollload-content">
+                        <ul id="private-textual_inversion-cards" class="gallery-cards extra-network-pane scrollload-content">
                         </ul>
                     </div>
                     <div id="private-hypernetworks" hidden="hidden">
-                        <ul id="private-hypernetworks-cards" class="gallery-cards extra-network-cards scrollload-content">
+                        <ul id="private-hypernetworks-cards" class="gallery-cards extra-network-pane scrollload-content">
                         </ul>
                     </div>
                     <div id="private-lora" hidden="hidden">
-                        <ul id="private-lora-cards" class="gallery-cards extra-network-cards scrollload-content">
+                        <ul id="private-lora-cards" class="gallery-cards extra-network-pane scrollload-content">
                         </ul>
                     </div>
                     <p>Public Models</p>
                     <div id="public-checkpoints" >
                         <div class="scrollload-container" model-type="checkpoints" workspace="public">
-                            <ul id="public-checkpoints-cards" class="gallery-cards extra-network-cards scrollload-content">
+                            <ul id="public-checkpoints-cards" class="gallery-cards extra-network-pane scrollload-content">
                             </ul>
                         </div>
                     </div>
                     <div id="public-textual_inversion">
                         <div class="scrollload-container" model-type="textual_inversion" workspace="public">
-                            <ul id="public-textual_inversion-cards" class="gallery-cards extra-network-cards scrollload-content">
+                            <ul id="public-textual_inversion-cards" class="gallery-cards extra-network-pane scrollload-content">
                             </ul>
                         </div>
                     </div>
                     <div id="public-hypernetworks">
                         <div class="scrollload-container" model-type="hypernetworks" workspace="public">
-                            <ul id="public-hypernetworks-cards" class="gallery-cards extra-network-cards scrollload-content">
+                            <ul id="public-hypernetworks-cards" class="gallery-cards extra-network-pane scrollload-content">
                                
                             </ul>
                         </div>
                     </div>
                     <div id="public-lora">
                         <div class="scrollload-container" model-type="lora" workspace="public">
-                            <ul id="public-lora-cards" class="gallery-cards extra-network-cards scrollload-content">
+                            <ul id="public-lora-cards" class="gallery-cards extra-network-pane scrollload-content">
                                
                             </ul>
                         </div>

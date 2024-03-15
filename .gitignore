@@ -7,6 +7,7 @@ __pycache__
 /repositories
 /venv
 /tmp
+/output
 /model.ckpt
 /models/**/*
 /GFPGANv1.3.pth
@@ -37,6 +38,10 @@ notification.mp3
 /node_modules
 /package-lock.json
 /.coverage*
+/test/test_outputs
+/test/results.xml
+coverage.xml
+**/tests/**/expectations
 /cache.json
 workdir
 cache.json.lock

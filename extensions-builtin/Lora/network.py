@@ -4,6 +4,9 @@ from collections import namedtuple
 import enum
 from typing_extensions import Self
 
+import torch.nn as nn
+import torch.nn.functional as F
+
 from modules import sd_models, cache, errors, hashes, shared
 from modules.model_info import ModelInfo
 
@@ -20,12 +23,11 @@ class SdVersion(enum.Enum):
 
 
 class NetworkOnDisk:
-    def __init__(self, name, filename, metadata: dict = None):
+    def __init__(self, name, filename):
         self.name = name
         self.filename = filename
-        self.metadata = metadata if metadata else {}
+        self.metadata = {}
         self.is_safetensors = os.path.splitext(filename)[1].lower() == ".safetensors"
-        self.safetensor_metadata = {}
 
         def read_metadata():
             metadata = sd_models.read_metadata_from_safetensors(filename)
@@ -35,7 +37,7 @@ class NetworkOnDisk:
 
         if self.is_safetensors:
             try:
-                self.safetensor_metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + self.name, filename, read_metadata)
+                self.metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + self.name, filename, read_metadata)
             except Exception as e:
                 errors.display(e, f"reading lora {filename}")
 
@@ -46,12 +48,12 @@ class NetworkOnDisk:
 
             self.metadata = m
 
-        self.alias = self.safetensor_metadata.get('ss_output_name', self.name)
+        self.alias = self.metadata.get('ss_output_name', self.name)
 
         self.hash = None
         self.shorthash = None
         self.set_hash(
-            self.safetensor_metadata.get('sshs_model_hash') or
+            self.metadata.get('sshs_model_hash') or
             hashes.sha256_from_cache(self.filename, "lora/" + self.name, use_addnet_hash=self.is_safetensors) or
             ''
         )
@@ -65,7 +67,6 @@ class NetworkOnDisk:
         obj.filename = model_info.filename
         obj.metadata = {}
         obj.is_safetensors = model_info.is_safetensors
-        obj.safetensor_metadata = {}
 
         def read_metadata():
             metadata = sd_models.read_metadata_from_safetensors(model_info.filename)
@@ -75,7 +76,7 @@ class NetworkOnDisk:
 
         if obj.is_safetensors:
             try:
-                obj.safetensor_metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + model_info.sha256, obj.filename, read_metadata)
+                obj.metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + model_info.sha256, obj.filename, read_metadata)
             except Exception as e:
                 errors.display(e, f"reading lora {obj.filename}")
 
@@ -85,13 +86,12 @@ class NetworkOnDisk:
 
         return obj
 
-
     def detect_version(self):
-        if str(self.safetensor_metadata.get('ss_base_model_version', "")).startswith("sdxl_"):
+        if str(self.metadata.get('ss_base_model_version', "")).startswith("sdxl_"):
             return SdVersion.SDXL
-        elif str(self.safetensor_metadata.get('ss_v2', "")) == "True":
+        elif str(self.metadata.get('ss_v2', "")) == "True":
             return SdVersion.SD2
-        elif len(self.safetensor_metadata):
+        elif len(self.metadata):
             return SdVersion.SD1
 
         return SdVersion.Unknown
@@ -146,6 +146,29 @@ class NetworkModule:
         if hasattr(self.sd_module, 'weight'):
             self.shape = self.sd_module.weight.shape
 
+        self.ops = None
+        self.extra_kwargs = {}
+        if isinstance(self.sd_module, nn.Conv2d):
+            self.ops = F.conv2d
+            self.extra_kwargs = {
+                'stride': self.sd_module.stride,
+                'padding': self.sd_module.padding
+            }
+        elif isinstance(self.sd_module, nn.Linear):
+            self.ops = F.linear
+        elif isinstance(self.sd_module, nn.LayerNorm):
+            self.ops = F.layer_norm
+            self.extra_kwargs = {
+                'normalized_shape': self.sd_module.normalized_shape,
+                'eps': self.sd_module.eps
+            }
+        elif isinstance(self.sd_module, nn.GroupNorm):
+            self.ops = F.group_norm
+            self.extra_kwargs = {
+                'num_groups': self.sd_module.num_groups,
+                'eps': self.sd_module.eps
+            }
+
         self.dim = None
         self.bias = weights.w.get("bias")
         self.alpha = weights.w["alpha"].item() if "alpha" in weights.w else None
@@ -168,7 +191,7 @@ class NetworkModule:
     def finalize_updown(self, updown, orig_weight, output_shape, ex_bias=None):
         if self.bias is not None:
             updown = updown.reshape(self.bias.shape)
-            updown += self.bias.to(orig_weight.device, dtype=orig_weight.dtype)
+            updown += self.bias.to(orig_weight.device, dtype=updown.dtype)
             updown = updown.reshape(output_shape)
 
         if len(output_shape) == 4:
@@ -186,5 +209,10 @@ class NetworkModule:
         raise NotImplementedError()
 
     def forward(self, x, y):
-        raise NotImplementedError()
+        """A general forward implementation for all modules"""
+        if self.ops is None:
+            raise NotImplementedError()
+        else:
+            updown, ex_bias = self.calc_updown(self.sd_module.weight)
+            return y + self.ops(x, weight=updown, bias=ex_bias, **self.extra_kwargs)
 

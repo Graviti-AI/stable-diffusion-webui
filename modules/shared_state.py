@@ -2,6 +2,8 @@ import datetime
 import logging
 import threading
 import time
+import traceback
+import torch
 
 from modules import errors, shared, devices, script_callbacks
 from typing import Optional
@@ -13,6 +15,7 @@ log = logging.getLogger(__name__)
 class State:
     skipped = False
     interrupted = False
+    stopping_generation = False
     job = ""
     _job_no = 0
     _job_count = 0
@@ -131,6 +134,10 @@ class State:
         log.info("Received interrupt request")
         script_callbacks.state_updated_callback(self)
 
+    def stop_generating(self):
+        self.stopping_generation = True
+        log.info("Received stop generating request")
+
     def nextjob(self):
         if shared.opts.live_previews_enable and shared.opts.show_progress_every_n_steps == -1:
             self.do_set_current_image()
@@ -144,6 +151,7 @@ class State:
         obj = {
             "skipped": self.skipped,
             "interrupted": self.interrupted,
+            "stopping_generation": self.stopping_generation,
             "job": self.job,
             "job_count": self.job_count,
             "job_timestamp": self.job_timestamp,
@@ -167,6 +175,7 @@ class State:
         self.id_live_preview = 0
         self.skipped = False
         self.interrupted = False
+        self.stopping_generation = False
         self.textinfo = None
         self.job = job
         self.request = request
@@ -184,6 +193,7 @@ class State:
 
         devices.torch_gc()
 
+    @torch.inference_mode()
     def set_current_image(self):
         """if enough sampling steps have been made after the last call to this, sets self.current_image from self.current_latent, and modifies self.id_live_preview accordingly"""
         if not shared.parallel_processing_allowed:
@@ -192,6 +202,7 @@ class State:
         if self.sampling_step - self.current_image_sampling_step >= shared.opts.show_progress_every_n_steps and shared.opts.live_previews_enable and shared.opts.show_progress_every_n_steps != -1:
             self.do_set_current_image()
 
+    @torch.inference_mode()
     def do_set_current_image(self):
         if self.current_latent is None:
             return
@@ -206,11 +217,14 @@ class State:
 
             self.current_image_sampling_step = self.sampling_step
 
-        except Exception:
+        except Exception as e:
+            # traceback.print_exc()
+            # print(e)
             # when switching models during genration, VAE would be on CPU, so creating an image will fail.
             # we silently ignore this error
             errors.record_exception()
 
+    @torch.inference_mode()
     def assign_current_image(self, image):
         self.current_image = image
         self.id_live_preview += 1

@@ -7,6 +7,8 @@ from modules.script_callbacks import ExtraNoiseParams, extra_noise_callback
 
 from modules.shared import opts
 import modules.shared as shared
+from modules_forge.forge_sampler import sampling_prepare, sampling_cleanup
+
 
 samplers_timesteps = [
     ('DDIM', sd_samplers_timesteps_impl.ddim, ['ddim'], {}),
@@ -36,7 +38,7 @@ class CompVisTimestepsVDenoiser(torch.nn.Module):
         self.inner_model = model
 
     def predict_eps_from_z_and_v(self, x_t, t, v):
-        return self.inner_model.sqrt_alphas_cumprod[t.to(torch.int), None, None, None] * v + self.inner_model.sqrt_one_minus_alphas_cumprod[t.to(torch.int), None, None, None] * x_t
+        return torch.sqrt(self.inner_model.alphas_cumprod)[t.to(torch.int), None, None, None] * v + torch.sqrt(1 - self.inner_model.alphas_cumprod)[t.to(torch.int), None, None, None] * x_t
 
     def forward(self, input, timesteps, **kwargs):
         model_output = self.inner_model.apply_model(input, timesteps, **kwargs)
@@ -50,10 +52,11 @@ class CFGDenoiserTimesteps(CFGDenoiser):
         super().__init__(sampler)
 
         self.alphas = shared.sd_model.alphas_cumprod
-        self.mask_before_denoising = True
+        self.classic_ddim_eps_estimation = True
 
     def get_pred_x0(self, x_in, x_out, sigma):
         ts = sigma.to(dtype=int)
+        self.alphas = self.alphas.to(ts.device)
 
         a_t = self.alphas[ts][:, None, None, None]
         sqrt_one_minus_at = (1 - a_t).sqrt()
@@ -80,6 +83,7 @@ class CompVisSampler(sd_samplers_common.Sampler):
         self.eta_default = 0.0
 
         self.model_wrap_cfg = CFGDenoiserTimesteps(self)
+        self.model_wrap = self.model_wrap_cfg.inner_model
 
     def get_timesteps(self, p, steps):
         discard_next_to_last_sigma = self.config is not None and self.config.options.get('discard_next_to_last_sigma', False)
@@ -94,16 +98,21 @@ class CompVisSampler(sd_samplers_common.Sampler):
         return timesteps
 
     def sample_img2img(self, p, x, noise, conditioning, unconditional_conditioning, steps=None, image_conditioning=None):
+        unet_patcher = self.model_wrap.inner_model.forge_objects.unet
+        sampling_prepare(self.model_wrap.inner_model.forge_objects.unet, x=x)
+
+        self.model_wrap.inner_model.alphas_cumprod = self.model_wrap.inner_model.alphas_cumprod.to(x.device)
+
         steps, t_enc = sd_samplers_common.setup_img2img_steps(p, steps)
 
-        timesteps = self.get_timesteps(p, steps)
+        timesteps = self.get_timesteps(p, steps).to(x.device)
         timesteps_sched = timesteps[:t_enc]
 
         alphas_cumprod = shared.sd_model.alphas_cumprod
         sqrt_alpha_cumprod = torch.sqrt(alphas_cumprod[timesteps[t_enc]])
         sqrt_one_minus_alpha_cumprod = torch.sqrt(1 - alphas_cumprod[timesteps[t_enc]])
 
-        xi = x * sqrt_alpha_cumprod + noise * sqrt_one_minus_alpha_cumprod
+        xi = x.to(noise) * sqrt_alpha_cumprod + noise * sqrt_one_minus_alpha_cumprod
 
         if opts.img2img_extra_noise > 0:
             p.extra_generation_params["Extra noise"] = opts.img2img_extra_noise
@@ -132,14 +141,20 @@ class CompVisSampler(sd_samplers_common.Sampler):
 
         samples = self.launch_sampling(t_enc + 1, lambda: self.func(self.model_wrap_cfg, xi, extra_args=self.sampler_extra_args, disable=False, callback=self.callback_state, **extra_params_kwargs))
 
-        if self.model_wrap_cfg.padded_cond_uncond:
-            p.extra_generation_params["Pad conds"] = True
+        self.add_infotext(p)
+
+        sampling_cleanup(unet_patcher)
 
         return samples
 
     def sample(self, p, x, conditioning, unconditional_conditioning, steps=None, image_conditioning=None):
+        unet_patcher = self.model_wrap.inner_model.forge_objects.unet
+        sampling_prepare(self.model_wrap.inner_model.forge_objects.unet, x=x)
+
+        self.model_wrap.inner_model.alphas_cumprod = self.model_wrap.inner_model.alphas_cumprod.to(x.device)
+
         steps = steps or p.steps
-        timesteps = self.get_timesteps(p, steps)
+        timesteps = self.get_timesteps(p, steps).to(x.device)
 
         extra_params_kwargs = self.initialize(p)
         parameters = inspect.signature(self.func).parameters
@@ -157,8 +172,9 @@ class CompVisSampler(sd_samplers_common.Sampler):
         }
         samples = self.launch_sampling(steps, lambda: self.func(self.model_wrap_cfg, x, extra_args=self.sampler_extra_args, disable=False, callback=self.callback_state, **extra_params_kwargs))
 
-        if self.model_wrap_cfg.padded_cond_uncond:
-            p.extra_generation_params["Pad conds"] = True
+        self.add_infotext(p)
+
+        sampling_cleanup(unet_patcher)
 
         return samples
 

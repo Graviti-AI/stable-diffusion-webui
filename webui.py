@@ -3,15 +3,25 @@ from __future__ import annotations
 import os
 import time
 
-from modules import initialize_util, initialize  # noqa: F401
 from modules.state_holder import make_state_holder
 from modules.launch_utils import startup_timer
+from modules import timer
+from modules import initialize_util
+from modules import initialize
+from threading import Thread
+from modules_forge.initialization import initialize_forge
+from modules_forge import main_thread
+
 
 startup_timer.record("launcher")
+
+initialize_forge()
 
 initialize.imports()
 
 initialize.check_versions()
+
+initialize.initialize()
 
 MAX_ANYIO_WORKER_THREAD = 64
 
@@ -24,11 +34,9 @@ def create_api(app):
     return api
 
 
-def api_only(server_port: int = 0):
+def api_only_worker(server_port: int = 0):
     from fastapi import FastAPI
     from modules.shared_cmd_options import cmd_opts
-
-    initialize.initialize()
 
     app = FastAPI()
     make_state_holder(app)
@@ -45,8 +53,9 @@ def api_only(server_port: int = 0):
     print(f"Startup time: {startup_timer.summary()}.")
     if not server_port:
         server_port = cmd_opts.port if cmd_opts.port else 7861
+
     api.launch(
-        server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1",
+        server_name=initialize_util.gradio_server_name(),
         port=server_port,
         root_path=f"/{cmd_opts.subpath}" if cmd_opts.subpath else ""
     )
@@ -64,13 +73,12 @@ def stop_route(request):
     return Response("Stopping.")
 
 
-def webui(server_port: int = 0):
+def webui_worker(server_port: int = 0):
     from modules.shared_cmd_options import cmd_opts
     from modules import shared
     from fastapi import FastAPI, HTTPException, status
 
     launch_api = cmd_opts.api
-    initialize.initialize()
     if not server_port:
         server_port = cmd_opts.port if cmd_opts.port else 7861
     if shared.state is None:
@@ -214,6 +222,14 @@ def webui(server_port: int = 0):
         if cmd_opts.disable_auto_restart:
             break
 
+def api_only():
+    Thread(target=api_only_worker, daemon=True).start()
+
+
+def webui(server_port: int = 0):
+    Thread(target=webui_worker, args=(server_port,), daemon=True).start()
+
+
 if __name__ == "__main__":
     from modules.shared_cmd_options import cmd_opts
 
@@ -221,3 +237,5 @@ if __name__ == "__main__":
         api_only()
     else:
         webui()
+
+    main_thread.loop()

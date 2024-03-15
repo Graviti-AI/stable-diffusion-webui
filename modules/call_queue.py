@@ -22,7 +22,7 @@ from modules.system_monitor import (
     copy_object_and_replace_images_with_path,
     monitor_call_context,
     generate_function_name)
-from modules import shared, progress, errors, script_callbacks, devices
+from modules import shared, progress, errors, script_callbacks, devices, fifo_lock
 
 from modules import sd_vae
 from modules.timer import Timer
@@ -225,6 +225,13 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
     return res
 
 
+queue_lock = fifo_lock.FIFOLock()
+
+def wrap_queued_call(func):
+    def f(*args, **kwargs):
+        with queue_lock:
+            res = func(*args, **kwargs)
+
 def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
     @functools.wraps(func)
     def f(request: gradio.routes.Request, *args, **kwargs):
@@ -361,6 +368,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
         shared.state.skipped = False
         shared.state.interrupted = False
+        shared.state.stopping_generation = False
         shared.state.job_count = 0
 
         if isinstance(res[-1], str) and task_id:

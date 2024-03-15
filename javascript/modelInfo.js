@@ -388,6 +388,7 @@ async function getAllModelInfo(mode, args) {
             checkpoint_titles.push(
                 ...key_info
                     .values(getArg)
+                    .filter(Boolean)
                     .map((item) => ({ value: item, source: key_info.source })),
             );
         }
@@ -401,6 +402,7 @@ async function getAllModelInfo(mode, args) {
             prompts.push(
                 ...key_info
                     .values(getArg)
+                    .filter(Boolean)
                     .map((item) => ({ value: item.trim(), source: key_info.source }))
                     .filter((item) => item.value),
             );

@@ -4,6 +4,10 @@ import argparse
 import os
 import sys
 import shlex
+from pathlib import Path
+
+
+normalized_filepath = lambda filepath: str(Path(filepath).resolve())
 
 commandline_args = os.environ.get('COMMANDLINE_ARGS', "")
 sys.argv += shlex.split(commandline_args)
@@ -32,5 +36,6 @@ configs_dir = os.path.join(data_path, "configs")
 extensions_dir = os.path.join(script_path, "extensions")
 extensions_builtin_dir = os.path.join(script_path, "extensions-builtin")
 config_states_dir = os.path.join(script_path, "config_states")
+default_output_dir = os.path.join(data_path, "output")
 
 roboto_ttf_file = os.path.join(modules_path, 'Roboto-Regular.ttf')

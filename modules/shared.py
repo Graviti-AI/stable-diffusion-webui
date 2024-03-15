@@ -1,3 +1,4 @@
+import os
 import sys
 
 import gradio as gr
@@ -15,7 +16,7 @@ parser = shared_cmd_options.parser
 
 batch_cond_uncond = True  # old field, unused now in favor of shared.opts.batch_cond_uncond
 parallel_processing_allowed = True
-styles_filename = cmd_opts.styles_file
+styles_filename = cmd_opts.styles_file = cmd_opts.styles_file if len(cmd_opts.styles_file) > 0 else [os.path.join(data_path, 'styles.csv')]
 config_filename = cmd_opts.ui_settings_file
 hide_dirs = {"visible": not cmd_opts.hide_ui_dir_config}
 
@@ -35,7 +36,7 @@ state = None
 
 def prompt_styles(request: gr.Request) -> modules.styles.StyleDatabase:
     filename = Paths(request).styles_filename()
-    return modules.styles.StyleDatabase(filename)
+    return modules.styles.StyleDatabase([filename])
 
 
 def reload_style(request: gr.Request):

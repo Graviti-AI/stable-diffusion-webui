@@ -1,7 +1,4 @@
 import os
-import json
-
-import gradio as gr
 
 from modules import ui_extra_networks, sd_hijack, shared
 from modules.ui_extra_networks import quote_js
@@ -22,7 +19,7 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
             if metadata is not None:
                 self.metadata[embedding.name] = metadata
 
-    def refresh(self, request: gr.Request):
+    def refresh(self, _):
         sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(force_reload=True)
         self.refresh_metadata()
 
@@ -51,7 +48,7 @@ class ExtraNetworksPageTextualInversion(ui_extra_networks.ExtraNetworksPage):
             "shorthash": embedding.shorthash,
             "preview": self.find_preview(path),
             "description": self.find_description(path),
-            "search_term": search_term,
+            "search_terms": [search_term],
             "prompt": quote_js(embedding.name),
             "local_preview": f"{path}.preview.{shared.opts.samples_format}",
             "sort_keys": {'default': index, **self.get_sort_keys(embedding.filename)},

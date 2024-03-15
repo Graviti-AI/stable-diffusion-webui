@@ -41,25 +41,19 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         path, ext = os.path.splitext(lora_on_disk.filename)
 
         alias = lora_on_disk.get_alias()
-        search_term = self.search_terms_from_path(lora_on_disk.filename)
-        metadata = self.metadata.get(name, None)
-        if metadata is not None:
-            search_term = " ".join([
-                search_term,
-                ", ".join(metadata["tags"]),
-                ", ".join(metadata["trigger_word"]),
-                metadata["model_name"],
-                metadata["sha256"]])
 
+        search_terms = [self.search_terms_from_path(lora_on_disk.filename)]
+        if lora_on_disk.hash:
+            search_terms.append(lora_on_disk.hash)
         item = {
             "name": name,
             "filename": lora_on_disk.filename,
             "shorthash": lora_on_disk.shorthash,
             "preview": self.find_preview(path),
             "description": self.find_description(path),
-            "search_term": search_term,
+            "search_terms": search_terms,
             "local_preview": f"{path}.{shared.opts.samples_format}",
-            "metadata": metadata,
+            "metadata": lora_on_disk.metadata,
             "sort_keys": {'default': index, **self.get_sort_keys(lora_on_disk.filename)},
             "sd_version": lora_on_disk.sd_version.name,
         }
@@ -67,12 +61,15 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         self.read_user_metadata(item)
         activation_text = item["user_metadata"].get("activation text")
         preferred_weight = item["user_metadata"].get("preferred weight", 0.0)
-        item["prompt"] = quote_js(f"<lora:{alias}:") + " + " + (
-            str(preferred_weight)
-            if preferred_weight else "opts.extra_networks_default_multiplier") + " + " + quote_js(">")
+        item["prompt"] = quote_js(f"<lora:{alias}:") + " + " + (str(preferred_weight) if preferred_weight else "opts.extra_networks_default_multiplier") + " + " + quote_js(">")
 
         if activation_text:
             item["prompt"] += " + " + quote_js(" " + activation_text)
+
+        negative_prompt = item["user_metadata"].get("negative text")
+        item["negative_prompt"] = quote_js("")
+        if negative_prompt:
+            item["negative_prompt"] = quote_js('(' + negative_prompt + ':1)')
 
         sd_version = item["user_metadata"].get("sd version")
         if sd_version in network.SdVersion.__members__:
@@ -84,9 +81,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         if shared.opts.lora_show_all or not enable_filter:
             pass
         elif sd_version == network.SdVersion.Unknown:
-            model_version = (network.SdVersion.SDXL
-                             if shared.sd_model.is_sdxl else network.SdVersion.SD2
-                             if shared.sd_model.is_sd2 else network.SdVersion.SD1)
+            model_version = network.SdVersion.SDXL if shared.sd_model.is_sdxl else network.SdVersion.SD2 if shared.sd_model.is_sd2 else network.SdVersion.SD1
             if model_version.name in shared.opts.lora_hide_unknown_for_versions:
                 return None
         elif shared.sd_model.is_sdxl and sd_version != network.SdVersion.SDXL:
@@ -107,7 +102,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
                 yield item
 
     def allowed_directories_for_previews(self):
-        return [shared.cmd_opts.lora_dir, shared.cmd_opts.lyco_dir_backcompat]
+        return [shared.cmd_opts.lora_dir]
 
     def create_user_metadata_editor(self, ui, tabname):
         return LoraUserMetadataEditor(ui, tabname, self)

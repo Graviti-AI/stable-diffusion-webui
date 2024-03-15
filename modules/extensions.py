@@ -8,6 +8,7 @@ import re
 from modules import shared, errors, cache, scripts
 from modules.gitpython_hack import Repo
 from modules.paths_internal import extensions_dir, extensions_builtin_dir, script_path  # noqa: F401
+from modules_forge.config import always_disabled_extensions
 
 
 os.makedirs(extensions_dir, exist_ok=True)
@@ -32,11 +33,12 @@ class ExtensionMetadata:
         self.config = configparser.ConfigParser()
 
         filepath = os.path.join(path, self.filename)
-        if os.path.isfile(filepath):
-            try:
-                self.config.read(filepath)
-            except Exception:
-                errors.report(f"Error reading {self.filename} for extension {canonical_name}.", exc_info=True)
+        # `self.config.read()` will quietly swallow OSErrors (which FileNotFoundError is),
+        # so no need to check whether the file exists beforehand.
+        try:
+            self.config.read(filepath)
+        except Exception:
+            errors.report(f"Error reading {self.filename} for extension {canonical_name}.", exc_info=True)
 
         self.canonical_name = self.config.get("Extension", "Name", fallback=canonical_name)
         self.canonical_name = canonical_name.lower().strip()
@@ -217,19 +219,32 @@ def list_extensions():
                 continue
 
             is_builtin = dirname == extensions_builtin_dir
-            extension = Extension(name=extension_dirname, path=path, enabled=extension_dirname not in shared.opts.disabled_extensions, is_builtin=is_builtin, metadata=metadata)
+
+            disabled_extensions = shared.opts.disabled_extensions + always_disabled_extensions
+
+            extension = Extension(
+                name=extension_dirname,
+                path=path,
+                enabled=extension_dirname not in disabled_extensions,
+                is_builtin=is_builtin,
+                metadata=metadata
+            )
+
             extensions.append(extension)
             loaded_extensions[canonical_name] = extension
 
     # check for requirements
     for extension in extensions:
+        if not extension.enabled:
+            continue
+
         for req in extension.metadata.requires:
             required_extension = loaded_extensions.get(req)
             if required_extension is None:
                 errors.report(f'Extension "{extension.name}" requires "{req}" which is not installed.', exc_info=False)
                 continue
 
-            if not extension.enabled:
+            if not required_extension.enabled:
                 errors.report(f'Extension "{extension.name}" requires "{required_extension.name}" which is disabled.', exc_info=False)
                 continue
 

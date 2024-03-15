@@ -1,19 +1,18 @@
+from pathlib import Path
+from modules import errors
 import csv
-import fnmatch
 import os
-import os.path
-import pathlib
-import re
-from typing import NamedTuple, Optional
+import typing
 import shutil
+from collections.abc import MutableMapping, Iterator
 
 from modules.paths_internal import data_path
 
-
-class PromptStyle(NamedTuple):
+class PromptStyle(typing.NamedTuple):
     name: str
-    prompt: str
-    negative_prompt: str
+    prompt: str | None
+    negative_prompt: str | None
+    path: str | None = None
 
 
 def merge_prompts(style_prompt: str, prompt: str) -> str:
@@ -33,38 +32,29 @@ def apply_styles_to_prompt(prompt, styles):
     return prompt
 
 
-def unwrap_style_text_from_prompt(style_text, prompt):
-    """
-    Checks the prompt to see if the style text is wrapped around it. If so,
-    returns True plus the prompt text without the style text. Otherwise, returns
-    False with the original prompt.
+def extract_style_text_from_prompt(style_text, prompt):
+    """This function extracts the text from a given prompt based on a provided style text. It checks if the style text contains the placeholder {prompt} or if it appears at the end of the prompt. If a match is found, it returns True along with the extracted text. Otherwise, it returns False and the original prompt.
 
-    Note that the "cleaned" version of the style text is only used for matching
-    purposes here. It isn't returned; the original style text is not modified.
+    extract_style_text_from_prompt("masterpiece", "1girl, art by greg, masterpiece") outputs (True, "1girl, art by greg")
+    extract_style_text_from_prompt("masterpiece, {prompt}", "masterpiece, 1girl, art by greg") outputs (True, "1girl, art by greg")
+    extract_style_text_from_prompt("masterpiece, {prompt}", "exquisite, 1girl, art by greg") outputs (False, "exquisite, 1girl, art by greg")
     """
-    stripped_prompt = prompt
-    stripped_style_text = style_text
+
+    stripped_prompt = prompt.strip()
+    stripped_style_text = style_text.strip()
+
     if "{prompt}" in stripped_style_text:
-        # Work out whether the prompt is wrapped in the style text. If so, we
-        # return True and the "inner" prompt text that isn't part of the style.
-        try:
-            left, right = stripped_style_text.split("{prompt}", 2)
-        except ValueError as e:
-            # If the style text has multple "{prompt}"s, we can't split it into
-            # two parts. This is an error, but we can't do anything about it.
-            print(f"Unable to compare style text to prompt:\n{style_text}")
-            print(f"Error: {e}")
-            return False, prompt
+        left, right = stripped_style_text.split("{prompt}", 2)
         if stripped_prompt.startswith(left) and stripped_prompt.endswith(right):
-            prompt = stripped_prompt[len(left) : len(stripped_prompt) - len(right)]
+            prompt = stripped_prompt[len(left):len(stripped_prompt)-len(right)]
             return True, prompt
     else:
-        # Work out whether the given prompt ends with the style text. If so, we
-        # return True and the prompt text up to where the style text starts.
         if stripped_prompt.endswith(stripped_style_text):
-            prompt = stripped_prompt[: len(stripped_prompt) - len(stripped_style_text)]
-            if prompt.endswith(", "):
+            prompt = stripped_prompt[:len(stripped_prompt)-len(stripped_style_text)]
+
+            if prompt.endswith(', '):
                 prompt = prompt[:-2]
+
             return True, prompt
 
     return False, prompt
@@ -79,73 +69,150 @@ def extract_original_prompts(style: PromptStyle, prompt, negative_prompt):
     if not style.prompt and not style.negative_prompt:
         return False, prompt, negative_prompt
 
-    match_positive, extracted_positive = unwrap_style_text_from_prompt(
-        style.prompt, prompt
-    )
+    match_positive, extracted_positive = extract_style_text_from_prompt(style.prompt, prompt)
     if not match_positive:
         return False, prompt, negative_prompt
 
-    match_negative, extracted_negative = unwrap_style_text_from_prompt(
-        style.negative_prompt, negative_prompt
-    )
+    match_negative, extracted_negative = extract_style_text_from_prompt(style.negative_prompt, negative_prompt)
     if not match_negative:
         return False, prompt, negative_prompt
 
     return True, extracted_positive, extracted_negative
 
 
-def _load_styles_from_file(filename):
-    p = pathlib.Path(filename)
-    styles = {}
-    if not p.exists() or p.is_dir():
-        return styles
-    with open(p, "r", encoding="utf-8-sig", newline='') as file:
-        reader = csv.DictReader(file, skipinitialspace=True)
-        for row in reader:
-            # Ignore empty rows or rows starting with a comment
-            if not row or row["name"].startswith("#"):
-                continue
-            # Support loading old CSV format with "name, text"-columns
-            prompt = row["prompt"] if "prompt" in row else row["text"]
-            negative_prompt = row.get("negative_prompt", "")
-            styles[row["name"]] = PromptStyle(row["name"], prompt, negative_prompt)
-    return styles
+class _Styles(MutableMapping[str, PromptStyle]):
+    BUILTIN_STYLES = {}
+
+    def __init__(self) -> None:
+        self._user_styles = {}
+        self._cache = {}
+
+    def _get_styles(self) -> dict[str, PromptStyle]:
+        if not self._cache:
+            self._cache = self._user_styles.copy()
+            for key, value in self.BUILTIN_STYLES.items():
+                if key not in self._user_styles:
+                    self._cache[key] = value
+
+        return self._cache
+
+    def __len__(self) -> int:
+        return len(self._get_styles())
+
+    def __getitem__(self, key: str) -> PromptStyle:
+        return self._get_styles()[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._get_styles())
+
+    def __setitem__(self, key: str, value: PromptStyle) -> None:
+        self._user_styles[key] = value
+        self._cache = {}
+
+    def __delitem__(self, key: str) -> None:
+        if key not in self._user_styles and key in self.BUILTIN_STYLES:
+            return
+
+        del self._user_styles[key]
+        self._cache = {}
+
+    def clear(self) -> None:
+        self._user_styles.clear()
+        self._cache = {}
+
+    def get_styles(self, skip_builtin: bool = False):
+        if skip_builtin:
+            return self._user_styles
+
+        return self._get_styles()
 
 
 class StyleDatabase:
-    built_in_styles = _load_styles_from_file(pathlib.Path(data_path, 'styles.csv'))
+    def __init__(self, paths: list[str | Path]):
+        self.no_style = PromptStyle("None", "", "", None)
+        self.styles = _Styles()
+        self.paths = paths
+        self.all_styles_files: list[Path] = []
 
-    def __init__(self, path: str):
-        self.no_style = PromptStyle("None", "", "")
-        self._user_styles = {}
-        self._styles = {}
-        self.path = path
-
-        folder, file = os.path.split(self.path)
-        filename, _, ext = file.partition('*')
-        self.default_path = os.path.join(folder, filename + ext)
+        folder, file = os.path.split(self.paths[0])
+        if '*' in file or '?' in file:
+            # if the first path is a wildcard pattern, find the first match else use "folder/styles.csv" as the default path
+            self.default_path = next(Path(folder).glob(file), Path(os.path.join(folder, 'styles.csv')))
+            self.paths.insert(0, self.default_path)
+        else:
+            self.default_path = Path(self.paths[0])
 
         self.prompt_fields = [field for field in PromptStyle._fields if field != "path"]
 
         self.reload()
 
-    @property
-    def styles(self):
-        if not self._styles:
-            self._styles.update(self._user_styles)
-            for k, v in self.built_in_styles.items():
-                if k not in self._user_styles:
-                    self._styles[k] = v
-        return self._styles
-
-    def get_styles(self, skip_built_in: bool = False):
-        if skip_built_in:
-            return self._user_styles
-        else:
-            return self.styles
-
     def reload(self):
-        self._user_styles = _load_styles_from_file(self.path)
+        """
+        Clears the style database and reloads the styles from the CSV file(s)
+        matching the path used to initialize the database.
+        """
+        self.styles.clear()
+
+        # scans for all styles files
+        all_styles_files = []
+        for pattern in self.paths:
+            folder, file = os.path.split(pattern)
+            if '*' in file or '?' in file:
+                found_files = Path(folder).glob(file)
+                [all_styles_files.append(file) for file in found_files]
+            else:
+                # if os.path.exists(pattern):
+                all_styles_files.append(Path(pattern))
+
+        # Remove any duplicate entries
+        seen = set()
+        self.all_styles_files = [s for s in all_styles_files if not (s in seen or seen.add(s))]
+
+        for styles_file in self.all_styles_files:
+            if len(all_styles_files) > 1:
+                # add divider when more than styles file
+                # '---------------- STYLES ----------------'
+                divider = f' {styles_file.stem.upper()} '.center(40, '-')
+                self.styles[divider] = PromptStyle(f"{divider}", None, None, "do_not_save")
+            if styles_file.is_file():
+                self.load_from_csv(styles_file)
+
+    def load_from_csv(self, path: str | Path):
+        try:
+            with open(path, "r", encoding="utf-8-sig", newline="") as file:
+                reader = csv.DictReader(file, skipinitialspace=True)
+                for row in reader:
+                    # Ignore empty rows or rows starting with a comment
+                    if not row or row["name"].startswith("#"):
+                        continue
+                    # Support loading old CSV format with "name, text"-columns
+                    prompt = row["prompt"] if "prompt" in row else row["text"]
+                    negative_prompt = row.get("negative_prompt", "")
+                    # Add style to database
+                    self.styles[row["name"]] = PromptStyle(
+                        row["name"], prompt, negative_prompt, str(path)
+                    )
+        except Exception:
+            errors.report(f'Error loading styles from {path}: ', exc_info=True)
+
+    def get_style_paths(self) -> set:
+        """Returns a set of all distinct paths of files that styles are loaded from."""
+        # Update any styles without a path to the default path
+        for style in list(self.styles.values()):
+            if not style.path:
+                self.styles[style.name] = style._replace(path=str(self.default_path))
+
+        # Create a list of all distinct paths, including the default path
+        style_paths = set()
+        style_paths.add(str(self.default_path))
+        for _, style in self.styles.items():
+            if style.path:
+                style_paths.add(style.path)
+
+        # Remove any paths for styles that are just list dividers
+        style_paths.discard("do_not_save")
+
+        return style_paths
 
     def get_style_prompts(self, styles):
         return [self.styles.get(x, self.no_style).prompt for x in styles]
@@ -163,30 +230,30 @@ class StyleDatabase:
             prompt, [self.styles.get(x, self.no_style).negative_prompt for x in styles]
         )
 
-    def save_styles(self, style: PromptStyle | list[PromptStyle] | None = None) -> None:
-        # Always keep a backup file around
-        if os.path.exists(self.path):
-            shutil.copy(self.path, f"{self.path}.bak")
-        if style:
-            if isinstance(style, list):
-                for s in style:
-                    self._user_styles[s.name] = s
-            else:
-                self._user_styles[style.name] = style
-        with open(self.path, 'w', encoding="utf-8-sig", newline='') as file:
-            # _fields is actually part of the public API: typing.NamedTuple is a replacement for collections.NamedTuple,
-            # and collections.NamedTuple has explicit documentation for accessing _fields. Same goes for _asdict()
-            writer = csv.DictWriter(file, fieldnames=PromptStyle._fields)
-            writer.writeheader()
-            writer.writerows(style._asdict() for k, style in self._user_styles.items())
-        self._styles = {}
+    def save_styles(self, path: str = None) -> None:
+        # The path argument is deprecated, but kept for backwards compatibility
 
-    def delete_style(self, name: str) -> Optional[PromptStyle]:
-        if name in self._user_styles:
-            style = self._user_styles.pop(name)
-            self.save_styles()
-            return style
-        return
+        style_paths = self.get_style_paths()
+
+        csv_names = [os.path.split(path)[1].lower() for path in style_paths]
+
+        for style_path in style_paths:
+            # Always keep a backup file around
+            if os.path.exists(style_path):
+                shutil.copy(style_path, f"{style_path}.bak")
+
+            # Write the styles to the CSV file
+            with open(style_path, "w", encoding="utf-8-sig", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=self.prompt_fields)
+                writer.writeheader()
+                for style in (s for s in self.styles.values() if s.path == style_path):
+                    # Skip style list dividers, e.g. "STYLES.CSV"
+                    if style.name.lower().strip("# ") in csv_names:
+                        continue
+                    # Write style fields, ignoring the path field
+                    writer.writerow(
+                        {k: v for k, v in style._asdict().items() if k != "path"}
+                    )
 
     def extract_styles_from_prompt(self, prompt, negative_prompt):
         extracted = []
@@ -213,3 +280,6 @@ class StyleDatabase:
             extracted.append(found_style.name)
 
         return list(reversed(extracted)), prompt, negative_prompt
+
+
+_Styles.BUILTIN_STYLES = StyleDatabase([Path(data_path, 'styles.csv')]).styles.get_styles()

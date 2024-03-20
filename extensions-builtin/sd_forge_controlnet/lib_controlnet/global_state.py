@@ -134,6 +134,8 @@ def update_controlnet_filenames():
 
 
 def get_sd_version() -> StableDiffusionVersion:
+    return StableDiffusionVersion.UNKNOWN
+
     if not shared.sd_model:
         return StableDiffusionVersion.UNKNOWN
     if shared.sd_model.is_sdxl:

@@ -28,13 +28,20 @@ const fetchDelete = (url, data = {}) => {
     }
 }
 
-const fetchGet = (url) => {
+const fetchGet = (url, params) => {
     try {
-        return fetch(url, {
-            method: 'GET', 
+        let queryParams = {
+            method: 'GET',
             credentials: "include",
             cache: "no-cache"
-        })
+        };
+        if (params) {
+            queryParams = {
+                ...queryParams,
+                ...params
+            }
+        }
+        return fetch(url, queryParams)
     } catch(e) {
         return new Promise.reject(e);
     }

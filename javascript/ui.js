@@ -995,10 +995,29 @@ function getSubscribers(interval = 10, timeoutId = null)
     });
 }
 
+function requestRefreshPage(timeoutId) {
+    let onRefresh = () => {location.reload();};
+    if (timeoutId)
+    {
+        clearTimeout(timeoutId);
+    }
+    notifier.confirm(
+        'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
+        onRefresh,
+        false,
+        {
+            labels: {
+            confirm: 'Page Need Refresh'
+            }
+        }
+    );
+}
+
 async function checkSignatureCompatibility(timeoutId = null)
 {
-    const txt2imgSignaturePromise = fetchGet("/internal/signature/txt2img");
-    const img2imgSignaturePromise = fetchGet("/internal/signature/img2img");
+    const currentDomain = window.location.hostname;
+    const txt2imgSignaturePromise = fetchGet("/internal/signature/txt2img", {mode: "cors"});
+    const img2imgSignaturePromise = fetchGet("/internal/signature/img2img", {mode: "cors"});
 
     const currentTxt2imgSignature = gradioApp().querySelector("#txt2img_signature textarea").value;
     const currentTxt2imgFnIndex = gradioApp().querySelector("#txt2img_function_index textarea").value;
@@ -1009,31 +1028,26 @@ async function checkSignatureCompatibility(timeoutId = null)
 
     txt2imgSignaturePromise
     .then(response => {
-        if (response.status === 200) {
-            return response.json();
+        const redirectUrl = new URL(response.url);
+        const redirectDomain = redirectUrl.hostname;
+        if (currentDomain !== redirectDomain) {
+            needRefresh = true;
+            requestRefreshPage(timeoutId);
+            console.log('Redirected to a new domain:', redirectDomain);
+            return Promise.reject(response);
+        } else {
+            if (response.status === 200) {
+                return response.json();
+            }
+            return Promise.reject(response);
         }
-        return Promise.reject(response);
     })
     .then((txt2imgSignature) => {
         if (txt2imgSignature && txt2imgSignature.signature && txt2imgSignature.fn_index) {
             if ((txt2imgSignature.signature != currentTxt2imgSignature || txt2imgSignature.fn_index != currentTxt2imgFnIndex) && !needRefresh)
             {
-                let onRefresh = () => {location.reload();};
                 needRefresh = true;
-                if (timeoutId)
-                {
-                    clearTimeout(timeoutId);
-                }
-               notifier.confirm(
-                   'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
-                   onRefresh,
-                   false,
-                   {
-                       labels: {
-                       confirm: 'Page Need Refresh'
-                       }
-                   }
-               );
+                requestRefreshPage(timeoutId);
             }
         }
     })

@@ -232,7 +232,7 @@ class ControlNetUiGroup(object):
 
         ControlNetUiGroup.all_ui_groups.append(self)
 
-    def render(self, tabname: str, elem_id_tabname: str) -> None:
+    def render(self, tabname: str, elem_id_tabname: str) -> tuple:
         """The pure HTML structure of a single ControlNetUnit. Calling this
         function will populate `self` with all gradio element declared
         in local scope.
@@ -619,6 +619,10 @@ class ControlNetUiGroup(object):
             self.pixel_perfect,
             self.control_mode,
         )
+
+        self.register_core_callbacks()
+        self.ui_initialized = True
+        return unit_args
 
         unit = gr.State(self.default_unit)
         for comp in unit_args + (self.dummy_gradio_update_trigger,):

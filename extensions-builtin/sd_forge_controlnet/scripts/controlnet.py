@@ -68,6 +68,7 @@ class ControlNetForForgeOfficial(scripts.Script):
         infotext = Infotext()
         ui_groups = []
         controls = []
+        unit_args_len = []
         max_models = shared.opts.data.get("control_net_unit_count", 3)
         gen_type = "img2img" if is_img2img else "txt2img"
         elem_id_tabname = gen_type + "_controlnet"
@@ -89,23 +90,32 @@ class ControlNetForForgeOfficial(scripts.Script):
                         ):
                             group = ControlNetUiGroup(is_img2img, default_unit, photopea)
                             ui_groups.append(group)
-                            controls.append(group.render(f"ControlNet-{i}", elem_id_tabname))
+                            components = group.render(f"ControlNet-{i}", elem_id_tabname)
+                            controls.extend(components)
+                            unit_args_len.append(len(components))
 
         for i, ui_group in enumerate(ui_groups):
             infotext.register_unit(i, ui_group)
         if shared.opts.data.get("control_net_sync_field_args", True):
             self.infotext_fields = infotext.infotext_fields
             self.paste_field_names = infotext.paste_field_names
+
+        self.unit_args_len = unit_args_len
         return tuple(controls)
 
-    def get_enabled_units(self, units):
-        # Parse dict from API calls.
-        units = [
-            ControlNetUnit.from_dict(unit) if isinstance(unit, dict) else unit
-            for unit in units
-        ]
-        assert all(isinstance(unit, ControlNetUnit) for unit in units)
-        enabled_units = [x for x in units if x.enabled]
+    def get_enabled_units(self, p):
+        if not hasattr(p, "_control_net_units"):
+            args = p.script_args[self.args_from : self.args_to]
+            units = []
+            offset = 0
+            for args_len in self.unit_args_len:
+                unit_args = args[offset: offset + args_len]
+                units.append(ControlNetUnit(*unit_args))
+                offset += args_len
+
+            p._control_net_units = units
+
+        enabled_units = [x for x in p._control_net_units if x.enabled]
         return enabled_units
 
     @staticmethod
@@ -540,7 +550,7 @@ class ControlNetForForgeOfficial(scripts.Script):
     @torch.no_grad()
     def process(self, p, *args, **kwargs):
         self.current_params = {}
-        enabled_units = self.get_enabled_units(args)
+        enabled_units = self.get_enabled_units(p)
         Infotext.write_infotext(enabled_units, p)
         for i, unit in enumerate(enabled_units):
             self.bound_check_params(unit)
@@ -551,13 +561,13 @@ class ControlNetForForgeOfficial(scripts.Script):
 
     @torch.no_grad()
     def process_before_every_sampling(self, p, *args, **kwargs):
-        for i, unit in enumerate(self.get_enabled_units(args)):
+        for i, unit in enumerate(self.get_enabled_units(p)):
             self.process_unit_before_every_sampling(p, unit, self.current_params[i], *args, **kwargs)
         return
 
     @torch.no_grad()
     def postprocess_batch_list(self, p, pp, *args, **kwargs):
-        for i, unit in enumerate(self.get_enabled_units(args)):
+        for i, unit in enumerate(self.get_enabled_units(p)):
             self.process_unit_after_every_sampling(p, unit, self.current_params[i], pp, *args, **kwargs)
         return
 

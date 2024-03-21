@@ -290,11 +290,7 @@ function addGenerateGtagEvent(selector, itemName) {
     reportSpendCreditsEvent(itemName, credits);
 }
 
-async function submit() {
-    addGenerateGtagEvent("#txt2img_generate > span", "txt2img_generation_button");
-    await tierCheckGenerate("txt2img");
-    checkSignatureCompatibility();
-
+async function _submit() {
     var res = create_submit_args(arguments);
     const [index, all_model_info] = await getAllModelInfo("txt2img", res);
 
@@ -315,8 +311,16 @@ async function submit() {
     return res;
 }
 
+async function submit() {
+    addGenerateGtagEvent("#txt2img_generate > span", "txt2img_generation_button");
+    await tierCheckGenerate("txt2img");
+    checkSignatureCompatibility();
+
+    return _submit(...arguments)
+}
+
 function submit_txt2img_upscale() {
-    var res = submit(...arguments);
+    var res = _submit(...arguments);
 
     res[2] = selected_gallery_index();
 

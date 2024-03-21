@@ -100,7 +100,7 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery, gallery_index, g
     image_info = gallery[gallery_index] if 0 <= gallery_index < len(gallery) else gallery[0]
     p.firstpass_image = infotext_utils.image_from_url_text(image_info)
 
-    parameters = parse_generation_parameters(geninfo.get('infotexts')[gallery_index], [])
+    parameters = parse_generation_parameters(geninfo.get('infotexts')[gallery_index], [], request=request)
     p.seed = parameters.get('Seed', -1)
     p.subseed = parameters.get('Variation seed', -1)
 
@@ -109,14 +109,14 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery, gallery_index, g
     with closing(p):
         with monitor_call_context(
             request,
-            generate_function_name(txt2img),
-            generate_function_name(txt2img),
+            generate_function_name(txt2img_upscale),
+            generate_function_name(txt2img_upscale),
             decoded_params=processing.build_decoded_params_from_processing(p)
         ):
             processed = modules.scripts.scripts_txt2img.run(p, *p.script_args)
 
-        if processed is None:
-            processed = processing.process_images(p)
+            if processed is None:
+                processed = processing.process_images(p)
 
     shared.total_tqdm.clear()
 

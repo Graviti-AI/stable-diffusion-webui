@@ -297,15 +297,18 @@ def create_override_settings_dropdown(tabname, row):
 
 def build_function_signature(
         func: Callable,
-        script_runner: scripts.ScriptRunner,
+        script_runner: scripts.ScriptRunner | None = None,
         extras: Optional[list] = None,
         start_from: int = 0):
     signature_args = inspect.getfullargspec(func)[0][start_from:]  # remove the first 'request'
     default_length = len(signature_args)
     default_values = list()
-    alwayson_scripts: list[scripts.Script] = script_runner.alwayson_scripts
-    selectable_scripts: list[scripts.Script] = script_runner.selectable_scripts
-    for extension_script in alwayson_scripts + selectable_scripts:
+    if script_runner is None:
+        extension_scripts = []
+    else:
+        extension_scripts = script_runner.alwayson_scripts + script_runner.selectable_scripts
+
+    for extension_script in extension_scripts:
         extension_name = extension_script.title()
         if extension_name is None:
             script_name_concat = extension_script.filename
@@ -333,7 +336,8 @@ def build_function_signature(
     if extras:
         signature_args += extras
         default_values += ["" for _ in range(len(extras))]
-    signature_args[default_length] = "Script:script_list:"
+    if len(signature_args) > default_length:
+        signature_args[default_length] = "Script:script_list:"
     return signature_args, default_values
 
 
@@ -357,6 +361,9 @@ txt2img_signature_args: list = list()
 txt2img_suffix_outputs: list = list()
 txt2img_params_default_values: list = list()
 txt2img_function_index: int | None = None
+
+txt2img_upscale_signature_args: list = list()
+
 img2img_signature_args: list = list()
 img2img_suffix_outputs: list = list()
 img2img_params_default_values: list = list()
@@ -381,12 +388,14 @@ def create_ui():
         need_upgrade = gr.Textbox(
             value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
         txt2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_signature")
+        txt2img_upscale_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_upscale_signature")
         txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
         txt2img_model_title = toprow.model_title
         txt2img_prompt_styles = toprow.ui_styles.dropdown
         txt2img_prompt_selections = toprow.ui_styles.selection
 
         dummy_component = gr.Label(visible=False)
+        dummy_gallery_index = gr.Number(visible=False, precision=0)
 
         extra_tabs = gr.Tabs(elem_id="txt2img_extra_tabs", elem_classes=["extra-networks"])
         extra_tabs.__enter__()
@@ -626,10 +635,22 @@ def create_ui():
             toprow.submit.click(**txt2img_args)
             txt2img_gradio_function = txt2img_interface.fns[-1]
 
+            global txt2img_upscale_signature_args
+            txt2img_upscale_signature_args, _ = build_function_signature(
+                modules.txt2img.txt2img_upscale,
+                start_from=1, # Start from 1 to remove request
+            )
+            txt2img_upscale_signature_args += txt2img_signature_args[1:]
+
             output_panel.button_upscale.click(
-                fn=wrap_gradio_gpu_call(modules.txt2img.txt2img_upscale, extra_outputs=[None, '', '']),
+                fn=wrap_gradio_gpu_call(
+                    modules.txt2img.txt2img_upscale,
+                    func_name='txt2img_upscale',
+                    extra_outputs=[None, '', ''],
+                    add_monitor_state=True,
+                ),
                 _js="submit_txt2img_upscale",
-                inputs=txt2img_inputs[0:1] + [output_panel.gallery, dummy_component, output_panel.generation_info] + txt2img_inputs[1:],
+                inputs=txt2img_inputs[0:1] + [output_panel.gallery, dummy_gallery_index, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature],
                 outputs=txt2img_outputs,
                 show_progress=False,
             )
@@ -1635,6 +1656,8 @@ def create_ui():
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])
+        demo.load(
+            fn=lambda: return_signature_str_from_list(txt2img_upscale_signature_args), inputs=None, outputs=[txt2img_upscale_signature])
         demo.load(
             fn=lambda: return_signature_str_from_list(img2img_signature_args), inputs=None, outputs=[img2img_signature])
 

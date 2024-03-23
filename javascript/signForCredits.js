@@ -63,7 +63,7 @@ class SignForCredits {
           // show check-in button for graviti.com
           if (channelResult) {
             const { name } = channelResult;
-            if (name !== 'graviti.com') return;
+            if (name !== 'diffus.me') return;
           }
           signNode.title = 'Unlock up to 900 free credits per month';
           imgNode.src = '/public/image/calendar.png';

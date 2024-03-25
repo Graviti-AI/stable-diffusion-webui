@@ -5,7 +5,7 @@ A huge thank you to [AUTOMATIC1111](https://github.com/AUTOMATIC1111) and all th
 We love the Stable Diffusion Web UI, however, using it can be challenging, particularly for those without extensive coding experience.
 Even for software engineers like ourselves, we frequently encounter various Python exceptions when running the code, leaving us puzzled as we search for workarounds and solutions.
 Additionally, not everyone has access to powerful GPUs, let alone setting up a GPU machine in the cloud.
-To make this incredible tool more accessible, we've created a hosting service, [Graviti Diffus](https://www.diffus.graviti.com/?utm_source=Github&utm_medium=social&utm_campaign=github_readme), which allows users to prompt and generate images from any location and on any device.
+To make this incredible tool more accessible, we've created a hosting service, [Graviti Diffus](https://www.diffus.me/?utm_source=Github&utm_medium=social&utm_campaign=github_readme), which allows users to prompt and generate images from any location and on any device.
 
 To achieve this, we've extensively modified the code base to accommodate multiple users simultaneously. We've addressed some of the most significant issues in the original code, including:
 
@@ -14,7 +14,7 @@ To achieve this, we've extensively modified the code base to accommodate multipl
 - **Model uploads**: Users no longer need to manually copy models to the appropriate location. Instead, we've added upload buttons to simplify the process.
 
 We've made numerous smaller fixes throughout the code to enhance the user experience and ensure a stable service. We hope you enjoy the improvements we've made.
-Feel free to test the code here, or for a hassle-free experience, try our [hosted service](https://www.diffus.graviti.com/?utm_source=Github&utm_medium=social&utm_campaign=github_readme).
+Feel free to test the code here, or for a hassle-free experience, try our [hosted service](https://www.diffus.me/?utm_source=Github&utm_medium=social&utm_campaign=github_readme).
 
 
 # Stable Diffusion web UI

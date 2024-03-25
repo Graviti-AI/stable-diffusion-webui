@@ -8,6 +8,8 @@ from modules import script_callbacks
 from modules.paths import models_path
 from modules.ui_common import ToolButton, refresh_symbol
 from modules.ui_components import ResizeHandleRow 
+from modules.system_monitor import monitor_call_context
+from modules.call_queue import wrap_gradio_gpu_call
 from modules import shared
 
 from modules_forge.forge_util import numpy_to_pytorch, pytorch_to_numpy, write_images_to_mp4
@@ -34,6 +36,56 @@ def update_svd_filenames():
     ]
     return svd_filenames
 
+
+def predict_wrapper(
+    request: gr.Request,
+    id_task: str,
+    filename,
+    width,
+    height,
+    video_frames,
+    motion_bucket_id,
+    fps,
+    augmentation_level,
+    sampling_seed,
+    sampling_steps,
+    sampling_cfg,
+    sampling_sampler_name,
+    sampling_scheduler,
+    sampling_denoise,
+    guidance_min_cfg,
+    input_image,
+):
+    with monitor_call_context(
+        request,
+        "extensions.svd",
+        "extensions.svd",
+        decoded_params={
+            "width": width,
+            "height": height,
+            "steps": sampling_steps,
+            "frames": video_frames,
+            "coefficient": 2,
+        },
+        only_available_for=["plus", "pro", "api"],
+    ):
+        return predict(
+            filename,
+            width,
+            height,
+            video_frames,
+            motion_bucket_id,
+            fps,
+            augmentation_level,
+            sampling_seed,
+            sampling_steps,
+            sampling_cfg,
+            sampling_sampler_name,
+            sampling_scheduler,
+            sampling_denoise,
+            guidance_min_cfg,
+            input_image,
+        ) + ("",)
 
 @torch.inference_mode()
 @torch.no_grad()
@@ -64,7 +116,7 @@ def on_ui_tabs():
             with gr.Column():
                 input_image = gr.Image(label='Input Image', source='upload', type='numpy', height=400)
 
-                generate_button = gr.Button(value="Generate", variant="primary")
+                generate_button = gr.Button(value="Generate", variant="primary", elem_id="svd_generate_button")
 
                 with gr.Row():
                     filename = gr.Dropdown(label="SVD Checkpoint Filename",
@@ -98,16 +150,41 @@ def on_ui_tabs():
                                                        'ddim_uniform'], value='karras')
                 sampling_seed = gr.Number(label='Seed', value=12345, precision=0)
 
-                ctrls = [filename, width, height, video_frames, motion_bucket_id, fps, augmentation_level,
+                id_task = gr.Label(visible=False)
+                html_log = gr.HTML(visible=False)
+
+                ctrls = [id_task, filename, width, height, video_frames, motion_bucket_id, fps, augmentation_level,
                          sampling_seed, sampling_steps, sampling_cfg, sampling_sampler_name, sampling_scheduler,
                          sampling_denoise, guidance_min_cfg, input_image]
+
+                def _resolution_updater(param_name: str) -> str:
+                    return f"monitorThisParam('svd_interface', 'extensions.svd', '{param_name}')"
+
+                width.change(None, inputs=[], outputs=[width], _js=_resolution_updater("width"))
+                height.change(None, inputs=[], outputs=[height], _js=_resolution_updater("height"))
+                sampling_steps.change(None, inputs=[], outputs=[sampling_steps], _js=_resolution_updater("steps"))
+                video_frames.change(None, inputs=[], outputs=[video_frames], _js=_resolution_updater("frames"))
+
+                need_upgrade_elem_id = "svd_upgrade_checkbox"
+                need_upgrade = gr.Textbox(value="", interactive=False, visible=False, elem_id=need_upgrade_elem_id)
+                need_upgrade.change(None, [need_upgrade], None, _js=f"redirect_to_payment_factory('{need_upgrade_elem_id}')")
 
             with gr.Column():
                 output_video = gr.Video(autoplay=True, interactive=False)
                 output_gallery = gr.Gallery(label='Gallery', show_label=False, object_fit='contain',
                                             visible=True, height=1024, columns=4)
 
-        generate_button.click(predict, inputs=ctrls, outputs=[output_gallery, output_video])
+        generate_button.click(
+            wrap_gradio_gpu_call(
+                predict_wrapper,
+                func_name='txt2img_upscale',
+                extra_outputs=[None, None],
+                add_monitor_state=True,
+            ),
+            inputs=ctrls,
+            outputs=[output_gallery, output_video, html_log, need_upgrade],
+            _js="submit_svd_task",
+        )
         PasteField = parameters_copypaste.PasteField
         paste_fields = [
             PasteField(width, "Size-1", api="width"),

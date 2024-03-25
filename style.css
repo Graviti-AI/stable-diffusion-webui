@@ -1237,9 +1237,12 @@ footer {
     z-index: 10000;
 }
 
-.extra-network-pane .card:hover .metadata-button, .extra-network-cards .card:hover .operation-button, .extra-network-thumbs .card:hover .metadata-button{
+.extra-network-pane .card:hover .metadata-button,
+.extra-network-pane .card:hover .operation-button,
+.extra-network-thumbs .card:hover .metadata-button{
     display: inline-block;
 }
+
 .extra-network-pane .card .metadata-button:hover, .extra-network-thumbs .card .metadata-button:hover{
     background-image: url('/components/icons/info_icon.svg');
 }

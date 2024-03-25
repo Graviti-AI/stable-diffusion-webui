@@ -64,6 +64,8 @@ def on_ui_tabs():
             with gr.Column():
                 input_image = gr.Image(label='Input Image', source='upload', type='numpy', height=400)
 
+                generate_button = gr.Button(value="Generate", variant="primary")
+
                 with gr.Row():
                     filename = gr.Dropdown(label="SVD Checkpoint Filename",
                                            choices=svd_filenames,
@@ -80,7 +82,7 @@ def on_ui_tabs():
                 fps = gr.Slider(label='Fps', minimum=1, maximum=1024, step=1, value=6)
                 augmentation_level = gr.Slider(label='Augmentation Level', minimum=0.0, maximum=10.0, step=0.01,
                                                value=0.0)
-                sampling_steps = gr.Slider(label='Sampling Steps', minimum=1, maximum=200, step=1, value=20)
+                sampling_steps = gr.Slider(label='Sampling Steps', minimum=1, maximum=50, step=1, value=20)
                 sampling_cfg = gr.Slider(label='CFG Scale', minimum=0.0, maximum=50.0, step=0.1, value=2.5)
                 sampling_denoise = gr.Slider(label='Sampling Denoise', minimum=0.0, maximum=1.0, step=0.01, value=1.0)
                 guidance_min_cfg = gr.Slider(label='Guidance Min Cfg', minimum=0.0, maximum=100.0, step=0.5, value=1.0)
@@ -96,14 +98,12 @@ def on_ui_tabs():
                                                        'ddim_uniform'], value='karras')
                 sampling_seed = gr.Number(label='Seed', value=12345, precision=0)
 
-                generate_button = gr.Button(value="Generate")
-
                 ctrls = [filename, width, height, video_frames, motion_bucket_id, fps, augmentation_level,
                          sampling_seed, sampling_steps, sampling_cfg, sampling_sampler_name, sampling_scheduler,
                          sampling_denoise, guidance_min_cfg, input_image]
 
             with gr.Column():
-                output_video = gr.Video(autoplay=True)
+                output_video = gr.Video(autoplay=True, interactive=False)
                 output_gallery = gr.Gallery(label='Gallery', show_label=False, object_fit='contain',
                                             visible=True, height=1024, columns=4)
 

@@ -27,9 +27,9 @@ class ChannelInfo {
     const signBtn = gradioApp().querySelector('#sign');
     const { name } = channelInfo;
     // hide sign button if channel is not graviti.
-    if (hasSingPermission && signBtn && name !== 'graviti.com') {
-      signBtn.style.display = 'none';
-    }
+    //if (hasSingPermission && signBtn && name !== 'diffus.me') {
+    //  signBtn.style.display = 'none';
+    //}
   }
 
   changeDiscordIcon(channelInfo) {

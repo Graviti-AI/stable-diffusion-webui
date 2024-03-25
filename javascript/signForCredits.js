@@ -60,10 +60,10 @@ class SignForCredits {
         //     }
         // }
         if (!has_signed_today) {
-          // show check-in button for graviti.com
+          // show check-in button for diffus.me
           if (channelResult) {
             const { name } = channelResult;
-            if (name !== 'graviti.com') return;
+            // if (name !== 'diffus.me') return;
           }
           signNode.title = 'Unlock up to 900 free credits per month';
           imgNode.src = '/public/image/calendar.png';

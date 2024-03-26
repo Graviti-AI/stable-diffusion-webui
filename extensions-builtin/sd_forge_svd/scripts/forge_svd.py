@@ -2,6 +2,7 @@ import torch
 import gradio as gr
 import os
 import pathlib
+import datetime
 
 import modules.infotext_utils as parameters_copypaste
 from modules import script_callbacks
@@ -10,6 +11,7 @@ from modules.ui_common import ToolButton, refresh_symbol
 from modules.ui_components import ResizeHandleRow 
 from modules.system_monitor import monitor_call_context
 from modules.call_queue import wrap_gradio_gpu_call
+from modules.paths import Paths
 from modules import shared
 
 from modules_forge.forge_util import numpy_to_pytorch, pytorch_to_numpy, write_images_to_mp4
@@ -70,6 +72,7 @@ def predict_wrapper(
         only_available_for=["plus", "pro", "api"],
     ):
         return predict(
+            request,
             filename,
             width,
             height,
@@ -89,7 +92,7 @@ def predict_wrapper(
 
 @torch.inference_mode()
 @torch.no_grad()
-def predict(filename, width, height, video_frames, motion_bucket_id, fps, augmentation_level,
+def predict(request: gr.Request, filename, width, height, video_frames, motion_bucket_id, fps, augmentation_level,
             sampling_seed, sampling_steps, sampling_cfg, sampling_sampler_name, sampling_scheduler,
             sampling_denoise, guidance_min_cfg, input_image):
     filename = os.path.join(svd_root, filename)
@@ -105,7 +108,11 @@ def predict(filename, width, height, video_frames, motion_bucket_id, fps, augmen
     output_pixels = opVAEDecode.decode(vae, output_latent)[0]
     outputs = pytorch_to_numpy(output_pixels)
 
-    video_filename = write_images_to_mp4(outputs, fps=fps)
+    date = datetime.datetime.now().strftime('%Y-%m-%d')
+    output_dir = Paths(request).private_outdir() / "svd" / date
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    video_filename = write_images_to_mp4(outputs, output_dir=output_dir, fps=fps)
 
     return outputs, video_filename
 

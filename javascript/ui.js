@@ -91,7 +91,7 @@ function switch_to_extras() {
 }
 
 function switch_to_svd() {
-    gradioApp().querySelector('#tabs').querySelectorAll('button')[6].click();
+    switchToTab("tab_svd");
     return Array.from(arguments);
 }
 

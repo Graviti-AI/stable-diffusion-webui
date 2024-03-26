@@ -7,10 +7,9 @@ from modules.ui_components import ResizeHandleRow
 def create_ui():
     dummy_component = gr.Label(visible=False)
     tab_index = gr.Number(value=0, visible=False)
+    need_upgrade = gr.Textbox(value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
 
     with ResizeHandleRow(equal_height=False, variant='compact'):
-        need_upgrade = gr.Textbox(
-            value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
         with gr.Column(variant='compact'):
             with gr.Tabs(elem_id="mode_extras"):
                 with gr.TabItem('Single Image', id="single_image", elem_id="extras_single_tab") as tab_single:

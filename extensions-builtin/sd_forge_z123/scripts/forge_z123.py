@@ -97,5 +97,5 @@ def on_ui_tabs():
     return [(model_block, "Z123", "z123")]
 
 
-update_model_filenames()
-script_callbacks.on_ui_tabs(on_ui_tabs)
+# update_model_filenames()
+# script_callbacks.on_ui_tabs(on_ui_tabs)

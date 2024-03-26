@@ -15,6 +15,7 @@ class NeverOOMForForge(scripts.Script):
         return "Never OOM Integrated"
 
     def show(self, is_img2img):
+        return False
         return scripts.AlwaysVisible
 
     def ui(self, *args, **kwargs):

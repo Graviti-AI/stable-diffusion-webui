@@ -83,12 +83,12 @@ def connect_reuse_seed(seed: gr.Number, reuse_seed: gr.Button, generation_info: 
         (sub)seed value from generation info the to the seed field. If copying subseed and subseed strength
         was 0, i.e. no variation seed was used, it copies the normal seed value instead."""
 
-    def copy_seed(gen_info_string: str, index):
+    def copy_seed(request: gr.Request, gen_info_string: str, index):
         res = -1
         try:
             gen_info = json.loads(gen_info_string)
             infotext = gen_info.get('infotexts')[index]
-            gen_parameters = infotext_utils.parse_generation_parameters(infotext, [])
+            gen_parameters = infotext_utils.parse_generation_parameters(infotext, [], request=request)
             res = int(gen_parameters.get('Variation seed' if is_subseed else 'Seed', -1))
         except Exception:
             if gen_info_string:

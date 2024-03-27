@@ -270,9 +270,10 @@ function _buildModelTree(models) {
         embedding: {},
         hypernetwork: {},
         lora: {},
+        lycoris: {},
     };
     for (let model of models) {
-        const model_type = model.model_type === "lycoris" ? "lora" : model.model_type;
+        const model_type = model.model_type;
         const key =
             model_type === "checkpoint"
                 ? `${model.name} [${model.sha256.slice(0, 10)}]`
@@ -311,10 +312,7 @@ function _findExtraNetworkModelKeys(prompts) {
             keys.push({ value: key, source: prompt.source });
         }
     }
-    return {
-        lora: [...network_keys.lora, ...network_keys.lyco],
-        hypernetwork: network_keys.hypernet,
-    };
+    return network_keys;
 }
 
 function _findEmbeddingModels(model_tree, prompts) {
@@ -355,7 +353,8 @@ function _getAllModelInfo(checkpoint_titles, prompts, network_keys, model_tree) 
     const all_keys = {
         checkpoint: checkpoint_titles,
         lora: network_keys.lora,
-        hypernetwork: network_keys.hypernetwork,
+        lycoris: network_keys.lyco,
+        hypernetwork: network_keys.hypernet,
     };
     const all_model_info = [];
 
@@ -412,8 +411,9 @@ async function getAllModelInfo(mode, args) {
     const network_keys = _findExtraNetworkModelKeys(prompts);
     const all_model_names = {
         checkpoint: checkpoint_titles.map((item) => _getStem(_getValue(item).split(" [")[0])),
-        hypernetwork: network_keys.hypernetwork.map(_getValue),
+        hypernetwork: network_keys.hypernet.map(_getValue),
         lora: network_keys.lora.map(_getValue),
+        lycoris: network_keys.lyco.map(_getValue),
     };
 
     try {

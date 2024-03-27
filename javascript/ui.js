@@ -790,8 +790,8 @@ async function getModelFromUrl() {
         "t": "textual_inversion",
         "hn": "hypernetworks",
         "h": "hypernetworks",
-        "lycoris": "lora",
-        "y": "lora",
+        "lycoris": "lycoris",
+        "y": "lycoris",
     }
 
     const promiseList = [];

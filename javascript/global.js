@@ -6,18 +6,21 @@ let galleryModelTotalPage = {
     lora: 1,
     hypernetworks: 1,
     textual_inversion: 1,
+    lycoris: 1,
   },
   public: {
     checkpoints: 1,
     lora: 1,
     hypernetworks: 1,
     textual_inversion: 1,
+    lycoris: 1,
   },
   private: {
     checkpoints: 1,
     lora: 1,
     hypernetworks: 1,
     textual_inversion: 1,
+    lycoris: 1,
   },
 };
 const model_type_mapper = {
@@ -25,6 +28,7 @@ const model_type_mapper = {
   lora: 'lora',
   hypernetworks: 'hypernetwork',
   textual_inversion: 'embedding',
+  lycoris: 'lycoris',
 };
 let currentModelTab = 'img2img';
 
@@ -37,12 +41,13 @@ let gallertModelCurrentPage = {
   lora: 1,
   hypernetworks: 1,
   textual_inversion: 1,
+  lycoris: 'lycoris',
 };
 let gallertModelScrollloads = [];
 let personalTabs = '';
 let publicTabs = '';
 let gallerySearchBtn = null;
-const defaultModelType = ['checkpoints', 'textual_inversion', 'hypernetworks', 'lora'];
+const defaultModelType = ['checkpoints', 'textual_inversion', 'hypernetworks', 'lora', 'lycoris'];
 let searchValue = '';
 let tabSearchValueMap = new Map();
 const isPcScreen = window.innerWidth > 600;

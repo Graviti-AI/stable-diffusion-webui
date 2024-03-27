@@ -31,6 +31,7 @@ function resetParams() {
         'lora': 1,
         'hypernetworks': 1,
         'textual_inversion': 1,
+        'lycoris': 1
     };
 
     galleryModelTotalPage = {
@@ -39,18 +40,21 @@ function resetParams() {
             'lora': 1,
             'hypernetworks': 1,
             'textual_inversion': 1,
+            'lycoris': 1
         },
         public: {
             'checkpoints': 1,
             'lora': 1,
             'hypernetworks': 1,
             'textual_inversion': 1,
+            'lycoris': 1
         },
         private: {
             'checkpoints': 1,
             'lora': 1,
             'hypernetworks': 1,
             'textual_inversion': 1,
+            'lycoris': 1
         }
     }
 }
@@ -201,12 +205,14 @@ function initDomPage() {
                     <li><a checkpoints href="#personal-checkpoints">Checkpoints</a></li>
                     <li><a textual_inversion  href="#personal-textual_inversion">Textual Inversion</a></li>
                     <li><a hypernetworks href="#personal-hypernetworks">Hypernetworks</a></li>
-                    <li><a lora href="#personal-lora">Lora/Lycoris</a></li>
+                    <li><a lycoris href="#personal-lycoris">LyCORIS</a></li>
+                    <li><a lora href="#personal-lora">Lora</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <ul id="personal-checkpoints" class="gallery-cards extra-network-pane" id="personal-checkpoints-cards"></li></ul>
                     <ul id="personal-textual_inversion" class="gallery-cards extra-network-pane" id="personal-textual_inversion-cards"></li></ul>
                     <ul id="personal-hypernetworks" class="gallery-cards extra-network-pane" id="personal-hypernetworks-cards"></li></ul>
+                    <ul id="personal-lycoris" class="gallery-cards extra-network-pane" id="personal-lycoris-cards"></li></ul>
                     <ul id="personal-lora" class="gallery-cards extra-network-pane" id="personal-lora-cards"></li></ul>
                 </div>
             </div>
@@ -225,7 +231,8 @@ function initDomPage() {
                     <li><a checkpoints href="#public-checkpoints">Checkpoints</a></li>
                     <li><a textual_inversion  href="#public-textual_inversion">Textual Inversion</a></li>
                     <li><a hypernetworks href="#public-hypernetworks">Hypernetworks</a></li>
-                    <li><a lora href="#public-lora">Lora/Lycoris</a></li>
+                    <li><a lycoris href="#public-lycoris">LyCORIS</a></li>
+                    <li><a lora href="#public-lora">Lora</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <p id="private-model-title">Private Models</p>
@@ -239,6 +246,10 @@ function initDomPage() {
                     </div>
                     <div id="private-hypernetworks" hidden="hidden">
                         <ul id="private-hypernetworks-cards" class="gallery-cards extra-network-pane scrollload-content">
+                        </ul>
+                    </div>
+                    <div id="private-lycoris" hidden="hidden">
+                        <ul id="private-lycoris-cards" class="gallery-cards extra-network-pane scrollload-content">
                         </ul>
                     </div>
                     <div id="private-lora" hidden="hidden">
@@ -262,6 +273,12 @@ function initDomPage() {
                         <div class="scrollload-container" model-type="hypernetworks" workspace="public">
                             <ul id="public-hypernetworks-cards" class="gallery-cards extra-network-pane scrollload-content">
                                
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="public-lycoris">
+                        <div class="scrollload-container" model-type="lycoris" workspace="public">
+                            <ul id="public-lycoris-cards" class="gallery-cards extra-network-pane scrollload-content">
                             </ul>
                         </div>
                     </div>

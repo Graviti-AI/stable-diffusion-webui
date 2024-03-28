@@ -395,7 +395,6 @@ def create_ui():
         txt2img_prompt_selections = toprow.ui_styles.selection
 
         dummy_component = gr.Label(visible=False)
-        dummy_gallery_index = gr.Number(visible=False, precision=0)
 
         extra_tabs = gr.Tabs(elem_id="txt2img_extra_tabs", elem_classes=["extra-networks"])
         extra_tabs.__enter__()
@@ -650,7 +649,7 @@ def create_ui():
                     add_monitor_state=True,
                 ),
                 _js="submit_txt2img_upscale",
-                inputs=txt2img_inputs[0:1] + [output_panel.gallery, dummy_gallery_index, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature],
+                inputs=txt2img_inputs[0:1] + [output_panel.gallery, dummy_component, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature],
                 outputs=txt2img_outputs,
                 show_progress=False,
             )

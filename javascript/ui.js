@@ -316,11 +316,11 @@ async function submit() {
     await tierCheckGenerate("txt2img");
     checkSignatureCompatibility();
 
-    return _submit(...arguments)
+    return await _submit(...arguments);
 }
 
-function submit_txt2img_upscale() {
-    var res = _submit(...arguments);
+async function submit_txt2img_upscale() {
+    var res = await _submit(...arguments);
 
     res[2] = selected_gallery_index();
 

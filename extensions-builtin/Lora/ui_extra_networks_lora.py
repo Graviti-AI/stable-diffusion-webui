@@ -17,18 +17,8 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         self.min_model_size_mb = 1
         self.max_model_size_mb = 2e3
 
-    def refresh_metadata(self):
-        for name, network_on_disk in networks.available_networks.items():
-            if name not in self.metadata:
-                path, ext = os.path.splitext(network_on_disk.filename)
-                metadata_path = "".join([path, ".meta"])
-                metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
-                if metadata is not None:
-                    self.metadata[name] = metadata
-
     def refresh(self, request: gr.Request):
         networks.list_available_networks()
-        self.refresh_metadata()
 
     def get_items_count(self):
         return len(networks.available_networks)

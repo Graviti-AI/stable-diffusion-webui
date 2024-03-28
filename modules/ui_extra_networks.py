@@ -213,9 +213,6 @@ class ExtraNetworksPage:
     def refresh(self, request: gr.Request):
         pass
 
-    def refresh_metadata(self):
-        pass
-
     def read_user_metadata(self, item, use_cache=True):
         filename = item.get("filename", None)
         metadata = extra_networks.get_user_metadata(filename, lister=self.lister if use_cache else None)
@@ -590,8 +587,6 @@ class ExtraNetworksPage:
 """ for subdir in subdirs])
 
         self_name_id = self.name.replace(" ", "_")
-
-        # self.refresh_metadata()
 
         # Add a upload model button
         plus_sign_elem_id = f"{tabname}_{self_name_id}-plus-sign"

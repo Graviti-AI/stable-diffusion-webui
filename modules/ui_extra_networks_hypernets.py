@@ -11,17 +11,8 @@ class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
         self.min_model_size_mb = 10
         self.max_model_size_mb = 1e3
 
-    def refresh_metadata(self):
-        for name, path in shared.hypernetworks.items():
-            path, ext = os.path.splitext(path)
-            metadata_path = "".join([path, ".meta"])
-            metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
-            if metadata is not None:
-                self.metadata[name] = metadata
-
     def refresh(self, _):
         shared.reload_hypernetworks()
-        self.refresh_metadata()
 
     def get_items_count(self):
         return len(shared.hypernetworks)

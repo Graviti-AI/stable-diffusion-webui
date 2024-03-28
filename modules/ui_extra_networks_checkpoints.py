@@ -15,17 +15,8 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
 
         self.allow_prompt = False
 
-    def refresh_metadata(self):
-        for name, checkpoint in sd_models.checkpoints_list.items():
-            path, ext = os.path.splitext(checkpoint.filename)
-            metadata_path = "".join([path, ".meta"])
-            metadata = ui_extra_networks.ExtraNetworksPage.read_metadata_from_file(metadata_path)
-            if metadata is not None:
-                self.metadata[checkpoint.name_for_extra] = metadata
-
     def refresh(self, request: gr.Request):
         shared.refresh_checkpoints(request)
-        self.refresh_metadata()
 
     def get_items_count(self):
         return len(sd_models.checkpoints_list)

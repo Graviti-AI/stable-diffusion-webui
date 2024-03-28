@@ -200,13 +200,11 @@ function initDomPage() {
                 <ul personal-data-tabs>
                     <li><a checkpoints href="#personal-checkpoints">Checkpoints</a></li>
                     <li><a textual_inversion  href="#personal-textual_inversion">Textual Inversion</a></li>
-                    <li><a hypernetworks href="#personal-hypernetworks">Hypernetworks</a></li>
                     <li><a lora href="#personal-lora">Lora/Lycoris</a></li>
                 </ul>
                 <div class="gallery-cards">
                     <ul id="personal-checkpoints" class="gallery-cards extra-network-pane" id="personal-checkpoints-cards"></li></ul>
                     <ul id="personal-textual_inversion" class="gallery-cards extra-network-pane" id="personal-textual_inversion-cards"></li></ul>
-                    <ul id="personal-hypernetworks" class="gallery-cards extra-network-pane" id="personal-hypernetworks-cards"></li></ul>
                     <ul id="personal-lora" class="gallery-cards extra-network-pane" id="personal-lora-cards"></li></ul>
                 </div>
             </div>
@@ -224,7 +222,6 @@ function initDomPage() {
                 <ul public-data-tabs>
                     <li><a checkpoints href="#public-checkpoints">Checkpoints</a></li>
                     <li><a textual_inversion  href="#public-textual_inversion">Textual Inversion</a></li>
-                    <li><a hypernetworks href="#public-hypernetworks">Hypernetworks</a></li>
                     <li><a lora href="#public-lora">Lora/Lycoris</a></li>
                 </ul>
                 <div class="gallery-cards">
@@ -235,10 +232,6 @@ function initDomPage() {
                     </div>
                     <div id="private-textual_inversion" hidden="hidden">
                         <ul id="private-textual_inversion-cards" class="gallery-cards extra-network-pane scrollload-content">
-                        </ul>
-                    </div>
-                    <div id="private-hypernetworks" hidden="hidden">
-                        <ul id="private-hypernetworks-cards" class="gallery-cards extra-network-pane scrollload-content">
                         </ul>
                     </div>
                     <div id="private-lora" hidden="hidden">
@@ -255,13 +248,6 @@ function initDomPage() {
                     <div id="public-textual_inversion">
                         <div class="scrollload-container" model-type="textual_inversion" workspace="public">
                             <ul id="public-textual_inversion-cards" class="gallery-cards extra-network-pane scrollload-content">
-                            </ul>
-                        </div>
-                    </div>
-                    <div id="public-hypernetworks">
-                        <div class="scrollload-container" model-type="hypernetworks" workspace="public">
-                            <ul id="public-hypernetworks-cards" class="gallery-cards extra-network-pane scrollload-content">
-                               
                             </ul>
                         </div>
                     </div>

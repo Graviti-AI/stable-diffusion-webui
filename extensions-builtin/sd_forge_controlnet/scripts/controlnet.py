@@ -104,7 +104,8 @@ class ControlNetForForgeOfficial(scripts.Script):
         return tuple(controls)
 
     def get_enabled_units(self, p):
-        if not hasattr(p, "_control_net_units"):
+        _CONTROLNET_UNITS_KEY = "_controlnet_units"
+        if not hasattr(p, _CONTROLNET_UNITS_KEY):
             args = p.script_args[self.args_from : self.args_to]
             units = []
             offset = 0
@@ -113,9 +114,9 @@ class ControlNetForForgeOfficial(scripts.Script):
                 units.append(ControlNetUnit(*unit_args))
                 offset += args_len
 
-            p._control_net_units = units
+            setattr(p, _CONTROLNET_UNITS_KEY, units)
 
-        enabled_units = [x for x in p._control_net_units if x.enabled]
+        enabled_units = [x for x in getattr(p, _CONTROLNET_UNITS_KEY) if x.enabled]
         return enabled_units
 
     @staticmethod

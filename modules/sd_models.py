@@ -149,7 +149,6 @@ def setup_model():
 
     os.makedirs(model_path, exist_ok=True)
 
-    # list_models()
     enable_midas_autodownload()
     patch_given_betas()
 
@@ -164,9 +163,11 @@ def checkpoint_tiles(req: Optional[gr.Request] = None, use_short=False):
     return sorted([x.short_title if use_short else x.title  for x in checkpoints_list.values()], key=alphanumeric_key)
 
 
-def list_models(req: gr.Request = None):
-    # checkpoints_list.clear()
-    # checkpoint_alisases.clear()
+def list_models():
+    return
+
+    checkpoints_list.clear()
+    checkpoint_alisases.clear()
 
     cmd_ckpt = shared.cmd_opts.ckpt
     if shared.cmd_opts.no_download_sd_model or cmd_ckpt != shared.sd_model_file or os.path.exists(cmd_ckpt):

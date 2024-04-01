@@ -858,7 +858,7 @@ function getSubscribers(interval = 10, timeoutId = null)
             } else {
                 newSubscribers.subscribers.forEach((newSubscriber) => {
                     const notificationElem = notifier.success(
-                        `<div class="notification-sub-main" style="width: 285px"><b class="notification-sub-email">${newSubscriber.email}</b> just subscribed to our basic plan &#129395 <a class="notification-upgrade-hyperlink" href="/user#/subscription?type=subscription" target="_blank">Click here to upgrade</a> and enjoy 5000 credits monthly!</div>`,
+                        `<div class="notification-sub-main" style="width: 285px"><b class="notification-sub-email">${newSubscriber.email}</b> just subscribed to our basic plan &#129395 <a class="notification-upgrade-hyperlink" href="/pricing_table" target="_blank">Click here to upgrade</a> and enjoy 5000 credits monthly!</div>`,
                         {labels: {success: ""}, animationDuration: 800, durations: {success: 8000}}
                     );
                     if (typeof posthog === 'object') {
@@ -1288,6 +1288,15 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
+function openPricingTable() {
+    if (typeof addUpgradeGtagEvent === 'function') {
+        addUpgradeGtagEvent("/pricing_table", "free_user_redirect_to_pricing_table", callback = () => {
+            window.location.href = "/pricing_table";
+        });
+    } else {
+        window.location.href = "/pricing_table";
+    }
+}
 
 async function updateOrderInfo() {
     await fetch(`/api/order_info`, { method: "GET", credentials: "include" })
@@ -1339,6 +1348,9 @@ async function updateOrderInfo() {
                     }
                     changeFreeCreditLink();
                     changeCreditsPackageLink();
+                    if (!result.subscribed && result.tier.toLowerCase() === "free") {
+                      setTimeout(openPricingTable, 10000);
+                    }
                 }
                 const boostButton = gradioApp().querySelector("#one_click_boost_button");
                 let onSucceededCallback = (elem) => {

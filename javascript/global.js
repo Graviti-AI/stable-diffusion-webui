@@ -1,5 +1,5 @@
 const PRICING_URL = 'https://www.diffus.me/pricing';
-const SUBSCRIPTION_URL = "/user#/subscription?type=subscription"
+const SUBSCRIPTION_URL = "/pricing_table"
 let galleryModelTotalPage = {
   personal: {
     checkpoints: 1,
@@ -111,13 +111,19 @@ function supportDifferentPriceType(priceType, linkNode) {
         item_name: priceType
       };
     } else if (priceInfo && priceInfo.pricing_table_id) {
-      linkNode.href = `/user#/subscription?priceType=${priceType}`
+      if (priceType === 'upgrade') {
+        linkNode.href = '/pricing_table';
+      } else if (priceType === 'api') {
+        linkNode.href = '/pricing_table/api';
+      } else {
+        linkNode.href = `/user#/subscription?priceType=${priceType}`;
+      }
       itemListInfo = {
         item_id: priceInfo.pricing_table_id,
         item_name: priceType
       };
     } else {
-      linkNode.href = (priceInfo && priceInfo.link) || '/user#/subscription?type=subscription';
+      linkNode.href = (priceInfo && priceInfo.link) || '/pricing_table';
       itemListInfo = {
         item_id: linkNode.href,
         item_name: priceType

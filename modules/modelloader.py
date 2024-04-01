@@ -56,7 +56,7 @@ def load_models(model_path: str, model_url: str = None, command_path: str = None
     try:
         places = []
 
-        if command_path is not None and command_path != model_path:
+        if command_path is not None and not os.path.samefile(command_path, model_path):
             pretrained_path = os.path.join(command_path, 'experiments/pretrained_models')
             if os.path.exists(pretrained_path):
                 print(f"Appending path: {pretrained_path}")

@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import time
 
-from modules.state_holder import make_state_holder
 from modules.launch_utils import startup_timer
 from modules import timer
 from modules import initialize_util
@@ -39,7 +38,6 @@ def api_only_worker(server_port: int = 0):
     from modules.shared_cmd_options import cmd_opts
 
     app = FastAPI()
-    make_state_holder(app)
     initialize_util.setup_middleware(app)
     api = create_api(app)
 
@@ -136,7 +134,6 @@ def webui_worker(server_port: int = 0):
             },
             root_path=f"/{cmd_opts.subpath}" if cmd_opts.subpath else "",
         )
-        make_state_holder(app)
         if cmd_opts.add_stop_route:
             app.add_route("/_stop", stop_route, methods=["POST"])
 

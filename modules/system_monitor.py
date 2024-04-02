@@ -11,6 +11,7 @@ import base64
 import io
 import imghdr
 from PIL import Image
+import numpy as np
 
 from typing import Optional, Protocol, Union, Any, Callable
 from contextlib import contextmanager
@@ -110,7 +111,9 @@ def copy_object_and_replace_images_with_path(
             ext = mime.split('/')[1] if mime else 'jpg'
             return save_base64_image_to_file(
                 removed_schema_str, os.path.join(output_dir, f"{str(uuid.uuid4())}.{ext}"))
-    elif isinstance(obj, Image.Image):
+    elif isinstance(obj, (Image.Image, np.ndarray)):
+        if isinstance(obj, np.ndarray):
+            obj = Image.fromarray(obj)
         if save_image_callback:
             return save_image_callback(obj)
         ext = 'jpg'

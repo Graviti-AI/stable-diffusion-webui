@@ -7,7 +7,7 @@ einops==0.4.1
 facexlib==0.3.0
 fastapi==0.94.0
 gradio==3.41.2
-httpcore==1.0.2
+httpcore==0.17.0
 inflection==0.5.1
 jsonmerge==1.8.0
 kornia==0.6.7

@@ -8,6 +8,7 @@ import modules.scripts as scripts
 from modules import shared, script_callbacks, masking, images
 from modules.ui_components import InputAccordion
 from modules.api.api import decode_base64_to_image
+from modules.call_queue import extract_image_path_or_save_if_needed
 import gradio as gr
 
 from lib_controlnet import global_state, external_code
@@ -360,7 +361,9 @@ class ControlNetForForgeOfficial(scripts.Script):
                 (is_high_res and hr_option.high_res_enabled) or
                 (not is_high_res and hr_option.low_res_enabled)
             ) and unit.save_detected_map:
-                p.extra_result_images.append(img)
+                pil_image = Image.fromarray(img)
+                extract_image_path_or_save_if_needed(p.get_request(), pil_image)
+                p.extra_result_images.append(pil_image)
 
         if preprocessor_output_is_image:
             params.control_cond = []

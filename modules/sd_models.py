@@ -231,7 +231,9 @@ def model_hash(filename):
 
 def select_checkpoint() -> ModelInfo:
     """Raises `FileNotFoundError` if no checkpoints are found."""
-    model_checkpoint = shared.opts.sd_model_checkpoint
+    model_checkpoint = shared.opts.sd_checkpoint_hash
+    if not model_checkpoint:
+        model_checkpoint = shared.opts.sd_model_checkpoint
 
     checkpoint_info = checkpoint_aliases.get(model_checkpoint, None)
     if checkpoint_info is not None:
@@ -611,7 +613,7 @@ def _load_model(
     timer = Timer('sd_models.load_model', checkpoint_info.title)
 
     if model_data.sd_model:
-        if model_data.sd_model.filename == checkpoint_info.filename:
+        if model_data.sd_model.sd_checkpoint_info.sha256 == checkpoint_info.sha256:
             return model_data.sd_model
 
         model_data.sd_model = None

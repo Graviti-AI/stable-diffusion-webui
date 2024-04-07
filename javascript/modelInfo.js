@@ -337,7 +337,7 @@ function _findEmbeddingModels(model_tree, prompts) {
     return models;
 }
 
-function _getSignature(args) {
+function getSignatureFromArgs(args) {
     const arg = _findLast(
         args,
         (item) =>
@@ -372,7 +372,7 @@ function _getAllModelInfo(checkpoint_titles, prompts, network_keys, model_tree) 
 }
 
 async function getAllModelInfo(mode, args) {
-    const signature = _getSignature(args);
+    const signature = getSignatureFromArgs(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
         _alert('"all_model_info" not found in signature');

@@ -192,7 +192,7 @@ async function _submit() {
 
 async function submit() {
     addGenerateGtagEvent("#txt2img_generate > span", "txt2img_generation_button");
-    await tierCheckGenerate("txt2img");
+    await tierCheckGenerate("txt2img", arguments);
     checkSignatureCompatibility();
 
     return await _submit(...arguments);
@@ -208,7 +208,7 @@ async function submit_txt2img_upscale() {
 
 async function submit_img2img() {
     addGenerateGtagEvent("#img2img_generate > span", "img2img_generation_button");
-    await tierCheckGenerate("img2img");
+    await tierCheckGenerate("img2img", arguments);
     showSubmitButtons('img2img', false);
 
     var res = create_submit_args(arguments);

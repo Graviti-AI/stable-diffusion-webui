@@ -24,6 +24,7 @@ from lib_controlnet.infotext import Infotext
 from modules_forge.forge_util import HWC3, numpy_to_pytorch
 from lib_controlnet.enums import HiResFixOption
 from lib_controlnet.api import controlnet_api
+from lib_controlnet.sd_version_check import check_sd_version_compatible
 
 import numpy as np
 import functools
@@ -555,6 +556,9 @@ class ControlNetForForgeOfficial(scripts.Script):
     def process(self, p, *args, **kwargs):
         self.current_params = {}
         enabled_units = self.get_enabled_units(p)
+        for unit in enabled_units:
+            check_sd_version_compatible(unit)
+
         Infotext.write_infotext(enabled_units, p)
         for i, unit in enumerate(enabled_units):
             self.bound_check_params(unit)

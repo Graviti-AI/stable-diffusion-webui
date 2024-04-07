@@ -107,7 +107,7 @@ def get_filtered_controlnet_names(tag):
         x for x in controlnet_names
         if x == 'None' or (
             any(f.lower() in x.lower() for f in model_filename_filters) and
-            get_sd_version().is_compatible_with(StableDiffusionVersion.detect_from_model_name(x))
+            get_selected_sd_version().is_compatible_with(StableDiffusionVersion.detect_from_model_name(x))
         )
     ]
 
@@ -133,9 +133,11 @@ def update_controlnet_filenames():
     return
 
 
-def get_sd_version() -> StableDiffusionVersion:
+def get_selected_sd_version() -> StableDiffusionVersion:
     return StableDiffusionVersion.UNKNOWN
 
+
+def get_sd_version() -> StableDiffusionVersion:
     if not shared.sd_model:
         return StableDiffusionVersion.UNKNOWN
     if shared.sd_model.is_sdxl:

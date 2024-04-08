@@ -7,6 +7,8 @@ import opennsfw2 as n2
 from keras import Model
 from PIL import Image, ImageFilter
 
+_NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api"}
+
 if TYPE_CHECKING:
     from modules.processing import StableDiffusionProcessing
 
@@ -39,7 +41,7 @@ def nsfw_blur(
     request = p.get_request()
     assert request is not None
 
-    if request.headers["user-tire"].lower() != "free":
+    if request.headers["user-tire"].lower() in _NSFW_ALLOWED_TIERS:
         return image
 
     probability = _get_nsfw_probability(image)

@@ -1335,7 +1335,7 @@ async function updateOrderInfo() {
                         };
                     }
 
-                    if (result.tier.toLowerCase() === "free") {
+                    if (result.tier.toLowerCase() === "free" || result.tier.toLowerCase() === "teaser") {
                         const upgradeContent = userContent.querySelector("#upgrade");
                         if (upgradeContent) {
                             upgradeContent.style.display = "flex";

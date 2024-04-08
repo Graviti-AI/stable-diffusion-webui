@@ -486,10 +486,14 @@ function check_nsfw(obj, boxId) {
         return;
     }
     addPopupGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
+    const _ALLOWED_TIERS = ["Basic", "Plus", "Pro", "Api"];
+    const allowed_tiers_message = joinWords(_ALLOWED_TIERS, "or");
+
     notifier.confirm(
         `Potential NSFW content was detected in the generated image, \
-        upgrade to enable your private image storage. Or join our ${_AFFILIATE_PROGRAM} \
-        to earn cash or credits and use it to upgrade to <b>Basic</b> plan.`,
+        upgrade to ${allowed_tiers_message} to enable your private image storage. \
+        Or join our ${_AFFILIATE_PROGRAM} \
+        to earn cash or credits and use it to upgrade to a higher plan.`,
         () => {
             addUpgradeGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
             update_textbox_by_id(boxId, "");

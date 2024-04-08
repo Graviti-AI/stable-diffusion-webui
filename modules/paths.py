@@ -72,6 +72,8 @@ for d, must_exist, what, options in path_dirs:
 
 
 class Paths:
+    _PRIVATE_IMAGE_ALLOWED_TIERS = {"basic", "plus", "pro", "api"}
+
     def __init__(self, request: gr.Request | None):
         import hashlib
         user = modules.user.User.current_user(request)
@@ -191,7 +193,7 @@ class Paths:
 
     def save_image(self, filename: str):
         # copy the generated image to public dir if user is free tier.
-        if not self.user.tire or self.user.tire.lower() == 'free':
+        if not self.user.tire or self.user.tire.lower() not in self._PRIVATE_IMAGE_ALLOWED_TIERS:
             src_path = pathlib.Path(filename)
 
             if not src_path.is_relative_to(self._output_dir):

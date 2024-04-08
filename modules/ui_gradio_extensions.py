@@ -58,7 +58,7 @@ def javascript_html(request: gr.Request):
 
 
 def css_html():
-    head = ""
+    head = "<title>Diffus - Stable Diffusion Made Easy</title>"
 
     head += '<link href="https://releases.transloadit.com/uppy/v3.7.0/uppy.min.css" rel="stylesheet" />\n'
     head += '<link href="/components/style/notification/style.css?v=0.3" rel="stylesheet" />\n'

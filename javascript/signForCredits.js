@@ -44,9 +44,9 @@ class SignForCredits {
       const { has_sign_permission, has_signed_today } = await response.json();
       hasSingPermission = has_sign_permission;
       if (!has_sign_permission) {
-        signNode.title = 'Unlock up to 1500 free credits per month';
+        signNode.title = 'Unlock more features with your Stable Diffusion generator';
         imgNode.src = '/public/image/unlock.png';
-        spanNode.textContent = isPcScreen ? 'Free Credits' : '';
+        spanNode.textContent = isPcScreen ? 'Upgrade' : '';
         signNode.style.display = 'flex';
         if (channelResult) {
           changeFreeCreditLink()

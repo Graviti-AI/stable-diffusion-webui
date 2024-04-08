@@ -49,6 +49,7 @@ const isPcScreen = window.innerWidth > 600;
 let userTier = 'Free';
 const tierLevels = {
   free: 0,
+  teaser: 0,
   basic: 1,
   plus: 2,
   pro: 3,

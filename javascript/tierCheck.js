@@ -30,7 +30,7 @@ async function _getFeaturePermissions() {
     return featurePermissions;
 }
 
-function _joinWords(words, conjunction = "and") {
+function joinWords(words, conjunction = "and") {
     const names = words.map((item) => `"${item}"`);
     if (names.length == 1) {
         return names[0];
@@ -46,7 +46,7 @@ function _joinTiers(tiers) {
             unique_tiers.push(tier);
         }
     }
-    return _joinWords(unique_tiers, "or");
+    return joinWords(unique_tiers, "or");
 }
 
 function _checkControlNetXL(tabname, args) {
@@ -68,7 +68,7 @@ function _checkControlNetXL(tabname, args) {
 }
 
 function _tierCheckFailed(features, allowed_tiers) {
-    const features_message = _joinWords(features);
+    const features_message = joinWords(features);
     const allowed_tiers_message = _joinTiers(allowed_tiers);
     const list_name = `${features.join("_").toLowerCase()}_tier_checker`;
 

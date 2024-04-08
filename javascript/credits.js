@@ -32,6 +32,8 @@ function initCreditsBar() {
             return {
                 permitted: 0,
                 used: 0,
+                startTime: Date.now(),
+                redirectInterval: 10,
             };
         },
         computed: {
@@ -46,6 +48,11 @@ function initCreditsBar() {
                     if (response.ok) {
                         const content = await response.json();
                         this.updateFromOrderInfo(content);
+                        if (!content.subscribed && content.tier.toLowerCase() === "free" && (Date.now() - this.startTime) > this.redirectInterval * 1000) {
+                          if (typeof openPricingTable === "function") {
+                            openPricingTable();
+                          }
+                        }
                     }
                     await PYTHON.asyncio.sleep(interval * 1000);
                 }

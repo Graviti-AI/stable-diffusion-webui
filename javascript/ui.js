@@ -1292,16 +1292,6 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
-function openPricingTable() {
-    if (typeof addUpgradeGtagEvent === 'function') {
-        addUpgradeGtagEvent("/pricing_table", "free_user_redirect_to_pricing_table", callback = () => {
-            window.location.href = "/pricing_table";
-        });
-    } else {
-        window.location.href = "/pricing_table";
-    }
-}
-
 async function updateOrderInfo() {
     await fetch(`/api/order_info`, { method: "GET", credentials: "include" })
         .then((res) => {

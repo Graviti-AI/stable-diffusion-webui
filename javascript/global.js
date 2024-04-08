@@ -149,4 +149,14 @@ function changeFreeCreditLink() {
   }
 }
 
+function openPricingTable() {
+    if (typeof addUpgradeGtagEvent === 'function') {
+        addUpgradeGtagEvent("/pricing_table", "free_user_redirect_to_pricing_table", callback = () => {
+            window.location.href = "/pricing_table";
+        });
+    } else {
+        window.location.href = "/pricing_table";
+    }
+}
+
 testApi();

@@ -10,7 +10,7 @@ class ChannelInfo {
       const res = await fetchGet('api/user_channel');
       const channelInfo = await res.json();
       if (channelInfo) {
-        document.title = channelInfo.title || '';
+        document.title = channelInfo.title || 'Diffus - Stable Diffusion Made Easy';
         channelResult = channelInfo;
         this.changeDiscordIcon(channelInfo);
         this.hideCheckinBtn(channelInfo);

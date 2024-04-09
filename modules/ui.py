@@ -599,7 +599,13 @@ def create_ui():
                 hr_negative_prompt,
                 restore_faces,
                 override_settings,
-            ] + custom_inputs + [txt2img_model_title, toprow.vae_model_title, dummy_component, txt2img_signature]
+            ] + custom_inputs + [
+                txt2img_model_title,
+                toprow.vae_model_title,
+                dummy_component,
+                dummy_component,
+                txt2img_signature
+            ]
 
             txt2img_outputs = [
                 output_panel.gallery,
@@ -615,7 +621,7 @@ def create_ui():
             txt2img_signature_args, txt2img_params_default_values = build_function_signature(
                 modules.txt2img.txt2img_create_processing,
                 scripts.scripts_txt2img,
-                extras=["model_title", "vae_title", "all_model_info"],
+                extras=["model_title", "vae_title", "all_style_info", "all_model_info"],
                 start_from=1)  # Start from 1 to remove request
             txt2img_args = dict(
                 fn=wrap_gradio_gpu_call(
@@ -1035,7 +1041,7 @@ def create_ui():
             img2img_signature_args, img2img_params_default_values = build_function_signature(
                 modules.img2img.img2img,
                 modules.scripts.scripts_img2img,
-                extras=["model_title", "vae_title", "all_model_info"],
+                extras=["model_title", "vae_title", "all_style_info", "all_model_info"],
                 start_from=1)  # Start from 1 to remove request
             img2img_args = dict(
                 fn=wrap_gradio_gpu_call(
@@ -1080,7 +1086,13 @@ def create_ui():
                     img2img_batch_use_png_info,
                     img2img_batch_png_info_props,
                     img2img_batch_png_info_dir,
-                ] + custom_inputs + [img2img_model_title, toprow.vae_model_title, dummy_component, img2img_signature],
+                ] + custom_inputs + [
+                    img2img_model_title,
+                    toprow.vae_model_title,
+                    dummy_component,
+                    dummy_component,
+                    img2img_signature
+                ],
                 outputs=[
                     output_panel.gallery,
                     output_panel.generation_info,

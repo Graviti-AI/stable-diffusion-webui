@@ -232,10 +232,10 @@ class StableDiffusionProcessing:
 
     is_api: bool = field(default=False, init=False)
 
-    _global_prompt_styles = None
     _request = None
     _task_id: Optional[str] = None
     _origin: Optional[str] = None
+    _all_style_info = None
     _all_model_info = None
 
     def __post_init__(self):
@@ -272,19 +272,26 @@ class StableDiffusionProcessing:
         self.extra_result_images = []
         self.modified_noise = None
 
-    def global_prompt_styles(self):
-        return self._global_prompt_styles
-
     def set_request(self, request):
         self._request = request
         if request:
             header_dict = dict(request.headers)
             self._task_id = header_dict.get('x-task-id', None)
             self._origin = header_dict.get('origin', None)
-        self._global_prompt_styles = shared.prompt_styles(request.request)
 
     def get_request(self):
         return self._request
+
+    def set_all_style_info(self, all_style_info: modules.styles.StyleDatabase):
+        self._all_style_info = all_style_info
+
+    def get_all_style_info(self) -> modules.styles.StyleDatabase:
+        if self._all_style_info is None:
+            request = self.get_request()
+            assert request is not None
+            self._all_style_info = shared.prompt_styles(request)
+
+        return self._all_style_info
 
     def set_all_model_info(self, all_model_info: AllModelInfo):
         self._all_model_info = all_model_info
@@ -468,25 +475,21 @@ class StableDiffusionProcessing:
     def setup_prompts(self):
         if isinstance(self.prompt,list):
             self.all_prompts = self.prompt
-            #self.all_prompts = [self.global_prompt_styles().apply_styles_to_prompt(x, self.styles) for x in self.prompt]
         elif isinstance(self.negative_prompt, list):
             self.all_prompts = [self.prompt] * len(self.negative_prompt)
         else:
             self.all_prompts = self.batch_size * self.n_iter * [self.prompt]
-            #self.all_prompts = self.batch_size * self.n_iter * [self.global_prompt_styles().apply_styles_to_prompt(self.prompt, self.styles)]
 
         if isinstance(self.negative_prompt, list):
             self.all_negative_prompts = self.negative_prompt
-            #self.all_negative_prompts = [self.global_prompt_styles().apply_negative_styles_to_prompt(x, self.styles) for x in self.negative_prompt]
         else:
             self.all_negative_prompts = [self.negative_prompt] * len(self.all_prompts)
-            #self.all_negative_prompts = self.batch_size * self.n_iter * [self.negative_prompt]
 
         if len(self.all_prompts) != len(self.all_negative_prompts):
             raise RuntimeError(f"Received a different number of prompts ({len(self.all_prompts)}) and negative prompts ({len(self.all_negative_prompts)})")
 
-        self.all_prompts = [self.global_prompt_styles().apply_styles_to_prompt(x, self.styles) for x in self.all_prompts]
-        self.all_negative_prompts = [self.global_prompt_styles().apply_negative_styles_to_prompt(x, self.styles) for x in self.all_negative_prompts]
+        self.all_prompts = [self.get_all_style_info().apply_styles_to_prompt(x, self.styles) for x in self.all_prompts]
+        self.all_negative_prompts = [self.get_all_style_info().apply_negative_styles_to_prompt(x, self.styles) for x in self.all_negative_prompts]
 
         self.main_prompt = self.all_prompts[0]
         self.main_negative_prompt = self.all_negative_prompts[0]
@@ -1500,8 +1503,8 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
         else:
             self.all_hr_negative_prompts = self.batch_size * self.n_iter * [self.hr_negative_prompt]
 
-        self.all_hr_prompts = [self.global_prompt_styles().apply_styles_to_prompt(x, self.styles) for x in self.all_hr_prompts]
-        self.all_hr_negative_prompts = [self.global_prompt_styles().apply_negative_styles_to_prompt(x, self.styles) for x in self.all_hr_negative_prompts]
+        self.all_hr_prompts = [self.get_all_style_info().apply_styles_to_prompt(x, self.styles) for x in self.all_hr_prompts]
+        self.all_hr_negative_prompts = [self.get_all_style_info().apply_negative_styles_to_prompt(x, self.styles) for x in self.all_hr_negative_prompts]
 
     def calculate_hr_conds(self):
         if self.hr_c is not None:

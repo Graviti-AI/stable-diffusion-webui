@@ -99,6 +99,20 @@ function changeCreditsPackageLink() {
   }
 }
 
+function updateQueryParameters(url, params) {
+  let updatedUrl = new URL(url);
+
+  let searchParams = updatedUrl.searchParams;
+
+  Object.keys(params).forEach(key => {
+    searchParams.set(key, params[key]);
+  });
+
+  updatedUrl.search = searchParams.toString();
+
+  return updatedUrl.href;
+}
+
 function supportDifferentPriceType(priceType, linkNode) {
   const priceInfo = channelResult && channelResult.prices[priceType];
   if (orderInfoResult) {
@@ -106,7 +120,13 @@ function supportDifferentPriceType(priceType, linkNode) {
     if (priceInfo && priceInfo.price_link) {
       const resultInfo = { user_id: orderInfoResult.user_id };
       const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
-      linkNode.href = `${priceInfo.price_link}?prefilled_email=${orderInfoResult.email}&client_reference_id=${referenceId}`;
+      linkNode.href = updateQueryParameters(
+        priceInfo.price_link,
+        {
+          prefilled_email: orderInfoResult.email,
+          client_reference_id: referenceId,
+        }
+      );
       itemListInfo = {
         item_id: priceInfo.price_link,
         item_name: priceType

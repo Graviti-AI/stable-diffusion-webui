@@ -371,7 +371,7 @@ function _getAllModelInfo(checkpoint_titles, prompts, network_keys, model_tree) 
     return all_model_info;
 }
 
-async function getAllModelInfo(mode, args) {
+async function getAllModelInfo(mode, args, all_style_info) {
     const signature = getSignatureFromArgs(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
@@ -409,6 +409,17 @@ async function getAllModelInfo(mode, args) {
         }
     }
 
+    if (all_style_info) {
+        for (let style of all_style_info) {
+            if (style.prompt) {
+                prompts.push({ value: style.prompt, source: "style" });
+            }
+            if (style.negative_prompt) {
+                prompts.push({ value: style.negative_prompt, source: "style" });
+            }
+        }
+    }
+
     const network_keys = _findExtraNetworkModelKeys(prompts);
     const all_model_names = {
         checkpoint: checkpoint_titles.map((item) => _getStem(_getValue(item).split(" [")[0])),
@@ -425,7 +436,7 @@ async function getAllModelInfo(mode, args) {
             network_keys,
             model_tree,
         );
-        return [index, JSON.stringify(all_model_info)];
+        return [index, all_model_info];
     } catch (error) {
         if (error === _REQUEST_FAILED) {
             console.error('Set "all_model_info" to null due to request fail');

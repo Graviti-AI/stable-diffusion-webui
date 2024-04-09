@@ -17,6 +17,7 @@ from modules.ui import plaintext_to_html
 from modules.paths import Paths
 import modules.scripts
 from modules.system_monitor import generate_function_name, monitor_call_context
+from modules.style_info import AllStyleInfo
 from modules.model_info import AllModelInfo
 from modules_forge import main_thread
 
@@ -236,9 +237,13 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
         override_settings=override_settings,
     )
     p.set_request(request)
+    raw_style_info = args[-3]
+    if raw_style_info is not None:
+        p.set_all_style_info(AllStyleInfo(raw_style_info))
+
     raw_model_info = args[-2]
     if raw_model_info is not None:
-        p.set_all_model_info(AllModelInfo(args[-2]))
+        p.set_all_model_info(AllModelInfo(raw_model_info))
 
     p.scripts = modules.scripts.scripts_img2img
     p.script_args = args

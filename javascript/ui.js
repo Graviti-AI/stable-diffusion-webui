@@ -171,7 +171,8 @@ function addGenerateGtagEvent(selector, itemName) {
 
 async function _submit() {
     var res = create_submit_args(arguments);
-    const [index, all_model_info] = await getAllModelInfo("txt2img", res);
+    const [all_style_info_index, all_style_info] = await getAllStyleInfo(res);
+    const [all_model_info_index, all_model_info] = await getAllModelInfo("txt2img", res, all_style_info);
 
     showSubmitButtons('txt2img', false);
 
@@ -185,7 +186,8 @@ async function _submit() {
     });
 
     res[0] = id;
-    res[index] = all_model_info;
+    res[all_style_info_index] = all_style_info === null ? null : JSON.stringify(all_style_info);
+    res[all_model_info_index] = all_model_info === null ? null : JSON.stringify(all_model_info);
 
     return res;
 }
@@ -212,7 +214,8 @@ async function submit_img2img() {
     showSubmitButtons('img2img', false);
 
     var res = create_submit_args(arguments);
-    const [index, all_model_info] = await getAllModelInfo("img2img", res);
+    const [all_style_info_index, all_style_info] = await getAllStyleInfo(res);
+    const [all_model_info_index, all_model_info] = await getAllModelInfo("img2img", res, all_style_info);
 
     var id = randomId();
     localSet("img2img_task_id", id);
@@ -226,7 +229,8 @@ async function submit_img2img() {
 
     res[0] = id;
     res[1] = get_tab_index('mode_img2img');
-    res[index] = all_model_info;
+    res[all_style_info_index] = all_style_info === null ? null : JSON.stringify(all_style_info);
+    res[all_model_info_index] = all_model_info === null ? null : JSON.stringify(all_model_info);
 
     return res;
 }

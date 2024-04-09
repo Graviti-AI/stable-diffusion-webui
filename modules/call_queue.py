@@ -125,7 +125,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 all_model_info = AllModelInfo(raw_model_info)
                 all_model_info.check_file_existence()
 
-            model_title = args[-4]
+            model_title = args[-5]
         else:
             all_model_info = None
             model_title = ''

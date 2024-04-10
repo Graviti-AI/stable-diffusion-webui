@@ -33,7 +33,7 @@ function initCreditsBar() {
                 permitted: 0,
                 used: 0,
                 startTime: Date.now(),
-                redirectInterval: 10,
+                redirectInterval: 60,
             };
         },
         computed: {

@@ -376,8 +376,7 @@ def before_task_started(
         request_data['task_id'] = task_id
     else:
         request_data['task_id'] = job_id
-    if decoded_params:
-        request_data['decoded_params'] = decoded_params
+    request_data['decoded_params'] = decoded_params if decoded_params is not None else {}
     resp = requests.post(monitor_addr,
                          headers={
                              'Api-Secret': system_monitor_api_secret,

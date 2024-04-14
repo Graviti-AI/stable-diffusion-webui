@@ -1158,6 +1158,11 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
     if p.scripts is not None:
         p.scripts.postprocess(p, res)
 
+    res.extra_images = [
+        Image.fromarray(image) if isinstance(image, np.ndarray) else image
+        for image in res.extra_images
+    ]
+
     return res
 
 

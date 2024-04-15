@@ -853,35 +853,6 @@ function callShowNotification() {
     }
 }
 
-function getSubscribers(interval = 10, timeoutId = null)
-{
-    const latestSubscribers = fetchGet(`/subscriptions/latest?interval=${interval}`);
-    latestSubscribers.then(async (response) => {
-        if (response.ok) {
-            const newSubscribers = await response.json();
-            if (newSubscribers.current_tier != "free") {
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                }
-            } else {
-                newSubscribers.subscribers.forEach((newSubscriber) => {
-                    const notificationElem = notifier.success(
-                        `<div class="notification-sub-main" style="width: 285px"><b class="notification-sub-email">${newSubscriber.email}</b> just subscribed to our basic plan &#129395 <a class="notification-upgrade-hyperlink" href="/pricing_table" target="_blank">Click here to upgrade</a> and enjoy 5000 credits monthly!</div>`,
-                        {labels: {success: ""}, animationDuration: 800, durations: {success: 8000}}
-                    );
-                    if (typeof posthog === 'object') {
-                        notificationElem.querySelector(".notification-upgrade-hyperlink").addEventListener("click", () => {
-                            posthog.capture('Notification upgrade link clicked', {
-                                subscriber_email: newSubscriber.email,
-                            });
-                        });
-                    }
-                });
-            }
-        }
-    });
-}
-
 function requestRefreshPage(timeoutId) {
     let onRefresh = () => {location.reload();};
     if (timeoutId)
@@ -980,12 +951,6 @@ async function checkSignatureCompatibility(timeoutId = null)
 async function monitorSignatureChange() {
     const timeoutId = setTimeout(monitorSignatureChange, 30000);
     checkSignatureCompatibility(timeoutId);
-}
-
-async function pullNewSubscribers() {
-    const interval = 10;
-    const timeoutId = setTimeout(pullNewSubscribers, interval * 1000);
-    getSubscribers(interval, timeoutId);
 }
 
 function getCurrentUserName() {
@@ -1387,7 +1352,6 @@ onUiLoaded(function(){
     }
 
     setTimeout(monitorSignatureChange, 30000);
-    pullNewSubscribers();
     updateOrderInfo();
 });
 

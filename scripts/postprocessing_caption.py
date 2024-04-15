@@ -19,12 +19,12 @@ class ScriptPostprocessingCeption(scripts_postprocessing.ScriptPostprocessing):
         if not enable:
             return
 
-        captions = [pp.caption]
+        captions = {}
 
         if "Deepbooru" in option:
-            captions.append(deepbooru.model.tag(pp.image))
+            captions["Deepbooru"] = deepbooru.model.tag(pp.image)
 
         if "BLIP" in option:
-            captions.append(shared.interrogator.interrogate(pp.image.convert("RGB")))
+            captions["BLIP"] = shared.interrogator.interrogate(pp.image.convert("RGB"))
 
-        pp.caption = ", ".join([x for x in captions if x])
+        pp.caption = captions

@@ -300,7 +300,7 @@ Requested path was: {f}
                     )
 
             else:
-                res.generation_info = gr.HTML(elem_id=f'html_info_x_{tabname}')
+                res.generation_info = gr.Textbox(visible=False, elem_id=f'generation_info_{tabname}')
                 res.infotext = gr.HTML(elem_id=f'html_info_{tabname}', elem_classes="infotext")
                 res.html_log = gr.HTML(elem_id=f'html_log_{tabname}')
 

@@ -2,6 +2,7 @@ import os
 
 import gradio as gr
 from PIL import Image
+import json
 
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
@@ -14,6 +15,7 @@ def run_postprocessing(
     shared.state.begin(job="extras")
 
     outputs = []
+    caption_results = []
 
     def get_images(extras_mode, image, image_folder, input_dir):
         if extras_mode == 1:
@@ -108,7 +110,7 @@ def run_postprocessing(
                 p.set_request(request)
                 fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True)
 
-                if pp.caption:
+                if pp.caption and False:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"
                     existing_caption = ""
                     try:
@@ -134,12 +136,23 @@ def run_postprocessing(
 
             if extras_mode != 2 or show_extras_results:
                 outputs.append(pp.image)
+                if pp.caption:
+                    caption_lines = [ui_common.plaintext_to_html(f"{key}:\n{value}") for key, value in pp.caption.items()]
+                    caption_results.append("".join(caption_lines))
+                else:
+                    caption_results.append(None)
 
         image_data.close()
 
     devices.torch_gc()
     shared.state.end()
-    return outputs, ui_common.plaintext_to_html(infotext), ''
+
+    infotext_html = ui_common.plaintext_to_html(infotext)
+    infotext_result = infotext_html
+    if caption_results and caption_results[0] is not None:
+        infotext_result += caption_results[0]
+
+    return outputs, json.dumps({"info": infotext_html, "captions": caption_results}), infotext_result, ''
 
 
 def run_postprocessing_webui(request: gr.Request, id_task, *args, **kwargs):

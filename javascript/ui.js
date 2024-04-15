@@ -253,6 +253,18 @@ function submit_extras() {
     return res;
 }
 
+function updateExtraResults() {
+    const inputs = Array.from(arguments);
+    const all_results = JSON.parse(inputs[0]);
+    const index = selected_gallery_index();
+
+    const caption_result = all_results.captions[index];
+    if (caption_result) {
+        return [all_results.info + caption_result];
+    }
+    return all_results.info;
+}
+
 function restoreProgressTxt2img() {
     showRestoreProgressButton("txt2img", false);
     var id = localGet("txt2img_task_id");

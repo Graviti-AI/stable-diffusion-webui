@@ -56,6 +56,7 @@ def create_ui():
         outputs=[
             output_panel.gallery,
             output_panel.generation_info,
+            output_panel.infotext,
             output_panel.html_log,
             need_upgrade
         ],
@@ -68,4 +69,11 @@ def create_ui():
     extras_image.change(
         fn=scripts.scripts_postproc.image_changed,
         inputs=[], outputs=[]
+    )
+
+    output_panel.gallery.select(
+        fn=None,
+        inputs=[output_panel.generation_info],
+        outputs=[output_panel.infotext],
+        _js="updateExtraResults",
     )

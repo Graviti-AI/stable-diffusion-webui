@@ -113,6 +113,34 @@ function updateQueryParameters(url, params) {
   return updatedUrl.href;
 }
 
+function updateStripeOrPricingUrls(htmlString, params) {
+
+  function shouldModifyUrl(url) {
+    const urlPattern = /stripe/;
+    const routePattern = /^\/pricing_table/;
+    const base = window.location.protocol + '//' + window.location.host;
+    const parsedUrl = new URL(url, base);
+
+    return urlPattern.test(parsedUrl.hostname) || routePattern.test(parsedUrl.pathname);
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+
+  const links = doc.querySelectorAll('a');
+
+  links.forEach(link => {
+    if (link.href && shouldModifyUrl(link.href)) {
+      link.href = updateQueryParameters(link.href, params || {});
+    }
+  });
+
+  const serializer = new XMLSerializer();
+  const modifiedHtmlString = serializer.serializeToString(doc);
+
+  return modifiedHtmlString;
+}
+
 function supportDifferentPriceType(priceType, linkNode) {
   const priceInfo = channelResult && channelResult.prices[priceType];
   if (orderInfoResult) {

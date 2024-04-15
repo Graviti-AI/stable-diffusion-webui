@@ -2263,7 +2263,7 @@ body.resizing .resize-handle {
 }
 
 .notification-sub-main {
-  color: #2d4156;
+  width: 100% !important;
 }
 
 #gallery_inspire_me_button {

@@ -36,7 +36,7 @@ def check_sd_version_compatible(unit: ControlNetUnit) -> None:
     if not sd_version.is_compatible_with(cnet_sd_version):
         raise SDVersionIncompatibleError(
             f"ControlNet model {unit.model}({cnet_sd_version}) is "
-            "not compatible with sd model({sd_version})"
+            f"not compatible with sd model({sd_version})"
         )
 
 

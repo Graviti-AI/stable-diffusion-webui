@@ -42,10 +42,16 @@ def update_generation_info(generation_info, html_info, img_index):
     return html_info, gr.update()
 
 
+_HTML_TEMPLATE = "<p {classname} {style}>{content}</p>"
+
 def plaintext_to_html(text, classname=None):
     content = "<br>\n".join(html.escape(x) for x in text.split('\n'))
 
-    return f"<p class='{classname}'>{content}</p>" if classname else f"<p>{content}</p>"
+    return _HTML_TEMPLATE.format(
+        classname=f"class='{classname}'" if classname else "",
+        style=f"style='user-select: text'",
+        content=content,
+    )
 
 
 def update_logfile(logfile_path, fields):

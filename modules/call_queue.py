@@ -176,7 +176,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         logger.exception(f'task {id_task} failed: {e.__str__()}')
         exception_str = traceback.format_exc()
         status = 'failed'
-        res = extra_outputs_array + [f"<div class='error'>{html.escape(repr(e))}</div>"]
+        res = extra_outputs_array + [_make_error_html(repr(e))]
         if add_monitor_state:
             return res, json.dumps({
                 "need_upgrade": True,
@@ -192,7 +192,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         error_message = f'{id_task}: {type(e).__name__}: {e}'
         if "MetadataIncompleteBuffer" in error_message:
             error_message = f"The model is probably corrupted, please contact us to delete it: {model_title}."
-        res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
+        res = extra_outputs_array + [_make_error_html(error_message)]
         exception_str = traceback.format_exc()
     finally:
         progress.finish_task(id_task, task_failed, exception_str or '')
@@ -283,6 +283,10 @@ async def get_body(request: gradio.routes.Request):
     return json_body
 
 
+def _make_error_html(content: str) -> str:
+    return f"<div class='error' style='user-select: text'>{html.escape(content)}</div>"
+
+
 def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
     @functools.wraps(func)
     def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
@@ -344,7 +348,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             shared.state.job_count = 0
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '']
-            res = extra_outputs_array + [f"<div class='error'>{html.escape(repr(e))}</div>"]
+            res = extra_outputs_array + [_make_error_html(repr(e))]
             monitor_state = json.dumps({
                 "need_upgrade": True,
                 "message": error_message})
@@ -370,7 +374,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '']
 
-            res = extra_outputs_array + [f"<div class='error'>{html.escape(error_message)}</div>"]
+            res = extra_outputs_array + [_make_error_html(error_message)]
         finally:
             if task_failed and task_id:
                 # NOTE: only report to progress after task_failed.
@@ -385,7 +389,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         shared.state.job_count = 0
 
         if isinstance(res[-1], str) and task_id:
-            res[-1] = f"<p class='comments'>task({task_id})</p>" + res[-1]
+            res[-1] = f"<p class='comments' style='user-select: text'>task({task_id})</p>" + res[-1]
 
         if not add_stats:
             task_end_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024

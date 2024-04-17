@@ -165,12 +165,28 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         res = extra_outputs_array + [repr(e)]
         status = 'failed'
         if add_monitor_state:
-            if e.status_code == 402:
-                return res, json.dumps(
-                    {"need_upgrade": True,
-                     "message": "You have ran out of your credits, please purchase more or upgrade to a higher plan."})
-            else:
-                return res, json.dumps({"need_upgrade": False})
+            match (e.status_code, e.code):
+                case (402, "WEBUIFE-01010001"):
+                    upgrade_info = {
+                        "need_upgrade": True,
+                        "reason": "INSUFFICIENT_CREDITS",
+                    }
+                case (402, "WEBUIFE-01010003"):
+                    upgrade_info = {
+                        "need_upgrade": True,
+                        "reason": "INSUFFICIENT_DAILY_CREDITS",
+                    }
+                case (429, "WEBUIFE-01010004"):
+                    upgrade_info = {
+                        "need_upgrade": True,
+                        "reason": "REACH_CONCURRENCY_LIMIT",
+                    }
+                case _:
+                    logger.error(f"mismatched status_code({e.status_code}) and code({e.code}) in 'MonitorException'")
+                    upgrade_info = {"need_upgrade": False}
+
+            return res, json.dumps(upgrade_info)
+
         return res
     except MonitorTierMismatchedException as e:
         logger.exception(f'task {id_task} failed: {e.__str__()}')

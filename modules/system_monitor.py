@@ -26,12 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 class MonitorException(Exception):
-    def __init__(self, status_code, msg):
+    def __init__(self, status_code: int, code: str, message: str):
         self.status_code = status_code
-        self._msg = msg
+        self.code = code
+        self.message = message
 
     def __repr__(self) -> str:
-        return self._msg
+        return f"{self.status_code} {self.code} {self.message}"
 
 
 class MonitorTierMismatchedException(Exception):
@@ -296,9 +297,10 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     if 199 < resp.status_code < 300:
         return monitor_log_id
 
+    content = resp.json()
     # log the response if request failed
-    logger.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
-    raise MonitorException(resp.status_code, resp.text)
+    logger.error(f'create monitor log failed, status: {resp.status_code}, content: {content}')
+    raise MonitorException(resp.status_code, content["code"], content["message"])
 
 
 def on_task_finished(request: gr.Request, monitor_log_id: str, status: str, message: str, time_consumption: dict):
@@ -388,9 +390,10 @@ def before_task_started(
     if 199 < resp.status_code < 300:
         return job_id
 
+    content = resp.json()
     # log the response if request failed
-    logger.error(f'create monitor log failed, status: {resp.status_code}, message: {resp.text[:1000]}')
-    raise MonitorException(resp.status_code, resp.text)
+    logger.error(f'create monitor log failed, status: {resp.status_code}, content: {content}')
+    raise MonitorException(resp.status_code, content["code"], content["message"])
 
 
 def after_task_finished(

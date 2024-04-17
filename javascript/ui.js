@@ -536,29 +536,91 @@ function update_textbox_by_id(id, value) {
 }
 
 function redirect_to_payment_factory(boxId) {
-  function redirect_to_payment(need_upgrade){
+  async function redirect_to_payment(need_upgrade){
       if (need_upgrade) {
           const need_upgrade_obj = JSON.parse(need_upgrade);
           check_nsfw(need_upgrade_obj, boxId);
           if (need_upgrade_obj.hasOwnProperty("need_upgrade") && need_upgrade_obj.need_upgrade) {
-              const message = need_upgrade_obj.hasOwnProperty("message")? need_upgrade_obj.message: "Upgrade to unlock more credits.";
+              // const message = need_upgrade_obj.hasOwnProperty("message")? need_upgrade_obj.message: "Upgrade to unlock more credits.";
+              let event, message, title, confirm_text, url;
+              switch (need_upgrade_obj.reason) {
+                case "INSUFFICIENT_CREDITS":
+                  event = "insufficient_credits";
+                  title = "Upgrade Now";
+                  confirm_text = "Upgrade";
+                  url = SUBSCRIPTION_URL;
+
+                  message = `You have ran out of your credits, please purchase more or upgrade to a higher plan. Join our ${_AFFILIATE_PROGRAM} to earn cash or credits.`;
+                  break;
+                case "INSUFFICIENT_DAILY_CREDITS":
+                  event = "insufficient_daily_credits";
+                  title = "Subscribe Now";
+                  confirm_text = "Subscribe Now";
+                  url = SUBSCRIPTION_URL;
+
+                  const response = await fetchGet("/api/order_info");
+                  if (response.ok) {
+                    const content = await response.json();
+                    const price_id = content.price_id;
+                    if (price_id) {
+                      const params = new URLSearchParams({
+                        price_id: price_id,
+                        client_reference_id: Base64.encodeURI(JSON.stringify({user_id: content.user_id})),
+                        allow_promotion_codes: true,
+                        current_url: window.location.href,
+                      });
+                      url = `/pricing_table/checkout?${params.toString()}`;
+                    }
+                  }
+
+                  message = "Your daily credits limit for the trial period has been exhausted. Subscribe now to unlock the daily restrictions.";
+                  break;
+                case "REACH_CONCURRENCY_LIMIT":
+                  event = "reach_concurrency_limit";
+                  title = "Upgrade Now";
+                  confirm_text = "Upgrade";
+                  url = SUBSCRIPTION_URL;
+
+                  const permissions = await getFeaturePermissions();
+                  const index = permissions.task_concurrency_limits.findIndex((item) => item.tier === userTier);
+                  if (index === -1) {
+                      throw `user tier "${userTier}" not found in task_concurrency_limits permissions.`
+                  }
+                  const current_tier_limit = permissions.task_concurrency_limits[index].limit;
+                  let target_tier_limit = permissions.task_concurrency_limits.slice(index + 1).filter((item) => item.limit > current_tier_limit);
+                  const getUnit = (limit) => limit === 1 ? "task" : "tasks";
+
+                  message = `Your current plan allows only ${current_tier_limit} concurrent ${getUnit(current_tier_limit)}.`
+                  if (target_tier_limit.length > 0) {
+                      message += " Upgrade to:";
+                      message += "<ul style='list-style: inside'>"
+                      for (let limit_info of target_tier_limit) {
+                          message += `<li><b>${limit_info.tier}</b> to run up to ${limit_info.limit} ${getUnit(limit_info.limit)} simultaneously;</li>`
+                      }
+                      message += "</ul>"
+                  }
+                  break;
+                default:
+                  throw `Unknown upgrade reason: "${need_upgrade_obj.reason}".`
+              }
+
               let onOk = () => {
-                addUpgradeGtagEvent(SUBSCRIPTION_URL, "insufficient_credits");
+                addUpgradeGtagEvent(url, event);
                 update_textbox_by_id(boxId, "");
-                window.open(SUBSCRIPTION_URL, "_blank");
+                window.open(url, "_blank");
               };
               let onCancel = () => {
                 update_textbox_by_id(boxId, "");
               };
-              addPopupGtagEvent(SUBSCRIPTION_URL, "insufficient_credits");
+              addPopupGtagEvent(url, event);
               notifier.confirm(
-                `${message} Join our ${_AFFILIATE_PROGRAM} to earn cash or credits.`,
+                message,
                 onOk,
                 onCancel,
                 {
                   labels: {
-                    confirm: 'Upgrade Now',
-                    confirmOk: 'Upgrade'
+                    confirm: title,
+                    confirmOk: confirm_text,
                   }
                 }
               );

@@ -117,6 +117,9 @@ async function tierCheckGenerate(tabname, args) {
             const tab_elem_id = `tab_${tabname}`;
             if (permission.type === "checkbox") {
                 const target_elem = document.querySelector(`#${tab_elem_id} #${elem_id} input`);
+                if (!target_elem) {
+                    continue;
+                }
                 if (target_elem.checked === permission.value) {
                     continue;
                 }

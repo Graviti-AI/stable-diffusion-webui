@@ -18,13 +18,14 @@ function _getControlNetArgNames() {
 
 let _controlNetArgNames = _getControlNetArgNames();
 
-async function _getFeaturePermissions() {
+async function getFeaturePermissions() {
     if (!featurePermissions) {
         const response = await fetchGet("/config/feature_permissions");
         const body = await response.json();
         featurePermissions = {
             generate: body.generate,
             buttons: Object.fromEntries(body.buttons.map((item) => [item.name, item])),
+            task_concurrency_limits: body.task_concurrency_limits,
         };
     }
     return featurePermissions;
@@ -95,7 +96,7 @@ async function tierCheckGenerate(tabname, args) {
     const allowed_tiers = [];
     let is_order_info_requested = false;
 
-    const permissions = await _getFeaturePermissions();
+    const permissions = await getFeaturePermissions();
     for (let permission of permissions.generate) {
         if (permission.allowed_tiers.includes(userTier)) {
             continue;
@@ -140,7 +141,7 @@ async function tierCheckGenerate(tabname, args) {
 }
 
 async function tierCheckButtonInternal(feature_name) {
-    const permissions = await _getFeaturePermissions();
+    const permissions = await getFeaturePermissions();
     const permission = permissions.buttons[feature_name];
 
     if (permission.allowed_tiers.includes(userTier)) {

@@ -899,7 +899,7 @@ def create_ui():
                                                     ['width', 'height'],
                                                     extractor = (scale_by) => {
                                                         let [imgWidth, imgHeight, scaleBy] = currentImg2imgSourceResolution(512, 512, scale_by);
-                                                        return [imgWidth * scale_by, imgHeight * scale_by];
+                                                        return [Math.floor(imgWidth * scale_by), Math.floor(imgHeight * scale_by)];
                                                     })"""
                                         )
 

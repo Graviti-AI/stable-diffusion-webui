@@ -511,7 +511,6 @@ function check_nsfw(obj, boxId) {
         Or join our ${_AFFILIATE_PROGRAM} \
         to earn cash or credits and use it to upgrade to a higher plan.`,
         () => {
-            addUpgradeGtagEvent(SUBSCRIPTION_URL, "nsfw_checker");
             update_textbox_by_id(boxId, "");
             window.open(SUBSCRIPTION_URL, "_blank");
         },
@@ -605,7 +604,9 @@ function redirect_to_payment_factory(boxId) {
               }
 
               let onOk = () => {
-                addUpgradeGtagEvent(url, event);
+                if (url.includes("pricing_table/checkout")) {
+                  addUpgradeGtagEvent(url, event);
+                }
                 update_textbox_by_id(boxId, "");
                 window.open(url, "_blank");
               };
@@ -1372,15 +1373,6 @@ async function updateOrderInfo() {
                         const upgradeContent = userContent.querySelector("#upgrade");
                         if (upgradeContent) {
                             upgradeContent.style.display = "flex";
-                            const linkNode = upgradeContent.querySelector("a");
-                            if (linkNode && linkNode.href) {
-                              linkNode.addEventListener('click', (e) => {
-                                e.preventDefault();
-                                addUpgradeGtagEvent(linkNode.href, "free_user_webui_upgrade_link", callback = () => {
-                                    window.location.href = linkNode.href;
-                                });
-                              });
-                            }
                         }
                     }
                     changeFreeCreditLink();

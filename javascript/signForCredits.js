@@ -23,6 +23,11 @@ class SignForCredits {
       }
       reportEarnCreditsEvent("daily_check_in", 20 + gained_inference_count);
       signNode.style.display = 'none';
+      const userContent = gradioApp().querySelector(".user-content");
+      const upgradeContent = userContent.querySelector("#upgrade");
+      if (upgradeContent) {
+          upgradeContent.style.display = "flex";
+      }
     } catch (e) {
       notifier.alert('check in error');
     }
@@ -70,6 +75,12 @@ class SignForCredits {
           spanNode.textContent = isPcScreen ? 'Check-in' : '';
           signNode.style.display = 'flex';
           linkNode.addEventListener('click', this.sign);
+        } else {
+          const userContent = gradioApp().querySelector(".user-content");
+          const upgradeContent = userContent.querySelector("#upgrade");
+          if (upgradeContent) {
+              upgradeContent.style.display = "flex";
+          }
         }
       }
     } catch (e) {

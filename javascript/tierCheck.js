@@ -77,7 +77,6 @@ function _tierCheckFailed(features, allowed_tiers) {
     notifier.confirm(
         `${features_message} is not available in the current plan. Please upgrade to ${allowed_tiers_message} to use it.`,
         () => {
-            addUpgradeGtagEvent(SUBSCRIPTION_URL, list_name);
             window.open(SUBSCRIPTION_URL, "_blank");
         },
         () => {},

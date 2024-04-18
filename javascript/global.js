@@ -164,6 +164,8 @@ function supportDifferentPriceType(priceType, linkNode) {
         linkNode.href = '/pricing_table';
       } else if (priceType === 'api') {
         linkNode.href = '/pricing_table/api';
+      } else if (priceType === 'add_ons') {
+        linkNode.href = '/pricing_table/addons';
       } else {
         linkNode.href = `/user#/subscription?priceType=${priceType}`;
       }
@@ -178,7 +180,7 @@ function supportDifferentPriceType(priceType, linkNode) {
         item_name: priceType
       };
     }
-    if (linkNode.href) {
+    if (linkNode.href && linkNode.href.includes('pricing_table/checkout')) {
       linkNode.addEventListener('click', (e) => {
         e.preventDefault();
         addUpgradeGtagEvent(itemListInfo.item_id, itemListInfo.item_name, callback = () => {
@@ -198,13 +200,7 @@ function changeFreeCreditLink() {
 }
 
 function openPricingTable() {
-    if (typeof addUpgradeGtagEvent === 'function') {
-        addUpgradeGtagEvent("/pricing_table", "free_user_redirect_to_pricing_table", callback = () => {
-            window.location.href = "/pricing_table";
-        });
-    } else {
-        window.location.href = "/pricing_table";
-    }
+    window.location.href = "/pricing_table";
 }
 
 testApi();

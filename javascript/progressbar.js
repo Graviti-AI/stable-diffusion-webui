@@ -105,7 +105,6 @@ function checkQueue(response) {
         Or join our ${_AFFILIATE_PROGRAM} to earn cash or credits \
         and use it to upgrade to <b>Basic</b> plan.`,
         () => {
-            addUpgradeGtagEvent(SUBSCRIPTION_URL, "free_queue");
             window.open(SUBSCRIPTION_URL, "_blank");
         },
         () => {},

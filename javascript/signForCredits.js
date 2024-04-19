@@ -1,3 +1,11 @@
+function enableUpgradeButton() {
+  const userContent = gradioApp().querySelector(".user-content");
+  const upgradeContent = userContent.querySelector("#upgrade");
+  if (upgradeContent) {
+      upgradeContent.style.display = "flex";
+  }
+}
+
 class SignForCredits {
   async sign() {
     const signNode = gradioApp().querySelector('.user-content #sign');
@@ -23,11 +31,7 @@ class SignForCredits {
       }
       reportEarnCreditsEvent("daily_check_in", 20 + gained_inference_count);
       signNode.style.display = 'none';
-      const userContent = gradioApp().querySelector(".user-content");
-      const upgradeContent = userContent.querySelector("#upgrade");
-      if (upgradeContent) {
-          upgradeContent.style.display = "flex";
-      }
+      enableUpgradeButton();
     } catch (e) {
       notifier.alert('check in error');
     }
@@ -53,6 +57,7 @@ class SignForCredits {
         //imgNode.src = '/public/image/unlock.png';
         //spanNode.textContent = isPcScreen ? 'Upgrade' : '';
         signNode.style.display = 'none';
+        enableUpgradeButton();
         //if (channelResult) {
         //  changeFreeCreditLink()
         //}
@@ -76,11 +81,7 @@ class SignForCredits {
           signNode.style.display = 'flex';
           linkNode.addEventListener('click', this.sign);
         } else {
-          const userContent = gradioApp().querySelector(".user-content");
-          const upgradeContent = userContent.querySelector("#upgrade");
-          if (upgradeContent) {
-              upgradeContent.style.display = "flex";
-          }
+          enableUpgradeButton();
         }
       }
     } catch (e) {

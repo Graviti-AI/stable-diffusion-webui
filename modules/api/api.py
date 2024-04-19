@@ -217,7 +217,9 @@ class Api:
         self.router = APIRouter()
         self.app = app
         self.submit_to_gpu_worker = submit_to_gpu_worker
+        app.middleware_stack = None
         api_middleware(self.app)
+        app.build_middleware_stack()
         self.add_api_route("/sdapi/v1/txt2img", self.text2imgapi, methods=["POST"], response_model=models.TextToImageResponse)
         self.add_api_route("/sdapi/v1/img2img", self.img2imgapi, methods=["POST"], response_model=models.ImageToImageResponse)
         self.add_api_route("/sdapi/v1/extra-single-image", self.extras_single_image_api, methods=["POST"], response_model=models.ExtrasSingleImageResponse)

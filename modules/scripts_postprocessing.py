@@ -52,6 +52,12 @@ class PostprocessedImage:
 
         return pp
 
+    def set_request(self, request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
+
 
 class ScriptPostprocessing:
     filename = None

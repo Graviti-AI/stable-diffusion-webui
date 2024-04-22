@@ -2,6 +2,8 @@ from PIL import Image
 import numpy as np
 
 from modules import scripts_postprocessing, codeformer_model, ui_components
+from modules.system_monitor import monitor_call_context
+from modules.postprocessing import monitor_extras_params
 import gradio as gr
 
 
@@ -15,13 +17,16 @@ class ScriptPostprocessingCodeFormer(scripts_postprocessing.ScriptPostprocessing
                 codeformer_visibility = gr.Slider(minimum=0.0, maximum=1.0, step=0.001, label="Visibility", value=1.0, elem_id="extras_codeformer_visibility")
                 codeformer_weight = gr.Slider(minimum=0.0, maximum=1.0, step=0.001, label="Weight (0 = maximum effect, 1 = minimum effect)", value=0, elem_id="extras_codeformer_weight")
 
+        monitor_extras_params(enable, "codeformer_enabled")
+        monitor_extras_params(codeformer_visibility, "codeformer_visibility")
+
         return {
             "enable": enable,
             "codeformer_visibility": codeformer_visibility,
             "codeformer_weight": codeformer_weight,
         }
 
-    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, codeformer_visibility, codeformer_weight):
+    def _process(self, pp: scripts_postprocessing.PostprocessedImage, enable, codeformer_visibility, codeformer_weight):
         if codeformer_visibility == 0 or not enable:
             return
 
@@ -34,3 +39,19 @@ class ScriptPostprocessingCodeFormer(scripts_postprocessing.ScriptPostprocessing
         pp.image = res
         pp.info["CodeFormer visibility"] = round(codeformer_visibility, 3)
         pp.info["CodeFormer weight"] = round(codeformer_weight, 3)
+
+    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, codeformer_visibility, codeformer_weight):
+        if codeformer_visibility == 0 or not enable:
+            return
+
+        with monitor_call_context(
+            pp.get_request(),
+            "extras.codeformer",
+            "extras.codeformer",
+            decoded_params={
+                "width": pp.image.width,
+                "height": pp.image.height,
+            },
+        ):
+            return self._process(pp, enable, codeformer_visibility, codeformer_weight)
+

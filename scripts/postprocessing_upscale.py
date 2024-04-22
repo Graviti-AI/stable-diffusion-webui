@@ -1,11 +1,14 @@
 from PIL import Image
 import numpy as np
+import math
 
 from modules import scripts_postprocessing, shared
 import gradio as gr
 
 from modules.ui_components import FormRow, ToolButton
 from modules.ui import switch_values_symbol
+from modules.system_monitor import monitor_call_context
+from modules.postprocessing import monitor_extras_params
 
 upscale_cache = {}
 
@@ -42,6 +45,15 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
         upscaling_res_switch_btn.click(lambda w, h: (h, w), inputs=[upscaling_resize_w, upscaling_resize_h], outputs=[upscaling_resize_w, upscaling_resize_h], show_progress=False)
         tab_scale_by.select(fn=lambda: 0, inputs=[], outputs=[selected_tab])
         tab_scale_to.select(fn=lambda: 1, inputs=[], outputs=[selected_tab])
+
+        monitor_extras_params(selected_tab, "resize_mode")
+        monitor_extras_params(upscaling_resize, "scale_by")
+        monitor_extras_params(upscaling_resize_w, "scale_to_w")
+        monitor_extras_params(upscaling_resize_h, "scale_to_h")
+        monitor_extras_params(upscaling_crop, "scale_crop")
+        monitor_extras_params(extras_upscaler_1, "upscaler_1_enabled", "(x) => !['', 'None'].includes(x)")
+        monitor_extras_params(extras_upscaler_2, "upscaler_2_enabled", "(x) => !['', 'None'].includes(x)")
+        monitor_extras_params(extras_upscaler_2_visibility, "upscaler_2_visibility")
 
         return {
             "upscale_mode": selected_tab,
@@ -89,7 +101,7 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             pp.shared.target_width = int(pp.image.width * upscale_by)
             pp.shared.target_height = int(pp.image.height * upscale_by)
 
-    def process(self, pp: scripts_postprocessing.PostprocessedImage, upscale_mode=1, upscale_by=2.0, upscale_to_width=None, upscale_to_height=None, upscale_crop=False, upscaler_1_name=None, upscaler_2_name=None, upscaler_2_visibility=0.0):
+    def _process(self, pp: scripts_postprocessing.PostprocessedImage, upscale_mode=1, upscale_by=2.0, upscale_to_width=None, upscale_to_height=None, upscale_crop=False, upscaler_1_name=None, upscaler_2_name=None, upscaler_2_visibility=0.0):
         if upscaler_1_name == "None":
             upscaler_1_name = None
 
@@ -115,6 +127,38 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             pp.info["Postprocess upscaler 2"] = upscaler2.name
 
         pp.image = upscaled_image
+
+    @staticmethod
+    def _get_decoded_params(image, upscale_mode, upscale_by, upscale_to_width, upscale_to_height, upscaler_1_name, upscaler_2_name, upscaler_2_visibility) -> dict | None:
+        if upscaler_1_name in {"None", None}:
+            return None
+
+        upscaler_number = 1
+
+        if upscaler_2_name not in {"None", None} and upscaler_2_visibility > 0:
+            upscaler_number += 1
+
+        if upscale_mode == 1:
+            upscale_by = max(upscale_to_width / image.width, upscale_to_height / image.height)
+
+        return {
+            "width": math.floor(upscale_by * image.width),
+            "height": math.floor(upscale_by * image.height),
+            "upscaler_number": upscaler_number,
+        }
+
+    def process(self, pp: scripts_postprocessing.PostprocessedImage, upscale_mode=1, upscale_by=2.0, upscale_to_width=None, upscale_to_height=None, upscale_crop=False, upscaler_1_name=None, upscaler_2_name=None, upscaler_2_visibility=0.0):
+        decoded_params = self._get_decoded_params(pp.image, upscale_mode, upscale_by, upscale_to_width, upscale_to_height, upscaler_1_name, upscaler_2_name, upscaler_2_visibility)
+        if not decoded_params:
+            return
+
+        with monitor_call_context(
+            pp.get_request(),
+            "extras.upscale",
+            "extras.upscale",
+            decoded_params=decoded_params,
+        ):
+            return self._process(pp, upscale_mode, upscale_by, upscale_to_width, upscale_to_height, upscale_crop, upscaler_1_name, upscaler_2_name, upscaler_2_visibility)
 
     def image_changed(self):
         upscale_cache.clear()

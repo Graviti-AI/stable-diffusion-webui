@@ -2,12 +2,22 @@ import gradio as gr
 from modules import scripts, shared, ui_common, postprocessing, call_queue, ui_toprow
 import modules.infotext_utils as parameters_copypaste
 from modules.ui_components import ResizeHandleRow
+from modules.postprocessing import monitor_extras_params
+
+import os
+from PIL import Image
+from tempfile import _TemporaryFileWrapper
 
 
 def create_ui():
     dummy_component = gr.Label(visible=False)
     tab_index = gr.Number(value=0, visible=False)
     need_upgrade = gr.Textbox(value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
+
+    source_width = gr.Number(visible=False)
+    source_height = gr.Number(visible=False)
+    source_widths = gr.JSON(visible=False)
+    source_heights = gr.JSON(visible=False)
 
     with ResizeHandleRow(equal_height=False, variant='compact'):
         with gr.Column(variant='compact'):
@@ -40,8 +50,25 @@ def create_ui():
     tab_batch.select(fn=lambda: 1, inputs=[], outputs=[tab_index])
     # tab_batch_dir.select(fn=lambda: 2, inputs=[], outputs=[tab_index])
 
+    extras_image.change(
+        _get_image_resolution,
+        inputs=[extras_image],
+        outputs=[source_width, source_height],
+    )
+    image_batch.change(
+        _get_batch_image_resolusion,
+        inputs=[image_batch],
+        outputs=[source_widths, source_heights],
+    )
+
+    monitor_extras_params(tab_index, "extras_mode")
+    monitor_extras_params(source_width, "source_width")
+    monitor_extras_params(source_height, "source_height")
+    monitor_extras_params(source_widths, "source_widths")
+    monitor_extras_params(source_heights, "source_heights")
+
     submit.click(
-        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing, extra_outputs=[None, ''], add_monitor_state=True),
+        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing, extra_outputs=[None, '', ''], add_monitor_state=True),
         _js="submit_extras",
         inputs=[
             dummy_component,
@@ -77,3 +104,25 @@ def create_ui():
         outputs=[output_panel.infotext],
         _js="updateExtraResults",
     )
+
+def _get_image_resolution(image: Image.Image | _TemporaryFileWrapper | None) -> tuple[int, int]:
+    if image is None:
+        return 0, 0
+
+    if not isinstance(image, Image.Image):
+        image = Image.open(os.path.abspath(image.name))
+
+    return image.width, image.height
+
+def _get_batch_image_resolusion(images: list[Image.Image | _TemporaryFileWrapper]) -> tuple[list[int], list[int]]:
+    if images is None:
+        return [], []
+
+    widths = []
+    heights = []
+    for image in images:
+        width, height = _get_image_resolution(image)
+        widths.append(width)
+        heights.append(height)
+
+    return widths, heights

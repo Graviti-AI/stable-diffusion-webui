@@ -1,6 +1,7 @@
 import math
 
 from modules import scripts_postprocessing, ui_components
+from modules.system_monitor import monitor_call_context
 import gradio as gr
 
 
@@ -64,8 +65,13 @@ class ScriptPostprocessingSplitOversized(scripts_postprocessing.ScriptPostproces
         if ratio >= 1.0 or ratio > split_threshold:
             return
 
-        result, *others = split_pic(pp.image, inverse_xy, width, height, overlap_ratio)
+        with monitor_call_context(
+            pp.get_request(),
+            "extras.split_oversized",
+            "extras.split_oversized",
+            decoded_params={},
+        ):
+            result, *others = split_pic(pp.image, inverse_xy, width, height, overlap_ratio)
 
-        pp.image = result
-        pp.extra_images = [pp.create_copy(x) for x in others]
-
+            pp.image = result
+            pp.extra_images = [pp.create_copy(x) for x in others]

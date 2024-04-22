@@ -41,11 +41,48 @@ var systemMonitorState = {
         link_mutipliers: {}, // function_name: param_name
       }
     }
+  },
+  tab_extras: {
+    generate_button_id: "extras_generate",
+    timeout_id: null,
+    functions: {
+      "modules.extras": {
+        params: {
+          extras_mode: 0,
+          source_width: 0,
+          source_height: 0,
+          source_widths: [],
+          source_heights: [],
+
+          resize_mode: 0,
+          scale_by: 2,
+          scale_to_w: 512,
+          scale_to_h: 512,
+          scale_crop: false,
+
+          upscaler_1_enabled: false,
+          upscaler_2_enabled: false,
+          upscaler_2_visibility: 0,
+
+          gfpgan_enabled: false,
+          gfpgan_visibility: 1,
+
+          codeformer_enabled: false,
+          codeformer_visibility: 1,
+
+          caption_enabled: false,
+          caption_option_number: 1,
+        },
+        link_params: {}, // tab_name: function_name
+        mutipliers: {}, // multipler_name: value
+        link_mutipliers: {}, // function_name: param_name
+      },
+    },
   }
 }
 
-async function updateButton(tabID) {
-  let credits = 1;
+async function updateButton(tabID, default_credit=1) {
+  let credits = default_credit;
   if (systemMonitorState.hasOwnProperty(tabID) && systemMonitorState[tabID].generate_button_id) {
     let request_body = JSON.parse(JSON.stringify(systemMonitorState[tabID]));
     for (const functionName in request_body.functions) {
@@ -84,7 +121,6 @@ async function updateButton(tabID) {
         } else {
             const response_json = await response.json();
             credits = response_json.inference;
-            credits = credits < 1? 1 : credits;
         }
     } catch(e) {
         console.log(e);
@@ -211,4 +247,5 @@ function resetMutipliers(tabID, functionName, resetLinkParams = false, resetLink
 onUiLoaded(async function(){
   await updateButton("tab_txt2img");
   await updateButton("tab_img2img");
+  await updateButton("tab_extras", 0);
 });

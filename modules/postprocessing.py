@@ -77,6 +77,7 @@ def run_postprocessing(
             existing_pnginfo["parameters"] = parameters
 
         initial_pp = scripts_postprocessing.PostprocessedImage(image_data.convert("RGB"))
+        initial_pp.set_request(request)
 
         scripts.scripts_postproc.run(initial_pp, args)
 
@@ -157,6 +158,16 @@ def run_postprocessing(
 
 def run_postprocessing_webui(request: gr.Request, id_task, *args, **kwargs):
     return run_postprocessing(request, id_task, *args, **kwargs)
+
+
+def monitor_extras_params(component, name: str, extractor: str | None = None) -> None:
+    js = (
+        f"monitorThisParam('tab_extras', 'modules.extras', '{name}')"
+        if not extractor else
+        f"monitorThisParam('tab_extras', 'modules.extras', '{name}', extractor = {extractor})"
+    )
+
+    component.change(None, inputs=[], outputs=[component], _js=js)
 
 
 def run_extras(request: gr.Request, id_task, extras_mode, resize_mode, image, image_folder, input_dir, output_dir, show_extras_results, gfpgan_visibility, codeformer_visibility, codeformer_weight, upscaling_resize, upscaling_resize_w, upscaling_resize_h, upscaling_crop, extras_upscaler_1, extras_upscaler_2, extras_upscaler_2_visibility, upscale_first: bool, save_output: bool = True):

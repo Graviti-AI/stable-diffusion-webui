@@ -1,6 +1,7 @@
 from PIL import Image
 
 from modules import scripts_postprocessing, ui_components
+from modules.system_monitor import monitor_call_context
 import gradio as gr
 
 
@@ -53,7 +54,7 @@ class ScriptPostprocessingAutosizedCrop(scripts_postprocessing.ScriptPostprocess
             "threshold": threshold,
         }
 
-    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, mindim, maxdim, minarea, maxarea, objective, threshold):
+    def _process(self, pp: scripts_postprocessing.PostprocessedImage, enable, mindim, maxdim, minarea, maxarea, objective, threshold):
         if not enable:
             return
 
@@ -62,3 +63,15 @@ class ScriptPostprocessingAutosizedCrop(scripts_postprocessing.ScriptPostprocess
             pp.image = cropped
         else:
             print(f"skipped {pp.image.width}x{pp.image.height} image (can't find suitable size within error threshold)")
+
+    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, mindim, maxdim, minarea, maxarea, objective, threshold):
+        if not enable:
+            return
+
+        with monitor_call_context(
+            pp.get_request(),
+            "extras.autoresized_crop",
+            "extras.autoresized_crop",
+            decoded_params={},
+        ):
+            return self._process(pp, enable, mindim, maxdim, minarea, maxarea, objective, threshold)

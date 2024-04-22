@@ -1,6 +1,7 @@
 from PIL import ImageOps, Image
 
 from modules import scripts_postprocessing, ui_components
+from modules.system_monitor import monitor_call_context
 import gradio as gr
 
 
@@ -18,7 +19,7 @@ class ScriptPostprocessingCreateFlippedCopies(scripts_postprocessing.ScriptPostp
             "option": option,
         }
 
-    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, option):
+    def _process(self, pp: scripts_postprocessing.PostprocessedImage, enable, option):
         if not enable:
             return
 
@@ -30,3 +31,18 @@ class ScriptPostprocessingCreateFlippedCopies(scripts_postprocessing.ScriptPostp
 
         if "Both" in option:
             pp.extra_images.append(pp.image.transpose(Image.Transpose.FLIP_TOP_BOTTOM).transpose(Image.Transpose.FLIP_LEFT_RIGHT))
+
+    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, option):
+        if not enable:
+            return
+
+        if not option:
+            return
+
+        with monitor_call_context(
+            pp.get_request(),
+            "extras.flipped_copies",
+            "extras.flipped_copies",
+            decoded_params={},
+        ):
+            return self._process(pp, enable, option)

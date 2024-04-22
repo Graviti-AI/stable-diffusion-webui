@@ -1,5 +1,6 @@
 
 from modules import scripts_postprocessing, ui_components, errors
+from modules.system_monitor import monitor_call_context
 import gradio as gr
 
 from modules.textual_inversion import autocrop
@@ -24,7 +25,7 @@ class ScriptPostprocessingFocalCrop(scripts_postprocessing.ScriptPostprocessing)
             "debug": debug,
         }
 
-    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, face_weight, entropy_weight, edges_weight, debug):
+    def _process(self, pp: scripts_postprocessing.PostprocessedImage, enable, face_weight, entropy_weight, edges_weight, debug):
         if not enable:
             return
 
@@ -52,3 +53,18 @@ class ScriptPostprocessingFocalCrop(scripts_postprocessing.ScriptPostprocessing)
         pp.image = result
         pp.extra_images = [pp.create_copy(x, nametags=["focal-crop-debug"], disable_processing=True) for x in others]
 
+
+    def process(self, pp: scripts_postprocessing.PostprocessedImage, enable, face_weight, entropy_weight, edges_weight, debug):
+        if not enable:
+            return
+
+        if not pp.shared.target_width or not pp.shared.target_height:
+            return
+
+        with monitor_call_context(
+            pp.get_request(),
+            "extras.focal_crop",
+            "extras.focal_crop",
+            decoded_params={},
+        ):
+            return self._process(pp, enable, face_weight, entropy_weight, edges_weight, debug)

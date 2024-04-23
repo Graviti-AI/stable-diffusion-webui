@@ -8,6 +8,7 @@ import modules.scripts as scripts
 from modules import shared, script_callbacks, masking, images
 from modules.ui_components import InputAccordion
 from modules.api.api import decode_base64_to_image
+from modules.system_monitor import monitor_call_context
 import gradio as gr
 
 from lib_controlnet import global_state, external_code
@@ -553,12 +554,25 @@ class ControlNetForForgeOfficial(scripts.Script):
 
     @torch.no_grad()
     def process(self, p, *args, **kwargs):
-        self.current_params = {}
         enabled_units = self.get_enabled_units(p)
         check_tier_permission(p, enabled_units)
         for unit in enabled_units:
             check_sd_version_compatible(unit)
 
+        enabled_units_number = len(enabled_units)
+        if enabled_units_number == 0:
+            return
+
+        with monitor_call_context(
+            p.get_request(),
+            f"extensions.controlnet.units-{enabled_units_number}",
+            f"extensions.controlnet.units-{enabled_units_number}",
+            decoded_params={},
+        ):
+            return self._process(p, enabled_units, *args, **kwargs)
+
+    def _process(self, p, enabled_units, *args, **kwargs):
+        self.current_params = {}
         Infotext.write_infotext(enabled_units, p)
         for i, unit in enumerate(enabled_units):
             self.bound_check_params(unit)

@@ -221,7 +221,7 @@ class ControlNetUiGroup(object):
         self.upload_independent_img_in_img2img = None
         self.image_upload_panel = None
         self.save_detected_map = None
-        self.input_mode = gr.State(InputMode.SIMPLE)
+        self.input_mode = None
         self.hr_option = None
         self.batch_image_dir_state = None
         self.output_dir_state = None
@@ -246,6 +246,14 @@ class ControlNetUiGroup(object):
         """
         self.dummy_gradio_update_trigger = gr.Number(value=0, visible=False)
         self.openpose_editor = OpenposeEditor()
+
+        self.input_mode = gr.Textbox(
+            label="Input Mode",
+            elem_id=f"{elem_id_tabname}_{tabname}_input_mode",
+            value=InputMode.SIMPLE.value,
+            visible=False,
+            interactive=False,
+        )
 
         with gr.Group(visible=not self.is_img2img) as self.image_upload_panel:
             self.save_detected_map = gr.Checkbox(value=True, visible=False)
@@ -332,12 +340,14 @@ class ControlNetUiGroup(object):
                             visible=False,
                         )
 
-                # with gr.Tab(label="Batch Upload") as self.merge_tab:
-                with gr.Row(visible=False) as self.merge_tab:
+                with gr.Tab(label="Batch Upload") as self.merge_tab:
                     with gr.Row():
                         with gr.Column():
+                            images_elem_id = f"{elem_id_tabname}_{tabname}_batch_images"
+                            masks_elem_id = f"{elem_id_tabname}_{tabname}_batch_masks"
+
                             self.batch_input_gallery = gr.Gallery(
-                                columns=[4], rows=[2], object_fit="contain", height="auto", label="Images"
+                                columns=[4], rows=[2], object_fit="contain", height="auto", label="Images", elem_id=images_elem_id
                             )
                             with gr.Row():
                                 self.merge_upload_button = gr.UploadButton(
@@ -349,7 +359,7 @@ class ControlNetUiGroup(object):
                         with gr.Group(visible=False, elem_classes=["cnet-mask-gallery-group"]) as self.batch_mask_gallery_group:
                             with gr.Column():
                                 self.batch_mask_gallery = gr.Gallery(
-                                    columns=[4], rows=[2], object_fit="contain", height="auto", label="Masks"
+                                    columns=[4], rows=[2], object_fit="contain", height="auto", label="Masks", elem_id=masks_elem_id
                                 )
                                 with gr.Row():
                                     self.mask_merge_upload_button = gr.UploadButton(
@@ -1213,12 +1223,12 @@ class ControlNetUiGroup(object):
             return
 
         for ui_group in ui_groups:
-            batch_fn = lambda: InputMode.BATCH
-            simple_fn = lambda: InputMode.SIMPLE
-            merge_fn = lambda: InputMode.MERGE
+            batch_fn = lambda: InputMode.BATCH.value
+            simple_fn = lambda: InputMode.SIMPLE.value
+            merge_fn = lambda: InputMode.MERGE.value
             for input_tab, fn in (
                 (ui_group.upload_tab, simple_fn),
-                (ui_group.batch_tab, batch_fn),
+                # (ui_group.batch_tab, batch_fn),
                 (ui_group.merge_tab, merge_fn),
             ):
                 # Sync input_mode.
@@ -1228,7 +1238,6 @@ class ControlNetUiGroup(object):
                     outputs=[ui_group.input_mode],
                     show_progress=False,
                 )
-                break
 
     @staticmethod
     def reset():

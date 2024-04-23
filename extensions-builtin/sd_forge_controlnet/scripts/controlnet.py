@@ -21,7 +21,7 @@ from modules.processing import StableDiffusionProcessingImg2Img, StableDiffusion
     StableDiffusionProcessing
 from lib_controlnet.infotext import Infotext
 from modules_forge.forge_util import HWC3, numpy_to_pytorch
-from lib_controlnet.enums import HiResFixOption
+from lib_controlnet.enums import HiResFixOption, InputMode
 from lib_controlnet.api import controlnet_api
 from lib_controlnet.sd_version_check import check_sd_version_compatible, check_tier_permission
 
@@ -112,7 +112,9 @@ class ControlNetForForgeOfficial(scripts.Script):
             offset = 0
             for args_len in self.unit_args_len:
                 unit_args = args[offset: offset + args_len]
-                units.append(ControlNetUnit(*unit_args))
+                unit = ControlNetUnit(*unit_args)
+                unit.input_mode = InputMode(unit.input_mode)
+                units.append(unit)
                 offset += args_len
 
             setattr(p, _CONTROLNET_UNITS_KEY, units)

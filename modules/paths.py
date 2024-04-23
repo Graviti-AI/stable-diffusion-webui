@@ -192,6 +192,8 @@ class Paths:
         return self._check_dir(self._work_dir.joinpath("model_previews"))
 
     def save_image(self, filename: str):
+        if os.getenv("NOT_SAVE_FREE_IMAGES_TO_PUBLIC", 'false').lower() in ('true', 'yes', '1'):
+            return
         # copy the generated image to public dir if user is free tier.
         if not self.user.tire or self.user.tire.lower() not in self._PRIVATE_IMAGE_ALLOWED_TIERS:
             src_path = pathlib.Path(filename)

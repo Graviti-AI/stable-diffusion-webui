@@ -557,19 +557,16 @@ function redirect_to_payment_factory(boxId) {
                   confirm_text = "Subscribe Now";
                   url = SUBSCRIPTION_URL;
 
-                  const response = await fetchGet("/api/order_info");
-                  if (response.ok) {
-                    const content = await response.json();
-                    const price_id = content.price_id;
-                    if (price_id) {
-                      const params = new URLSearchParams({
-                        price_id: price_id,
-                        client_reference_id: Base64.encodeURI(JSON.stringify({user_id: content.user_id})),
-                        allow_promotion_codes: true,
-                        current_url: window.location.href,
-                      });
-                      url = `/pricing_table/checkout?${params.toString()}`;
-                    }
+                  const orderInfo = realtimeData.orderInfo;
+                  const price_id = orderInfo.price_id;
+                  if (price_id) {
+                    const params = new URLSearchParams({
+                      price_id: price_id,
+                      client_reference_id: Base64.encodeURI(JSON.stringify({user_id: orderInfo.user_id})),
+                      allow_promotion_codes: true,
+                      current_url: window.location.href,
+                    });
+                    url = `/pricing_table/checkout?${params.toString()}`;
                   }
 
                   message = "Your daily credits limit for the trial period has been exhausted. Subscribe now to unlock the daily restrictions.";
@@ -581,9 +578,10 @@ function redirect_to_payment_factory(boxId) {
                   url = SUBSCRIPTION_URL;
 
                   const permissions = await getFeaturePermissions();
-                  const index = permissions.task_concurrency_limits.findIndex((item) => item.tier === userTier);
+                  const tier = realtimeData.orderInfo.tier;
+                  const index = permissions.task_concurrency_limits.findIndex((item) => item.tier === tier);
                   if (index === -1) {
-                      throw `user tier "${userTier}" not found in task_concurrency_limits permissions.`
+                      throw `user tier "${tier}" not found in task_concurrency_limits permissions.`
                   }
                   const current_tier_limit = permissions.task_concurrency_limits[index].limit;
                   let target_tier_limit = permissions.task_concurrency_limits.slice(index + 1).filter((item) => item.limit > current_tier_limit);
@@ -1336,66 +1334,65 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
-async function updateOrderInfo() {
-    await fetch(`/api/order_info`, { method: "GET", credentials: "include" })
-        .then((res) => {
-            if (res && res.ok && !res.redirected) {
-                return res.json();
-            }
-        })
-        .then(async (result) => {
-            if (result) {
-                await reportIdentity(result.user_id, result.email);
-                const userContent = gradioApp().querySelector(".user-content");
-                const userInfo = userContent.querySelector(".user_info");
-                if (userInfo) {
-                    userTier = result.tier;
-                    orderInfoResult = result;
-                    userInfo.style.display = "flex";
-                    const img = userInfo.querySelector("a > img");
-                    if (img) {
-                        imgExists(result.picture, img, result.name);
-                    }
-                    const name = userInfo.querySelector(".user_info-name > span");
-                    if (name) {
-                        name.innerHTML = result.name;
-                    }
-                    const logOutLink = userInfo.querySelector(".user_info-name > a");
-                    if (logOutLink) {
-                        logOutLink.target = "_self";
-                        // remove cookie
-                        logOutLink.onclick = () => {
-                            document.cookie = "auth-session=;";
-                        };
-                    }
+let _isUserCenterInited = false;
+function initUserCenter(realtimeData) {
+    if (_isUserCenterInited) {
+        return;
+    }
 
-                    if (result.tier.toLowerCase() === "free" || result.tier.toLowerCase() === "teaser") {
-                        const upgradeContent = userContent.querySelector("#upgrade");
-                        if (upgradeContent) {
-                            upgradeContent.style.display = "flex";
-                        }
-                    }
-                    changeFreeCreditLink();
-                    changeCreditsPackageLink();
-                    if (!result.subscribed && result.tier.toLowerCase() === "free") {
-                      setTimeout(openPricingTable, 10000);
-                    }
-                }
-                const boostButton = gradioApp().querySelector("#one_click_boost_button");
-                let onSucceededCallback = (elem) => {
-                    elem.style.display = "flex";
-                };
-                if (boostButton) {
-                    renderHtmlResponse(
-                        boostButton,
-                        "/boost_button/html",
-                        "GET",
-                        (onSucceeded = onSucceededCallback),
-                    );
-                }
+    const orderInfo = realtimeData.orderInfo;
+    if (!orderInfo) {
+        return;
+    }
+    reportIdentity(orderInfo.user_id, orderInfo.email);
+    const userContent = gradioApp().querySelector(".user-content");
+    const userInfo = userContent.querySelector(".user_info");
+    if (userInfo) {
+        userInfo.style.display = "flex";
+        const img = userInfo.querySelector("a > img");
+        if (img) {
+            imgExists(orderInfo.picture, img, orderInfo.name);
+        }
+        const name = userInfo.querySelector(".user_info-name > span");
+        if (name) {
+            name.innerHTML = orderInfo.name;
+        }
+        const logOutLink = userInfo.querySelector(".user_info-name > a");
+        if (logOutLink) {
+            logOutLink.target = "_self";
+            // remove cookie
+            logOutLink.onclick = () => {
+                document.cookie = "auth-session=;";
+            };
+        }
+
+        if (orderInfo.tier.toLowerCase() === "free" || orderInfo.tier.toLowerCase() === "teaser") {
+            const upgradeContent = userContent.querySelector("#upgrade");
+            if (upgradeContent) {
+                upgradeContent.style.display = "flex";
             }
-        });
+        }
+        changeFreeCreditLink();
+        changeCreditsPackageLink();
+        if (!orderInfo.subscribed && orderInfo.tier.toLowerCase() === "free") {
+          setTimeout(openPricingTable, 10000);
+        }
+    }
+    const boostButton = gradioApp().querySelector("#one_click_boost_button");
+    let onSucceededCallback = (elem) => {
+        elem.style.display = "flex";
+    };
+    if (boostButton) {
+        renderHtmlResponse(
+            boostButton,
+            "/boost_button/html",
+            "GET",
+            (onSucceeded = onSucceededCallback),
+        );
+    }
+    _isUserCenterInited = true;
 }
+realtimeDataCallbacks.push(initUserCenter);
 
 // get user info
 onUiLoaded(function(){
@@ -1418,7 +1415,6 @@ onUiLoaded(function(){
     }
 
     setTimeout(monitorSignatureChange, 30000);
-    updateOrderInfo();
 });
 
 var onEditTimers = {};

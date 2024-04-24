@@ -83,7 +83,7 @@ function randomId() {
 }
 
 function checkQueue(response) {
-    if (userTier != "Free") {
+    if (realtimeData.orderInfo.tier != "Free") {
         return false;
     }
     if (!response.queued) {

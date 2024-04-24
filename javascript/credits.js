@@ -42,34 +42,34 @@ function initCreditsBar() {
             },
         },
         methods: {
-            async queryOrderInfo(interval) {
-                while (true) {
-                    const response = await fetchGet("/api/order_info");
-                    if (response.ok) {
-                        const content = await response.json();
-                        this.updateFromOrderInfo(content);
-                        if (!content.subscribed && content.tier.toLowerCase() === "free" && (Date.now() - this.startTime) > this.redirectInterval * 1000) {
-                          if (typeof openPricingTable === "function") {
-                            openPricingTable();
-                          }
-                        }
+            openPricingTableForFreeUser(realtimeData) {
+                const orderInfo = realtimeData.orderInfo;
+                if (
+                    !orderInfo.subscribed &&
+                    orderInfo.tier.toLowerCase() === "free" &&
+                    Date.now() - this.startTime > this.redirectInterval * 1000
+                ) {
+                    if (typeof openPricingTable === "function") {
+                        openPricingTable();
                     }
-                    await PYTHON.asyncio.sleep(interval * 1000);
                 }
             },
-            updateFromOrderInfo(response) {
+            updateFromOrderInfoCallback(realtimeData) {
                 let permitted = 0;
                 let used = 0;
-                response.inference_usage.forEach((item) => {
+
+                realtimeData.orderInfo.inference_usage.forEach((item) => {
                     permitted += item.permitted;
                     used += item.used;
                 });
+
                 this.permitted = permitted;
                 this.used = used;
             },
         },
         mounted() {
-            this.queryOrderInfo(10);
+            realtimeDataCallbacks.push(this.openPricingTableForFreeUser);
+            realtimeDataCallbacks.push(this.updateFromOrderInfoCallback);
         },
     });
 }

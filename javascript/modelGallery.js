@@ -16,7 +16,7 @@ async function openWorkSpaceDialog(model_type = 'checkpoints') {
 }
 
 function judgeUserTierLevel() {
-    return tierLevels[userTier.toLocaleLowerCase()] >= tierLevels['plus']
+    return tierLevels[realtimeData.orderInfo.tier.toLocaleLowerCase()] >= tierLevels['plus']
 }
 
 function resetParams() {

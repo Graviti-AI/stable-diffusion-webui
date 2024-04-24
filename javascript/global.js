@@ -46,7 +46,6 @@ const defaultModelType = ['checkpoints', 'textual_inversion', 'lora'];
 let searchValue = '';
 let tabSearchValueMap = new Map();
 const isPcScreen = window.innerWidth > 600;
-let userTier = 'Free';
 const tierLevels = {
   free: 0,
   teaser: 0,
@@ -80,11 +79,11 @@ function judgeEnvironment() {
 
 let channelResult = null;
 let hasSingPermission = false;
-let orderInfoResult = null;
 
 function changeCreditsPackageLink() {
-  if (orderInfoResult) {
-    if (["basic", "plus", "pro", "api"].includes(orderInfoResult.tier.toLowerCase())) {
+  const orderInfo = realtimeData.orderInfo;
+  if (orderInfo) {
+    if (["basic", "plus", "pro", "api"].includes(orderInfo.tier.toLowerCase())) {
       const packageIcon = gradioApp().querySelector("#package");
       if (packageIcon) {
           packageIcon.style.display = "flex";
@@ -143,15 +142,16 @@ function updateStripeOrPricingUrls(htmlString, params) {
 
 function supportDifferentPriceType(priceType, linkNode) {
   const priceInfo = channelResult && channelResult.prices[priceType];
-  if (orderInfoResult) {
+  const orderInfo = realtimeData.orderInfo;
+  if (orderInfo) {
     let itemListInfo = {};
     if (priceInfo && priceInfo.price_link) {
-      const resultInfo = { user_id: orderInfoResult.user_id };
+      const resultInfo = { user_id: orderInfo.user_id };
       const referenceId = Base64.encodeURI(JSON.stringify(resultInfo));
       linkNode.href = updateQueryParameters(
         priceInfo.price_link,
         {
-          prefilled_email: orderInfoResult.email,
+          prefilled_email: orderInfo.email,
           client_reference_id: referenceId,
         }
       );

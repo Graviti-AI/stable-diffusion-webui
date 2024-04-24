@@ -93,19 +93,13 @@ function _tierCheckFailed(features, allowed_tiers) {
 async function tierCheckGenerate(tabname, args) {
     const features = [];
     const allowed_tiers = [];
-    let is_order_info_requested = false;
 
     const permissions = await getFeaturePermissions();
+    const tier = realtimeData.orderInfo.tier;
+
     for (let permission of permissions.generate) {
-        if (permission.allowed_tiers.includes(userTier)) {
+        if (permission.allowed_tiers.includes(tier)) {
             continue;
-        }
-        if (!is_order_info_requested) {
-            await updateOrderInfo();
-            is_order_info_requested = true;
-            if (permission.allowed_tiers.includes(userTier)) {
-                continue;
-            }
         }
 
         if (permission.name === "ControlNetXL") {
@@ -146,11 +140,7 @@ async function tierCheckButtonInternal(feature_name) {
     const permissions = await getFeaturePermissions();
     const permission = permissions.buttons[feature_name];
 
-    if (permission.allowed_tiers.includes(userTier)) {
-        return;
-    }
-    await updateOrderInfo();
-    if (permission.allowed_tiers.includes(userTier)) {
+    if (permission.allowed_tiers.includes(realtimeData.orderInfo.tier)) {
         return;
     }
     _tierCheckFailed([feature_name], permission.allowed_tiers);

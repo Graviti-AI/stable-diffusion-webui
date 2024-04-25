@@ -136,7 +136,7 @@ def on_ui_tabs():
 
                 width = gr.Slider(label='Width', minimum=16, maximum=2048, step=8, value=1024)
                 height = gr.Slider(label='Height', minimum=16, maximum=2048, step=8, value=576)
-                video_frames = gr.Slider(label='Video Frames', minimum=1, maximum=4096, step=1, value=14)
+                video_frames = gr.Slider(label='Video Frames', minimum=1, maximum=256, step=1, value=14)
                 motion_bucket_id = gr.Slider(label='Motion Bucket Id', minimum=1, maximum=1023, step=1, value=127)
                 fps = gr.Slider(label='Fps', minimum=1, maximum=1024, step=1, value=6)
                 augmentation_level = gr.Slider(label='Augmentation Level', minimum=0.0, maximum=10.0, step=0.01,

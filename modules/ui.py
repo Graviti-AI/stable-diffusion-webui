@@ -385,8 +385,7 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False) as txt2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=False, is_compact=shared.opts.compact_prompt_box)
-        need_upgrade = gr.Textbox(
-            value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
+        upgrade_info = gr.JSON(value={}, interactive=False, visible=False)
         txt2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_signature")
         txt2img_upscale_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_upscale_signature")
         txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
@@ -612,7 +611,7 @@ def create_ui():
                 output_panel.generation_info,
                 output_panel.infotext,
                 output_panel.html_log,
-                need_upgrade
+                upgrade_info,
             ]
 
 
@@ -661,7 +660,7 @@ def create_ui():
             )
 
             txt2img_gallery = output_panel.gallery
-            need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment_factory('upgrade_checkbox')")
+            upgrade_info.change(None, [upgrade_info], None, _js="upgradeCheck")
             res_switch_btn.click(fn=None, _js="function(){switchWidthHeight('txt2img')}", inputs=None, outputs=None, show_progress=False)
 
             toprow.restore_progress_button.click(
@@ -1098,7 +1097,7 @@ def create_ui():
                     output_panel.generation_info,
                     output_panel.infotext,
                     output_panel.html_log,
-                    need_upgrade
+                    upgrade_info,
                 ],
                 show_progress=False,
             )
@@ -1402,7 +1401,7 @@ def create_ui():
             outputs=[
                 ti_output,
                 ti_outcome,
-                need_upgrade
+                upgrade_info,
             ]
         )
 
@@ -1437,7 +1436,7 @@ def create_ui():
             outputs=[
                 ti_output,
                 ti_outcome,
-                need_upgrade
+                upgrade_info,
             ]
         )
 
@@ -1648,7 +1647,8 @@ def create_ui():
         modelmerger_ui.setup_ui(
             dummy_component=dummy_component,
             sd_model_checkpoint_component=settings.component_dict['sd_model_checkpoint'],
-            need_upgrade_component=need_upgrade)
+            upgrade_info=upgrade_info,
+        )
         def load_styles(request: gr.Request):
             choices = {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}
             return gr.update(**choices), gr.update(**choices), gr.update(**choices), gr.update(**choices)

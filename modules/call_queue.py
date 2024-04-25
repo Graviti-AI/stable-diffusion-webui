@@ -185,7 +185,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                     logger.error(f"mismatched status_code({e.status_code}) and code({e.code}) in 'MonitorException'")
                     upgrade_info = {"need_upgrade": False}
 
-            return res, json.dumps(upgrade_info)
+            return res, upgrade_info
 
         return res
     except MonitorTierMismatchedException as e:
@@ -233,11 +233,16 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 logging.warning(f'send task finished event to monitor failed: {str(e)}')
 
     if add_monitor_state:
-        state = {"need_upgrade": False}
         if is_nsfw:
-            state["is_nsfw"] = True
+            upgrade_info = {
+                "need_upgrade": True,
+                "reason": "NSFW_CONTENT",
+            }
+        else:
+            upgrade_info = {"need_upgrade": False}
 
-        return res, json.dumps(state)
+        return res, upgrade_info
+
     return res
 
 
@@ -286,7 +291,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '', '']
             if add_monitor_state:
-                return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], json.dumps({"need_upgrade": False})
+                return extra_outputs_array + [f'Predict timeout: {predict_timeout}s'], {"need_upgrade": False}
             return extra_outputs_array + [f'Predict timeout: {predict_timeout}s']
 
         return res

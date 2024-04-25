@@ -172,9 +172,8 @@ def on_ui_tabs():
                 sampling_steps.change(None, inputs=[], outputs=[sampling_steps], _js=_resolution_updater("steps"))
                 video_frames.change(None, inputs=[], outputs=[video_frames], _js=_resolution_updater("frames"))
 
-                need_upgrade_elem_id = "svd_upgrade_checkbox"
-                need_upgrade = gr.Textbox(value="", interactive=False, visible=False, elem_id=need_upgrade_elem_id)
-                need_upgrade.change(None, [need_upgrade], None, _js=f"redirect_to_payment_factory('{need_upgrade_elem_id}')")
+                upgrade_info = gr.JSON(value={}, interactive=False, visible=False)
+                upgrade_info.change(None, [upgrade_info], None, _js="upgradeCheck")
 
             with gr.Column():
                 output_video = gr.Video(autoplay=True, interactive=False)
@@ -189,7 +188,7 @@ def on_ui_tabs():
                 add_monitor_state=True,
             ),
             inputs=ctrls,
-            outputs=[output_gallery, output_video, html_log, need_upgrade],
+            outputs=[output_gallery, output_video, html_log, upgrade_info],
             _js="submit_svd_task",
         )
         PasteField = parameters_copypaste.PasteField

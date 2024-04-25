@@ -12,7 +12,7 @@ from tempfile import _TemporaryFileWrapper
 def create_ui():
     dummy_component = gr.Label(visible=False)
     tab_index = gr.Number(value=0, visible=False)
-    need_upgrade = gr.Textbox(value="", interactive=False, visible=False, elem_id="upgrade_checkbox")
+    upgrade_info = gr.JSON(value={}, interactive=False, visible=False)
 
     source_width = gr.Number(visible=False)
     source_height = gr.Number(visible=False)
@@ -85,12 +85,12 @@ def create_ui():
             output_panel.generation_info,
             output_panel.infotext,
             output_panel.html_log,
-            need_upgrade
+            upgrade_info,
         ],
         show_progress=False,
     )
 
-    need_upgrade.change(None, [need_upgrade], None, _js="redirect_to_payment_factory('upgrade_checkbox_postprocessing')")
+    upgrade_info.change(None, [upgrade_info], None, _js="upgradeCheck")
     parameters_copypaste.add_paste_fields("extras", extras_image, None)
 
     extras_image.change(

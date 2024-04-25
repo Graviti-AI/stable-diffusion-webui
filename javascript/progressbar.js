@@ -82,42 +82,6 @@ function randomId() {
     return `task(${randomUUID()})`;
 }
 
-function checkQueue(response) {
-    if (realtimeData.orderInfo.tier != "Free") {
-        return false;
-    }
-    if (!response.queued) {
-        return false;
-    }
-    let result = response.textinfo.match(/^In queue\((\d+) ahead\)/);
-    if (!result) {
-        return false;
-    }
-
-    let ahead = Number(result[1]);
-    if (ahead <= 1) {
-        return false;
-    }
-    addPopupGtagEvent(SUBSCRIPTION_URL, "free_queue");
-    notifier.confirm(
-        `Your task is in queue and ${ahead} tasks ahead, \
-        upgrade to shorten the queue and get faster service. \
-        Or join our ${_AFFILIATE_PROGRAM} to earn cash or credits \
-        and use it to upgrade to <b>Basic</b> plan.`,
-        () => {
-            window.open(SUBSCRIPTION_URL, "_blank");
-        },
-        () => {},
-        {
-            labels: {
-                confirm: 'Upgrade Now',
-                confirmOk: 'Upgrade'
-            }
-        }
-    );
-    return true;
-}
-
 // starts sending progress requests to "/internal/progress" uri, creating progressbar above progressbarContainer element and
 // preview inside gallery element. Cleans up all created stuff when the task is over and calls atEnd.
 // calls onProgress every time there is a progress update
@@ -160,7 +124,7 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
             }
 
             if (!is_queue_checked) {
-                is_queue_checked = checkQueue(res);
+                is_queue_checked = checkQueue(res.queued, res.textinfo);
             }
 
             let progressText = "";

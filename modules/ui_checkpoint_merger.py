@@ -85,7 +85,7 @@ class UiCheckpointMerger:
         self.metadata_editor = metadata_editor
         self.blocks = modelmerger_interface
 
-    def setup_ui(self, dummy_component, sd_model_checkpoint_component, need_upgrade_component):
+    def setup_ui(self, dummy_component, sd_model_checkpoint_component, upgrade_info):
         self.checkpoint_format.change(lambda fmt: gr.update(visible=fmt == 'safetensors'), inputs=[self.checkpoint_format], outputs=[self.metadata_editor], show_progress=False)
 
         self.read_metadata.click(extras.read_metadata, inputs=[self.primary_model_name, self.secondary_model_name, self.tertiary_model_name], outputs=[self.metadata_json])
@@ -118,7 +118,7 @@ class UiCheckpointMerger:
                 self.tertiary_model_name,
                 sd_model_checkpoint_component,
                 self.modelmerger_result,
-                need_upgrade_component
+                upgrade_info,
             ]
         )
 

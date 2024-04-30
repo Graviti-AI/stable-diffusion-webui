@@ -116,7 +116,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         task_info = progress.start_task(id_task)
 
         # log all gpu calls with monitor, we should log it before task begin
-        if func_name in ('txt2img', 'img2img'):
+        if func_name in ('txt2img', 'img2img', 'txt2img_upscale'):
             raw_model_info = args[-2]
             if raw_model_info is None:
                 logger.info("'model_info' is None, searching model by legacy logic")

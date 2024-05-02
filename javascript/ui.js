@@ -779,7 +779,8 @@ function callShowNotification() {
 
     showNotification(userName, userAvatarUrl, executeNotificationCallbacks);
   }
-}function imgExists(url, imgNode, name){
+}
+function imgExists(url, imgNode, name){
     const img = new Image();
     img.src= url;
     img.onerror = () => {
@@ -893,14 +894,13 @@ async function monitorSignatureChange() {
 }
 
 function getCurrentUserName() {
-    const userName = gradioApp().querySelector(
-        "div.user_info > div > span").textContent;
-    return userName;
+    const orderInfo = realtimeData.orderInfo;
+    return orderInfo.name;
 }
 
 function getCurrentUserAvatar() {
     const userAvatarUrl = gradioApp().querySelector(
-        "div.user_info > a > img").src;
+        "#user_info img").src;
     return userAvatarUrl;
 }
 
@@ -1212,27 +1212,18 @@ function initUserCenter(realtimeData) {
     }
     reportIdentity(orderInfo.user_id, orderInfo.email);
     const userContent = gradioApp().querySelector(".user-content");
-    const userInfo = userContent.querySelector(".user_info");
+    const userInfo = userContent.querySelector("#user_info");
     if (userInfo) {
         userInfo.style.display = "flex";
-        const img = userInfo.querySelector("a > img");
-        if (img) {
-            imgExists(orderInfo.picture, img, orderInfo.name);
-        }
-        const name = userInfo.querySelector(".user_info-name > span");
-        if (name) {
-            name.innerHTML = orderInfo.name;
-        }
-        const logOutLink = userInfo.querySelector(".user_info-name > a");
-        if (logOutLink) {
-            logOutLink.target = "_self";
-            // remove cookie
-            logOutLink.onclick = () => {
-                document.cookie = "auth-session=;";
-            };
-        }
+        //const img = userInfo.querySelector("img");
+        //if (img) {
+        //    imgExists(orderInfo.picture, img, orderInfo.name);
+        //}
 
-        if (orderInfo.tier.toLowerCase() === "free" || orderInfo.tier.toLowerCase() === "teaser") {
+        if (
+            orderInfo.tier.toLowerCase() === "free" ||
+            orderInfo.tier.toLowerCase() === "teaser"
+        ) {
             const upgradeContent = userContent.querySelector("#upgrade");
             if (upgradeContent) {
                 upgradeContent.style.display = "flex";
@@ -1258,6 +1249,7 @@ function initUserCenter(realtimeData) {
     }
     _isUserCenterInited = true;
 }
+// initialize user center
 realtimeDataCallbacks.push(initUserCenter);
 
 // get user info

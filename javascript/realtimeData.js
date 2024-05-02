@@ -31,4 +31,4 @@ async function requestOrderInfo(interval) {
     }
 }
 
-onUiLoaded(requestOrderInfo(10));
+onUiLoaded(() => requestOrderInfo(10));

@@ -96,26 +96,25 @@ div.gradio-image button[aria-label="Edit"] {
     margin: 0 0 0 auto;
 }
 
-.user_info img{
+#user_info img{
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    margin-right: 12px;
 }
 
-.user_info {
+#user_info {
     display: flex;
     align-items: center;
     text-align: left;
 }
 
-.user_info .user_info-name {
+#user_info .user_info-name {
     display: flex;
     flex-direction: column;
     margin-left: 5px;
 }
 
-.user_info .user_info-name a:hover {
+#user_info .user_info-name a:hover {
     color: #5a3cff;
 }
 

@@ -1496,10 +1496,7 @@ def create_ui():
                               "</a>"
                             "</div>"
                           "</div>"
-                          "<div style='display: none;justify-content: flex-end;' class='user_info'><a href='/user'><img "
-                            "src=''"
-                            "/></a><div class='user_info-name'><span></span><a "
-                            "href='/api/logout' target='_self'>Log out</a></div></div></div>",
+                          "<div style='display: none;justify-content: flex-end;' id='user_info'></div>",
                     show_label=False)
         with gr.Row(elem_id="topbar"):
             with gr.Column(scale=6, min_width=850):

@@ -68,7 +68,12 @@ def create_ui():
     monitor_extras_params(source_heights, "source_heights")
 
     submit.click(
-        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing, extra_outputs=[None, '', ''], add_monitor_state=True),
+        fn=call_queue.wrap_gradio_gpu_call(
+            postprocessing.run_postprocessing,
+            func_name="extras",
+            extra_outputs=[None, '', ''],
+            add_monitor_state=True
+        ),
         _js="submit_extras",
         inputs=[
             dummy_component,

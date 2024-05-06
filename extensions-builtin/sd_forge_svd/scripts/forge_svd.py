@@ -183,7 +183,7 @@ def on_ui_tabs():
         generate_button.click(
             wrap_gradio_gpu_call(
                 predict_wrapper,
-                func_name='txt2img_upscale',
+                func_name='svd',
                 extra_outputs=[None, None],
                 add_monitor_state=True,
             ),

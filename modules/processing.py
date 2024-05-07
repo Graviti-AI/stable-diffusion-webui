@@ -17,13 +17,13 @@ from typing import Any, Optional
 
 import modules.sd_hijack
 from modules import devices, prompt_parser, masking, sd_samplers, lowvram, infotext_utils, extra_networks, sd_vae_approx, scripts, sd_samplers_common, sd_unet, errors, rng
+from modules import util
 from modules.rng import slerp # noqa: F401
 from modules.sd_hijack import model_hijack
 from modules.sd_samplers_common import images_tensor_to_samples, decode_first_stage, approximation_indexes
 from modules.shared import opts, cmd_opts, state
 from modules.model_info import AllModelInfo, ModelInfo, DatabaseAllModelInfo
 from modules.nsfw import nsfw_blur
-from modules.util import get_share_url
 import modules.shared as shared
 import modules.paths as paths
 import modules.face_restoration
@@ -774,7 +774,9 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
         "Diffus task ID": p.task_id,
     }
     if p.origin is not None:
-        generation_params["Image created at"] = get_share_url(p.origin, p.get_request())
+        share_url = util.get_share_url(p.origin, p.get_request())
+        short_url = util.get_short_url(share_url, p.get_request())
+        generation_params["Image created at"] = short_url
 
     generation_params_text = ", ".join([k if k == v else f'{k}: {infotext_utils.quote(v)}' for k, v in generation_params.items() if v is not None])
 

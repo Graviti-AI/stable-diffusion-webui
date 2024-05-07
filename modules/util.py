@@ -88,6 +88,11 @@ def get_share_url(url: str, request: Request) -> str:
     )
 
 
+def get_short_url(url: str, request: Request) -> str:
+    # implemented in sd-webui-image-server
+    return url
+
+
 def add_params_to_url(url: str, params: dict[str, str | None]) -> str:
     parts = list(urlparse(url))
 

@@ -16,6 +16,7 @@ function _getControlNetArgNames() {
 
 let _controlNetArgNames = _getControlNetArgNames();
 let _featurePermissions = null;
+let _samplingStepsArgName = "steps";
 
 const _AFFILIATE_PROGRAM =
     '<a href="/affiliate/everyone" target="_blank" style="text-wrap: nowrap">Affiliate Program</a>';
@@ -27,7 +28,7 @@ async function getFeaturePermissions() {
         _featurePermissions = {
             generate: body.generate,
             buttons: Object.fromEntries(body.buttons.map((item) => [item.name, item])),
-            task_concurrency_limits: body.task_concurrency_limits,
+            limits: body.limits,
         };
     }
     return _featurePermissions;
@@ -52,10 +53,20 @@ function _joinTiers(tiers) {
     return _joinWords(unique_tiers, "or");
 }
 
-function _checkControlNetXL(tabname, args) {
+function _getCurrentAndHigherLimits(permissions, tier) {
+    const limits = permissions.limits;
+    const index = limits.findIndex((item) => item.tier === tier);
+    if (index === -1) {
+        throw `user tier "${tier}" not found in the "limits" of permissions.`;
+    }
+    const current_limit = limits[index];
+    const higher_limits = limits.slice(index + 1);
+
+    return [current_limit, higher_limits];
+}
+
+function _checkControlNetXL(tabname, getArg) {
     const names = _controlNetArgNames[tabname];
-    const signature = getSignatureFromArgs(args);
-    const getArg = (key) => args[signature.indexOf(key)];
     for (let name of names) {
         if (!getArg(name.enable)) {
             continue;
@@ -68,6 +79,45 @@ function _checkControlNetXL(tabname, args) {
         }
     }
     return true;
+}
+
+function _checkSamplingSteps(getArg, permissions, tier) {
+    const steps = getArg(_samplingStepsArgName);
+
+    let [current_limit, higher_limits] = _getCurrentAndHigherLimits(permissions, tier);
+    const max_sampling_steps = current_limit.max_sampling_steps;
+
+    if (steps <= max_sampling_steps) {
+        return;
+    }
+
+    let message = `Your current plan allows for a maximum of ${current_limit.max_sampling_steps} sampling steps.`;
+
+    higher_limits = higher_limits.filter((item) => item.max_sampling_steps > max_sampling_steps);
+    if (higher_limits.length > 0) {
+        message += " Upgrade to:";
+        message += "<ul style='list-style: inside'>";
+        for (let limit of higher_limits) {
+            message += `<li><b>${limit.tier}</b> to increase your limit to \
+                ${limit.max_sampling_steps} sampling steps;</li>`;
+        }
+        message += "</ul>";
+    }
+
+    notifier.confirm(
+        message,
+        () => {
+            window.open(SUBSCRIPTION_URL, "_blank");
+        },
+        () => {},
+        {
+            labels: {
+                confirm: "Upgrade Now",
+                confirmOk: "Upgrade",
+            },
+        },
+    );
+    throw `The used sampling steps (${steps}) has exceeded the maximum limit (${max_sampling_steps}) for current tier.`;
 }
 
 function _tierCheckFailed(features, allowed_tiers) {
@@ -99,13 +149,16 @@ async function tierCheckGenerate(tabname, args) {
     const permissions = await getFeaturePermissions();
     const tier = realtimeData.orderInfo.tier;
 
+    const signature = getSignatureFromArgs(args);
+    const getArg = (key) => args[signature.indexOf(key)];
+
     for (let permission of permissions.generate) {
         if (permission.allowed_tiers.includes(tier)) {
             continue;
         }
 
         if (permission.name === "ControlNetXL") {
-            if (_checkControlNetXL(tabname, args)) {
+            if (_checkControlNetXL(tabname, getArg)) {
                 continue;
             }
         } else {
@@ -132,10 +185,11 @@ async function tierCheckGenerate(tabname, args) {
         allowed_tiers.push(...permission.allowed_tiers);
     }
 
-    if (features.length == 0) {
-        return;
+    if (features.length != 0) {
+        _tierCheckFailed(features, allowed_tiers);
     }
-    _tierCheckFailed(features, allowed_tiers);
+
+    _checkSamplingSteps(getArg, permissions, tier);
 }
 
 async function tierCheckButtonInternal(feature_name) {
@@ -259,26 +313,24 @@ async function upgradeCheck(upgrade_info) {
 
             const permissions = await getFeaturePermissions();
             const tier = realtimeData.orderInfo.tier;
-            const index = permissions.task_concurrency_limits.findIndex(
-                (item) => item.tier === tier,
-            );
-            if (index === -1) {
-                throw `user tier "${tier}" not found in task_concurrency_limits permissions.`;
-            }
-            const current_tier_limit = permissions.task_concurrency_limits[index].limit;
-            let target_tier_limit = permissions.task_concurrency_limits
-                .slice(index + 1)
-                .filter((item) => item.limit > current_tier_limit);
+
+            let [current_limit, higher_limits] = _getCurrentAndHigherLimits(permissions, tier);
+            const max_concurrent_tasks = current_limit.max_concurrent_tasks;
+
             const getUnit = (limit) => (limit === 1 ? "task" : "tasks");
 
-            message = `Your current plan allows only ${current_tier_limit} concurrent \
-                ${getUnit(current_tier_limit)}.`;
-            if (target_tier_limit.length > 0) {
+            message = `Your current plan allows only ${max_concurrent_tasks} concurrent \
+                ${getUnit(max_concurrent_tasks)}.`;
+
+            higher_limits = higher_limits.filter(
+                (item) => item.max_concurrent_tasks > max_concurrent_tasks,
+            );
+            if (higher_limits.length > 0) {
                 message += " Upgrade to:";
                 message += "<ul style='list-style: inside'>";
-                for (let limit_info of target_tier_limit) {
-                    message += `<li><b>${limit_info.tier}</b> to run up to ${limit_info.limit} \
-                        ${getUnit(limit_info.limit)} simultaneously;</li>`;
+                for (let limit of higher_limits) {
+                    message += `<li><b>${limit.tier}</b> to run up to ${limit.max_concurrent_tasks} \
+                        ${getUnit(limit.max_concurrent_tasks)} simultaneously;</li>`;
                 }
                 message += "</ul>";
             }

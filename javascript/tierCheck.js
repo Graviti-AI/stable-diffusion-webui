@@ -104,6 +104,7 @@ function _checkSamplingSteps(getArg, permissions, tier) {
         message += "</ul>";
     }
 
+    addPopupGtagEvent(SUBSCRIPTION_URL, "sampling_steps_checker");
     notifier.confirm(
         message,
         () => {

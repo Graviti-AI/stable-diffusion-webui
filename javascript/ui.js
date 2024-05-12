@@ -1229,7 +1229,6 @@ function initUserCenter(realtimeData) {
                 upgradeContent.style.display = "flex";
             }
         }
-        changeFreeCreditLink();
         changeCreditsPackageLink();
         if (!orderInfo.subscribed && orderInfo.tier.toLowerCase() === "free") {
           setTimeout(openPricingTable, 10000);

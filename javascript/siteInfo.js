@@ -14,7 +14,6 @@ class ChannelInfo {
         channelResult = channelInfo;
         this.changeDiscordIcon(channelInfo);
         this.hideCheckinBtn(channelInfo);
-        changeFreeCreditLink();
         changeCreditsPackageLink();
       }
       this.iniatlLanguage();

@@ -59,7 +59,7 @@ class SignForCredits {
         signNode.style.display = 'none';
         enableUpgradeButton();
         //if (channelResult) {
-        //  changeFreeCreditLink()
+        changeFreeCreditLink();
         //}
       } else {
         // set after reload

@@ -96,11 +96,13 @@ class Script(scripts.Script):
         p.seed = [p.seed + (i if different_seeds else 0) for i in range(len(all_prompts))]
         p.prompt_for_display = positive_prompt
         with monitor_call_context(
-                p.get_request(),
-                get_function_name_from_processing(p),
-                "script.prompt_matrix",
-                decoded_params=build_decoded_params_from_processing(p),
-                only_available_for=["plus", "pro", "api"]):
+            p.get_request(),
+            get_function_name_from_processing(p),
+            "script.prompt_matrix",
+            decoded_params=build_decoded_params_from_processing(p),
+            feature_type="generate",
+            feature_name="Script",
+        ):
             processed = process_images(p)
 
         grid = images.image_grid(processed.images, p.batch_size, rows=1 << ((len(prompt_matrix_parts) - 1) // 2))

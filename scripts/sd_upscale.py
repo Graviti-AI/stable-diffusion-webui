@@ -96,11 +96,13 @@ class Script(scripts.Script):
 
                 state.job = f"Batch {i + 1 + n * batch_count} out of {state.job_count}"
                 with monitor_call_context(
-                        p.get_request(),
-                        get_function_name_from_processing(p),
-                        "script.sd_upscale.step",
-                        decoded_params=build_decoded_params_from_processing(p),
-                        only_available_for=["plus", "pro", "api"]):
+                    p.get_request(),
+                    get_function_name_from_processing(p),
+                    "script.sd_upscale.step",
+                    decoded_params=build_decoded_params_from_processing(p),
+                    feature_type="generate",
+                    feature_name="Script",
+                ):
                     processed = processing.process_images(p)
 
                 if initial_info is None:

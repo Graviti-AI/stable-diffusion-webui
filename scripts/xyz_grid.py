@@ -784,11 +784,13 @@ class Script(scripts.Script):
 
             try:
                 with monitor_call_context(
-                        p.get_request(),
-                        get_function_name_from_processing(p),
-                        "script.xyz_grid.cell",
-                        decoded_params=build_decoded_params_from_processing(pc),
-                        only_available_for=["plus", "pro", "api"]):
+                    p.get_request(),
+                    get_function_name_from_processing(p),
+                    "script.xyz_grid.cell",
+                    decoded_params=build_decoded_params_from_processing(pc),
+                    feature_type="generate",
+                    feature_name="Script",
+                ):
                     res = process_images(pc)
             except MonitorTierMismatchedException:
                 raise

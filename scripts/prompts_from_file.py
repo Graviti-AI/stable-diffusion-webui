@@ -234,11 +234,13 @@ class Script(scripts.Script):
                     copy_p.negative_prompt = p.negative_prompt + " " + args.get("negative_prompt")
 
             with monitor_call_context(
-                    p.get_request(),
-                    get_function_name_from_processing(copy_p),
-                    "script.prompts_from_file.line",
-                    decoded_params=build_decoded_params_from_processing(copy_p),
-                    only_available_for=["plus", "pro", "api"]):
+                p.get_request(),
+                get_function_name_from_processing(copy_p),
+                "script.prompts_from_file.line",
+                decoded_params=build_decoded_params_from_processing(copy_p),
+                feature_type="generate",
+                feature_name="Script"
+            ):
                 proc = process_images(copy_p)
                 images += proc.images
 

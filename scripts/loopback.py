@@ -107,11 +107,13 @@ class Script(scripts.Script):
                 state.job = f"Iteration {i + 1}/{loops}, batch {n + 1}/{batch_count}"
 
                 with monitor_call_context(
-                        p.get_request(),
-                        processing.get_function_name_from_processing(p),
-                        "script.loopback.batch",
-                        decoded_params=processing.build_decoded_params_from_processing(p),
-                        only_available_for=["plus", "pro", "api"]):
+                    p.get_request(),
+                    processing.get_function_name_from_processing(p),
+                    "script.loopback.batch",
+                    decoded_params=processing.build_decoded_params_from_processing(p),
+                    feature_type="generate",
+                    feature_name="Script",
+                ):
                     processed = processing.process_images(p)
 
                 # Generation cancelled.

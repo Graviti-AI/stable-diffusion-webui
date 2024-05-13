@@ -215,11 +215,13 @@ class Script(scripts.Script):
         p.extra_generation_params["Sigma Adjustment"] = sigma_adjustment
 
         with monitor_call_context(
-                p.get_request(),
-                processing.get_function_name_from_processing(p),
-                "script.img2imgalt",
-                decoded_params=processing.build_decoded_params_from_processing(p),
-                only_available_for=["plus", "pro", "api"]):
+            p.get_request(),
+            processing.get_function_name_from_processing(p),
+            "script.img2imgalt",
+            decoded_params=processing.build_decoded_params_from_processing(p),
+            feature_type="generate",
+            feature_name="Script",
+        ):
             processed = processing.process_images(p)
 
         return processed

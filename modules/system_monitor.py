@@ -13,7 +13,7 @@ import imghdr
 from PIL import Image
 import numpy as np
 
-from typing import Optional, Protocol, Union, Any, Callable
+from typing import Optional, Protocol, Union, Any, Callable, Literal
 from contextlib import contextmanager
 
 import gradio as gr
@@ -43,6 +43,31 @@ class MonitorTierMismatchedException(Exception):
 
     def __repr__(self) -> str:
         return self._msg
+
+
+_FEATURE_PERMISSIONS_URL = os.getenv("FEATURE_PERMISSIONS_URL")
+_feature_permissions = None
+
+
+def _get_feature_permissions() -> dict[str, Any]:
+    global _feature_permissions
+
+    if _FEATURE_PERMISSIONS_URL is None:
+        message = "Failed to get feature permissions due to 'FEATURE_PERMISSIONS_URL' is not set"
+        logger.error(message)
+        raise ValueError(message)
+
+    if _feature_permissions is None:
+        response = requests.get(_FEATURE_PERMISSIONS_URL)
+        response.raise_for_status()
+        content = response.json()
+
+        _feature_permissions = {
+            "generate": {item["name"]: item for item in content["generate"]},
+            "buttons": {item["name"]: item for item in content["buttons"]},
+        }
+
+    return _feature_permissions
 
 
 def remove_schema(base64_str: str) -> str:
@@ -458,87 +483,20 @@ class RequestGetter(Protocol):
         ...
 
 
-def monitor_this_call(
-        api_name: Optional[str] = None,
-        initiator: Optional[str] = None,
-        is_intermediate: bool = False,
-        param_list: Optional[list] = None,
-        extract_task_id: bool = False,
-        refund_if_task_failed: bool = True,
-        refund_if_failed: bool = False,
-        only_available_for: Optional[list[str]] = None
-):
-    def function_wrapper(func):
-        @functools.wraps(func)
-        def wrapper(request: Union[gr.Request, RequestGetter], *args, **kwargs):
-            task_id = None
-            if extract_task_id:
-                for item in args:
-                    if isinstance(item, str) and item.startswith('task(') and item.endswith(')'):
-                        task_id = item[5:-1]
-                        break
-            if not task_id:
-                task_id = str(uuid.uuid4())
-            if isinstance(request, gr.Request):
-                request_obj = request
-            else:
-                request_obj = request.get_request()
-            status = 'unknown'
-            message = ''
-            # get func name
-            func_name = generate_function_name(func)
-            nonlocal api_name, initiator
-            if not api_name:
-                api_name = func_name
-            if not initiator:
-                initiator = func_name
-            # get all parameters
-            signature = inspect.signature(func)
-            decoded_params = dict()
-            if param_list:
-                signature_params = signature.parameters
-                signature_params_keys = list(signature_params.keys())
-                for arg in param_list:
-                    if arg in signature_params:
-                        if signature_params[arg].default == inspect.Parameter.empty:
-                            decoded_params[arg] = args[signature_params_keys.index(arg) - 1]
-                        else:
-                            decoded_params[arg] = kwargs[arg]
-                    else:
-                        logger.error(
-                            f'system_monitor function {func_name} param {arg} is not in the signature')
-            try:
-                task_id = before_task_started(
-                    request_obj, api_name, initiator, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)
-                result = func(request, *args, **kwargs)
-                status = 'finished'
-                try:
-                    message = json.dumps(result, ensure_ascii=False, sort_keys=True)
-                except Exception as e:
-                    logger.error(f'{task_id}: Json encode result failed {str(e)}.')
-            except Exception as e:
-                status = 'failed'
-                message = f'{type(e).__name__}: {str(e)}'
-                raise e
-            finally:
-                after_task_finished(request_obj, task_id, status, message, is_intermediate, refund_if_failed)
-            return result
-
-        return wrapper
-    return function_wrapper
-
-
 @contextmanager
 def monitor_call_context(
-        request: gr.Request,
-        api_name: str,
-        function_name: str,
-        task_id: Optional[str] = None,
-        decoded_params: Optional[dict] = None,
-        is_intermediate: bool = True,
-        refund_if_task_failed: bool = True,
-        refund_if_failed: bool = False,
-        only_available_for: Optional[list[str]] = None):
+    request: gr.Request,
+    api_name: str,
+    function_name: str,
+    task_id: Optional[str] = None,
+    decoded_params: Optional[dict] = None,
+    is_intermediate: bool = True,
+    refund_if_task_failed: bool = True,
+    refund_if_failed: bool = False,
+    only_available_for: Optional[list[str]] = None,
+    feature_type: Literal["generate", "buttons", None] = None,
+    feature_name: str | None = None,
+):
     status = 'unknown'
     message = ''
     task_is_failed = False
@@ -551,6 +509,9 @@ def monitor_call_context(
         except Exception as e:
             logger.error(f'{task_id}: Json encode result failed {str(e)}.')
     try:
+        if feature_type is not None:
+            only_available_for = _get_feature_permissions()[feature_type][feature_name]["allowed_tiers"]
+
         task_id = before_task_started(
             request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)
         logger.info(f"before step {function_name}: {task_id} Free VRAM: %.2f MB, Total VRAM: %.2f MB" % tuple(number / 1e6 for number in torch.cuda.mem_get_info()))

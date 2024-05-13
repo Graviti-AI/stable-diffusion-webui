@@ -258,11 +258,13 @@ class Script(scripts.Script):
             p.latent_mask = latent_mask
 
             with monitor_call_context(
-                    p.get_request(),
-                    get_function_name_from_processing(p),
-                    "script.outpainting_mk_2.expand",
-                    decoded_params=build_decoded_params_from_processing(p),
-                    only_available_for=["plus", "pro", "api"]):
+                p.get_request(),
+                get_function_name_from_processing(p),
+                "script.outpainting_mk_2.expand",
+                decoded_params=build_decoded_params_from_processing(p),
+                feature_type="generate",
+                feature_name="Script",
+            ):
                 proc = process_images(p)
 
             if initial_seed_and_info[0] is None:

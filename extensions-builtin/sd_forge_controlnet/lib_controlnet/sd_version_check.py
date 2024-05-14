@@ -4,10 +4,8 @@ from lib_controlnet.global_state import get_sd_version
 from lib_controlnet.logging import logger
 
 from modules.processing import StableDiffusionProcessing
-from modules.system_monitor import MonitorTierMismatchedException
+from modules.system_monitor import MonitorTierMismatchedException, get_feature_permissions
 from modules.user import User
-
-_SDXL_ALLOWED_TIERS = ["basic", "plus", "pro", "api"]
 
 
 class SDVersionIncompatibleError(Exception):
@@ -45,7 +43,9 @@ def check_tier_permission(
 ) -> None:
     request = p.get_request()
     tier = User.current_user(request).tire
-    if tier.lower() in _SDXL_ALLOWED_TIERS:
+    allowed_tiers = get_feature_permissions()["generate"]["ControlNetXL"]["allowed_tiers"]
+
+    if tier in allowed_tiers:
         return
 
     for unit in enabled_units:
@@ -53,10 +53,10 @@ def check_tier_permission(
             raise MonitorTierMismatchedException(
                 (
                     "Preprocessor 'revision' only supports SDXL. SDXL ControlNet is available for "
-                    f"{ _SDXL_ALLOWED_TIERS} only. The current user tier is {tier}."
+                    f"{allowed_tiers} only. The current user tier is {tier}."
                 ),
                 tier,
-                _SDXL_ALLOWED_TIERS,
+                allowed_tiers,
             )
 
         cnet_sd_version = StableDiffusionVersion.detect_from_model_name(unit.model)
@@ -64,8 +64,8 @@ def check_tier_permission(
             raise MonitorTierMismatchedException(
                 (
                     "SDXL ControlNet is available for "
-                    f"{ _SDXL_ALLOWED_TIERS} only. The current user tier is {tier}."
+                    f"{allowed_tiers} only. The current user tier is {tier}."
                 ),
                 tier,
-                _SDXL_ALLOWED_TIERS,
+                allowed_tiers,
             )

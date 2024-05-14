@@ -9,7 +9,7 @@ from modules import script_callbacks
 from modules.paths import models_path
 from modules.ui_common import ToolButton, refresh_symbol
 from modules.ui_components import ResizeHandleRow 
-from modules.system_monitor import _get_feature_permissions, monitor_call_context
+from modules.system_monitor import monitor_call_context
 from modules.call_queue import wrap_gradio_gpu_call
 from modules.paths import Paths
 from modules import shared

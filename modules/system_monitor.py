@@ -49,7 +49,7 @@ _FEATURE_PERMISSIONS_URL = os.getenv("FEATURE_PERMISSIONS_URL")
 _feature_permissions = None
 
 
-def _get_feature_permissions() -> dict[str, Any]:
+def get_feature_permissions() -> dict[str, Any]:
     global _feature_permissions
 
     if _FEATURE_PERMISSIONS_URL is None:
@@ -510,7 +510,7 @@ def monitor_call_context(
             logger.error(f'{task_id}: Json encode result failed {str(e)}.')
     try:
         if feature_type is not None:
-            only_available_for = _get_feature_permissions()[feature_type][feature_name]["allowed_tiers"]
+            only_available_for = get_feature_permissions()[feature_type][feature_name]["allowed_tiers"]
 
         task_id = before_task_started(
             request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)

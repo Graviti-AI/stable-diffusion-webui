@@ -14,6 +14,7 @@ function _getControlNetArgNames() {
     return arg_names;
 }
 
+let _upgradableTiers = ["Basic", "Plus", "Pro", "Api"];
 let _controlNetArgNames = _getControlNetArgNames();
 let _featurePermissions = null;
 let _samplingStepsArgName = "steps";
@@ -25,11 +26,16 @@ async function getFeaturePermissions() {
     if (!_featurePermissions) {
         const response = await fetchGet("/config/feature_permissions");
         const body = await response.json();
+
         _featurePermissions = {
             generate: body.generate,
             buttons: Object.fromEntries(body.buttons.map((item) => [item.name, item])),
-            limits: body.limits,
+            limits: Object.fromEntries(body.limits.map((item) => [item.tier, item])),
         };
+
+        _featurePermissions.upgradablelimits = _upgradableTiers.map(
+            (item) => _featurePermissions.limits[item],
+        );
     }
     return _featurePermissions;
 }
@@ -45,24 +51,12 @@ function _joinWords(words, conjunction = "and") {
 
 function _joinTiers(tiers) {
     const unique_tiers = [];
-    for (let tier of ["Basic", "Plus", "Pro", "Api"]) {
-        if (tiers.includes(tier)) {
+    for (let tier of _upgradableTiers) {
+        if (tiers.has(tier)) {
             unique_tiers.push(tier);
         }
     }
     return _joinWords(unique_tiers, "or");
-}
-
-function _getCurrentAndHigherLimits(permissions, tier) {
-    const limits = permissions.limits;
-    const index = limits.findIndex((item) => item.tier === tier);
-    if (index === -1) {
-        throw `user tier "${tier}" not found in the "limits" of permissions.`;
-    }
-    const current_limit = limits[index];
-    const higher_limits = limits.slice(index + 1);
-
-    return [current_limit, higher_limits];
 }
 
 function _checkControlNetXL(tabname, getArg) {
@@ -84,7 +78,11 @@ function _checkControlNetXL(tabname, getArg) {
 function _checkSamplingSteps(getArg, permissions, tier) {
     const steps = getArg(_samplingStepsArgName);
 
-    let [current_limit, higher_limits] = _getCurrentAndHigherLimits(permissions, tier);
+    const current_limit = permissions.limits[tier];
+    if (!current_limit) {
+        throw `user tier "${tier}" not found in the "limits" of permissions.`;
+    }
+
     const max_sampling_steps = current_limit.max_sampling_steps;
 
     if (steps <= max_sampling_steps) {
@@ -93,7 +91,9 @@ function _checkSamplingSteps(getArg, permissions, tier) {
 
     let message = `Your current plan allows for a maximum of ${current_limit.max_sampling_steps} sampling steps.`;
 
-    higher_limits = higher_limits.filter((item) => item.max_sampling_steps > max_sampling_steps);
+    const higher_limits = permissions.upgradablelimits.filter(
+        (item) => item.max_sampling_steps > max_sampling_steps,
+    );
     if (higher_limits.length > 0) {
         message += " Upgrade to:";
         message += "<ul style='list-style: inside'>";
@@ -121,9 +121,15 @@ function _checkSamplingSteps(getArg, permissions, tier) {
     throw `The used sampling steps (${steps}) has exceeded the maximum limit (${max_sampling_steps}) for current tier.`;
 }
 
-function _tierCheckFailed(features, allowed_tiers) {
-    const features_message = _joinWords(features);
-    const allowed_tiers_message = _joinTiers(allowed_tiers);
+function _tierCheckFailed(features) {
+    const features_message = _joinWords(features.map((item) => item.name));
+
+    let intersected_tiers = new Set(_upgradableTiers);
+    features.forEach((item) => {
+        intersected_tiers = intersected_tiers.intersection(new Set(item.allowed_tiers));
+    });
+
+    const allowed_tiers_message = _joinTiers(intersected_tiers);
     const list_name = `${features.join("_").toLowerCase()}_tier_checker`;
 
     addPopupGtagEvent(SUBSCRIPTION_URL, list_name);
@@ -145,7 +151,6 @@ function _tierCheckFailed(features, allowed_tiers) {
 
 async function tierCheckGenerate(tabname, args) {
     const features = [];
-    const allowed_tiers = [];
 
     const permissions = await getFeaturePermissions();
     const tier = realtimeData.orderInfo.tier;
@@ -182,12 +187,11 @@ async function tierCheckGenerate(tabname, args) {
                 continue;
             }
         }
-        features.push(permission.name);
-        allowed_tiers.push(...permission.allowed_tiers);
+        features.push({ name: permission.name, allowed_tiers: permission.allowed_tiers });
     }
 
     if (features.length != 0) {
-        _tierCheckFailed(features, allowed_tiers);
+        _tierCheckFailed(features);
     }
 
     _checkSamplingSteps(getArg, permissions, tier);
@@ -315,7 +319,11 @@ async function upgradeCheck(upgrade_info) {
             const permissions = await getFeaturePermissions();
             const tier = realtimeData.orderInfo.tier;
 
-            let [current_limit, higher_limits] = _getCurrentAndHigherLimits(permissions, tier);
+            const current_limit = permissions.limits[tier];
+            if (!current_limit) {
+                throw `user tier "${tier}" not found in the "limits" of permissions.`;
+            }
+
             const max_concurrent_tasks = current_limit.max_concurrent_tasks;
 
             const getUnit = (limit) => (limit === 1 ? "task" : "tasks");
@@ -323,7 +331,7 @@ async function upgradeCheck(upgrade_info) {
             message = `Your current plan allows only ${max_concurrent_tasks} concurrent \
                 ${getUnit(max_concurrent_tasks)}.`;
 
-            higher_limits = higher_limits.filter(
+            const higher_limits = permissions.upgradablelimits.filter(
                 (item) => item.max_concurrent_tasks > max_concurrent_tasks,
             );
             if (higher_limits.length > 0) {

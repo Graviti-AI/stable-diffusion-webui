@@ -7,7 +7,7 @@ import opennsfw2 as n2
 from keras import Model
 from PIL import Image, ImageFilter
 
-_NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api"}
+_NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s"}
 
 if TYPE_CHECKING:
     from modules.processing import StableDiffusionProcessing

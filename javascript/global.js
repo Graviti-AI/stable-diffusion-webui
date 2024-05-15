@@ -53,6 +53,7 @@ const tierLevels = {
   plus: 2,
   pro: 3,
   api: 4,
+  "ltd s": 1
 };
 
 let connectNewModelApi = true;

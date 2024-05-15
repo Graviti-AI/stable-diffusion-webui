@@ -52,11 +52,15 @@ function _joinWords(words, conjunction = "and") {
 function _joinTiers(tiers) {
     const unique_tiers = [];
     for (let tier of _upgradableTiers) {
-        if (tiers.has(tier)) {
+        if (tiers.includes(tier)) {
             unique_tiers.push(tier);
         }
     }
     return _joinWords(unique_tiers, "or");
+}
+
+function _intersection(a, b) {
+    return a.filter((item) => b.includes(item));
 }
 
 function _checkControlNetXL(tabname, getArg) {
@@ -124,9 +128,9 @@ function _checkSamplingSteps(getArg, permissions, tier) {
 function _tierCheckFailed(features) {
     const features_message = _joinWords(features.map((item) => item.name));
 
-    let intersected_tiers = new Set(_upgradableTiers);
+    let intersected_tiers = _upgradableTiers;
     features.forEach((item) => {
-        intersected_tiers = intersected_tiers.intersection(new Set(item.allowed_tiers));
+        intersected_tiers = _intersection(intersected_tiers, item.allowed_tiers);
     });
 
     const allowed_tiers_message = _joinTiers(intersected_tiers);

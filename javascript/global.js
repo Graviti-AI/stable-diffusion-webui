@@ -83,7 +83,7 @@ let hasSingPermission = false;
 function changeCreditsPackageLink() {
   const orderInfo = realtimeData.orderInfo;
   if (orderInfo) {
-    if (["basic", "plus", "pro", "api"].includes(orderInfo.tier.toLowerCase())) {
+    if (["basic", "plus", "pro", "api", "ltd s"].includes(orderInfo.tier.toLowerCase())) {
       const packageIcon = gradioApp().querySelector("#package");
       if (packageIcon) {
           packageIcon.style.display = "flex";

@@ -126,7 +126,8 @@ function _checkSamplingSteps(getArg, permissions, tier) {
 }
 
 function _tierCheckFailed(features) {
-    const features_message = _joinWords(features.map((item) => item.name));
+    const feature_names = features.map((item) => item.name);
+    const features_message = _joinWords(feature_names);
 
     let intersected_tiers = _upgradableTiers;
     features.forEach((item) => {
@@ -134,7 +135,7 @@ function _tierCheckFailed(features) {
     });
 
     const allowed_tiers_message = _joinTiers(intersected_tiers);
-    const list_name = `${features.join("_").toLowerCase()}_tier_checker`;
+    const list_name = `${feature_names.join("_").toLowerCase()}_tier_checker`;
 
     addPopupGtagEvent(SUBSCRIPTION_URL, list_name);
     notifier.confirm(
@@ -191,7 +192,7 @@ async function tierCheckGenerate(tabname, args) {
                 continue;
             }
         }
-        features.push({ name: permission.name, allowed_tiers: permission.allowed_tiers });
+        features.push(permission);
     }
 
     if (features.length != 0) {
@@ -208,7 +209,7 @@ async function tierCheckButtonInternal(feature_name) {
     if (permission.allowed_tiers.includes(realtimeData.orderInfo.tier)) {
         return;
     }
-    _tierCheckFailed([feature_name], permission.allowed_tiers);
+    _tierCheckFailed([permission]);
 }
 
 function tierCheckButton(feature_name) {

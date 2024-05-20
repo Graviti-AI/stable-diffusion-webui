@@ -16,7 +16,7 @@ class ChannelInfo {
         this.hideCheckinBtn(channelInfo);
         changeCreditsPackageLink();
       }
-      this.iniatlLanguage();
+      this.initialLanguage();
     } catch (e) {
       console.log(e);
     }
@@ -56,38 +56,45 @@ class ChannelInfo {
     }
   }
 
-  iniatlLanguage() {
+  initialLanguage() {
     if (!window.Cookies) return;
 
-    const navigatorLanguage = navigator.language.replaceAll('-', '_');
     const cookieLanguage = Cookies.get(languageCookieKey);
     const languageListNode = gradioApp().querySelector(`#language-list`);
-
-    const laguageList = JSON.parse(
+    const languageList = JSON.parse(
       languageListNode.textContent.replaceAll("'", '"')
     );
 
+    let selectedLanguage = 'None';
+    // language priority:
+    // 1. user setting in cookie
+    // 2. channel setting
+    // 3. browser language
     if (cookieLanguage) {
-      setSelectChecked('language-select', cookieLanguage);
+      selectedLanguage = cookieLanguage;
     } else {
-      const language = laguageList.find(
-        (item) => item.toLowerCase() === navigatorLanguage.toLowerCase()
-      );
-      // set default language from channel
-      if (channelResult) {
-        const { language: channelLanguage } = channelResult;
-        setSelectChecked('language-select', channelLanguage);
-        Cookies.set(languageCookieKey, channelLanguage);
+      if (channelResult && channelResult.language) {
+        selectedLanguage = channelResult.language;
       } else {
-        setSelectChecked('language-select', language ? language : 'None');
-        Cookies.set(languageCookieKey, navigatorLanguage);
+        selectedLanguage = navigator.language.replaceAll('-', '_');
       }
+    }
+
+    // always update cookie, to keep it not expired
+    const cookieMeta = { expires: 365, domain: 'diffus.me' };
+    Cookies.set(languageCookieKey, selectedLanguage, cookieMeta);
+
+    // update language-select list to show current selected language
+    const language = languageList.includes(selectedLanguage) ? selectedLanguage : 'None';
+    setSelectChecked('language-select', language);
+    if (!cookieLanguage && language != 'None'){
       location.reload();
     }
+
     gradioApp()
       .querySelector(`#language-select`)
       .addEventListener('change', (event) => {
-        Cookies.set(languageCookieKey, event.target.value);
+        Cookies.set(languageCookieKey, event.target.value, cookieMeta);
         location.reload();
       });
   }

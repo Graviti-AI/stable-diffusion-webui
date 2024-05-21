@@ -512,6 +512,22 @@ function initUserCenterMenu() {
                 <v-list-item-title>User Center</v-list-item-title>
               </v-list-item-content>
             </v-list-item>
+            <v-list-item @click="redirectToComfy">
+              <v-list-item-icon>
+                <v-icon>account_tree</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>ComfyUI
+                  <v-chip
+                    class="ml-2"
+                    color="#ff9800d4"
+                    small
+                  >
+                    Free Alpha
+                  </v-chip>
+                </v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
             <v-list-item @click="cancelSubscription">
               <v-list-item-icon>
                 <v-icon>highlight_off</v-icon>
@@ -576,6 +592,12 @@ function initUserCenterMenu() {
       },
       redirectToUserCenter() {
         window.location.href = "/user";
+      },
+      redirectToComfy() {
+        const comfyInfo = channelResult.sub_pages.find(item => item.name.toLowerCase() === "comfyui");
+        if (comfyInfo) {
+          window.open(comfyInfo.url, "_blank");
+        }
       },
       cancelSubscription() {
         window.location.href = "/user#/billing?cancel_subscription=true";

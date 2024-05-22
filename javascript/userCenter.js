@@ -593,7 +593,9 @@ function initUserCenterMenu() {
       redirectToUserCenter() {
         window.location.href = "/user";
       },
-      redirectToComfy() {
+      async redirectToComfy() {
+        await checkComfyUI();
+
         const comfyInfo = channelResult.sub_pages.find(item => item.name.toLowerCase() === "comfyui");
         if (comfyInfo) {
           window.open(comfyInfo.url, "_blank");

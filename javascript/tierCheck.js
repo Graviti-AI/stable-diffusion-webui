@@ -80,6 +80,53 @@ function _checkControlNetXL(tabname, getArg) {
     return true;
 }
 
+function _checkControlNetUnits(tabname, getArg, permissions, tier) {
+    const names = _controlNetArgNames[tabname];
+    const controlnet_units = names.map((item) => getArg(item.enable)).reduce((a, b) => a + b, 0);
+
+    const current_limit = permissions.limits[tier];
+    if (!current_limit) {
+        throw `user tier "${tier}" not found in the "limits" of permissions.`;
+    }
+
+    const max_controlnet_units = current_limit.max_controlnet_units;
+
+    if (controlnet_units <= max_controlnet_units) {
+        return;
+    }
+
+    let message = `Your current plan allows for a maximum of ${max_controlnet_units} controlnet units.`;
+
+    const higher_limits = permissions.upgradablelimits.filter(
+        (item) => item.max_controlnet_units > max_controlnet_units,
+    );
+    if (higher_limits.length > 0) {
+        message += " Upgrade to:";
+        message += "<ul style='list-style: inside'>";
+        for (let limit of higher_limits) {
+            message += `<li><b>${limit.tier}</b> to increase your limit to \
+                ${limit.max_controlnet_units} controlnet units;</li>`;
+        }
+        message += "</ul>";
+    }
+
+    addPopupGtagEvent(SUBSCRIPTION_URL, "controlnet_units_checker");
+    notifier.confirm(
+        message,
+        () => {
+            window.open(SUBSCRIPTION_URL, "_blank");
+        },
+        () => {},
+        {
+            labels: {
+                confirm: "Upgrade Now",
+                confirmOk: "Upgrade",
+            },
+        },
+    );
+    throw `The used controlnet units (${controlnet_units}) has exceeded the maximum limit (${max_controlnet_units}) for current tier.`;
+}
+
 function _checkSamplingSteps(getArg, permissions, tier) {
     const steps = getArg(_samplingStepsArgName);
 
@@ -94,7 +141,7 @@ function _checkSamplingSteps(getArg, permissions, tier) {
         return;
     }
 
-    let message = `Your current plan allows for a maximum of ${current_limit.max_sampling_steps} sampling steps.`;
+    let message = `Your current plan allows for a maximum of ${max_sampling_steps} sampling steps.`;
 
     const higher_limits = permissions.upgradablelimits.filter(
         (item) => item.max_sampling_steps > max_sampling_steps,
@@ -211,6 +258,7 @@ async function tierCheckGenerate(tabname, args) {
     }
 
     _checkSamplingSteps(getArg, permissions, tier);
+    _checkControlNetUnits(tabname, getArg, permissions, tier);
 }
 
 async function tierCheckButtonInternal(feature_name) {

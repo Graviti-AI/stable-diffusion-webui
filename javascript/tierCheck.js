@@ -30,6 +30,7 @@ async function getFeaturePermissions() {
         _featurePermissions = {
             generate: body.generate,
             buttons: Object.fromEntries(body.buttons.map((item) => [item.name, item])),
+            features: Object.fromEntries(body.features.map((item) => [item.name, item])),
             limits: Object.fromEntries(body.limits.map((item) => [item.tier, item])),
         };
 
@@ -123,6 +124,16 @@ function _checkSamplingSteps(getArg, permissions, tier) {
         },
     );
     throw `The used sampling steps (${steps}) has exceeded the maximum limit (${max_sampling_steps}) for current tier.`;
+}
+
+async function checkComfyUI() {
+    const permissions = await getFeaturePermissions();
+    const feature = permissions.features["ComfyUI"];
+
+    if (feature.allowed_tiers.includes(realtimeData.orderInfo.tier)) {
+        return;
+    }
+    _tierCheckFailed([feature]);
 }
 
 function _tierCheckFailed(features) {

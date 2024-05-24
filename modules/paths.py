@@ -10,6 +10,7 @@ import modules.user
 import gradio as gr
 
 WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
+COMFYUI_WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
 workdir = pathlib.Path(data_path, WORKDIR_NAME)
 
 def mute_sdxl_imports():
@@ -93,6 +94,7 @@ class Paths:
 
         # work dir save user output files
         self._work_dir = base_dir.joinpath(WORKDIR_NAME, *parents_path)
+        self._comfyui_work_dir = base_dir.joinpath(COMFYUI_WORKDIR_NAME, *parents_path)
         if not self._work_dir.exists():
             self._work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -123,6 +125,9 @@ class Paths:
     def favorites_dir(self) -> pathlib.Path:
         return self._check_dir(self._favorite_dir)
 
+    def comfyui_favorites_dir(self) -> pathlib.Path:
+        return self._check_dir(self._comfyui_work_dir.joinpath('favorites'))
+
     def public_outdir(self) -> pathlib.Path:
         return self._check_dir(pathlib.Path(data_path).joinpath(WORKDIR_NAME, 'public', 'outputs'))
 
@@ -131,6 +136,9 @@ class Paths:
 
     def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)
+
+    def private_comfyui_outdir(self) -> pathlib.Path:
+        return self._check_dir(self._comfyui_work_dir.joinpath('outputs'))
 
     def private_tempdir(self) -> pathlib.Path:
         return self._check_dir(self._work_dir.joinpath('temp'))

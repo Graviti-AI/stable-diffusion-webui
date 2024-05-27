@@ -190,6 +190,9 @@ class State:
         self.job = ""
         self.job_count = 0
         self.request = None
+        self.skipped = False
+        self.interrupted = False
+        self.stopping_generation = False
 
         devices.torch_gc()
 

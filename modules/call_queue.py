@@ -257,7 +257,7 @@ def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_moni
     @functools.wraps(func)
     def f(request: gradio.routes.Request, *args, **kwargs):
         assert shared.state, "shared.state is not initialized"
-        predict_timeout = dict(request.headers).get('X-Predict-Timeout', shared.cmd_opts.predict_timeout)
+        predict_timeout = dict(request.headers).get('x-task-timeout', shared.cmd_opts.predict_timeout)
         # if the first argument is a string that says "task(...)", it is treated as a job id
         if args and type(args[0]) == str and args[0].startswith("task(") and args[0].endswith(")"):
             id_task = args[0]
@@ -403,11 +403,6 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             else:
                 # the wrapped func will report to progress if not task_failed.
                 pass
-
-        shared.state.skipped = False
-        shared.state.interrupted = False
-        shared.state.stopping_generation = False
-        shared.state.job_count = 0
 
         if isinstance(res[-1], str) and task_id:
             res[-1] = f"<p class='comments' style='user-select: text'>task({task_id})</p>" + res[-1]

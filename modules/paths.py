@@ -10,7 +10,7 @@ import modules.user
 import gradio as gr
 
 WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
-COMFYUI_WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
+COMFYUI_WORKDIR_NAME = os.getenv('COMFYUI_WORKDIR_NAME', WORKDIR_NAME)
 workdir = pathlib.Path(data_path, WORKDIR_NAME)
 
 def mute_sdxl_imports():
@@ -138,7 +138,7 @@ class Paths:
         return self._check_dir(self._private_output_dir)
 
     def private_comfyui_outdir(self) -> pathlib.Path:
-        return self._check_dir(self._comfyui_work_dir.joinpath('outputs'))
+        return self._check_dir(self._comfyui_work_dir.joinpath('output'))
 
     def private_tempdir(self) -> pathlib.Path:
         return self._check_dir(self._work_dir.joinpath('temp'))

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 
+import base64
+import io
 from typing import TYPE_CHECKING
 
+import gradio as gr
 import numpy as np
 import opennsfw2 as n2
+from fastapi import FastAPI, Request
 from keras import Model
 from PIL import Image, ImageFilter
+from pydantic import BaseModel
 
 _NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s"}
 
@@ -50,3 +55,34 @@ def nsfw_blur(
         setattr(image, "is_nsfw", True)
 
     return image
+
+
+class NSFWCheckerRequest(BaseModel):
+    image: str
+
+
+class NSFWCheckerResponse(BaseModel):
+    confidence: float
+
+
+def check_nsfw(_: Request, body: NSFWCheckerRequest) -> NSFWCheckerResponse:
+    base64_image = body.image
+
+    if "base64," in base64_image:
+        base64_image = base64_image.split("base64,", 1)[1]
+
+    image = Image.open(io.BytesIO(base64.b64decode(base64_image)))
+    confidence = _get_nsfw_probability(image)
+
+    return NSFWCheckerResponse(confidence=confidence)
+
+
+# call "script_callbacks.on_app_started" for this function in style_info.py
+# because this module is inited too early before "script_callbacks.clear_callbacks"
+def setup_nsfw_checker_api(_: gr.Blocks, app: FastAPI) -> None:
+    app.add_api_route(
+        "/internal/nsfw_checker",
+        check_nsfw,
+        methods=["POST"],
+        response_model=NSFWCheckerResponse,
+    )

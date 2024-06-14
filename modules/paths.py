@@ -2,7 +2,7 @@ import os
 import pathlib
 import shutil
 import sys
-from modules.paths_internal import models_path, script_path, data_path, binary_dir, configs_dir, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME, cwd  # noqa: F401
+from modules.paths_internal import models_path, script_path, data_path, workdir_path, binary_dir, model_dir_path, configs_dir, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME, cwd  # noqa: F401
 
 import modules.safe  # noqa: F401
 import modules.user
@@ -11,7 +11,7 @@ import gradio as gr
 
 WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
 COMFYUI_WORKDIR_NAME = os.getenv('COMFYUI_WORKDIR_NAME', WORKDIR_NAME)
-workdir = pathlib.Path(data_path, WORKDIR_NAME)
+workdir = pathlib.Path(workdir_path, WORKDIR_NAME)
 
 def mute_sdxl_imports():
     """create fake modules that SDXL wants to import but doesn't actually use for our purposes"""
@@ -80,7 +80,7 @@ class Paths:
         user = modules.user.User.current_user(request)
         self.user = user
 
-        base_dir = pathlib.Path(data_path)
+        base_dir = pathlib.Path(workdir_path)
 
         # encode uid to avoid uid has path invalid character
         h = hashlib.sha256()
@@ -94,11 +94,13 @@ class Paths:
 
         # work dir save user output files
         self._work_dir = base_dir.joinpath(WORKDIR_NAME, *parents_path)
-        self._comfyui_work_dir = base_dir.joinpath(COMFYUI_WORKDIR_NAME, *parents_path)
         if not self._work_dir.exists():
             self._work_dir.mkdir(parents=True, exist_ok=True)
-
-        # model dir save user uploaded models
+        # comfyui dir save user comfy output file
+        self._comfyui_work_dir = base_dir.joinpath(COMFYUI_WORKDIR_NAME, *parents_path)
+        if not self._comfyui_work_dir.exists():
+            self._comfyui_work_dir.mkdir(parents=True, exist_ok=True)
+        # deprecated ,model dir save user uploaded models
         self._model_dir = base_dir.joinpath(MODEL_CONTAINER_NAME, *parents_path)
         if not self._model_dir.exists():
             self._model_dir.mkdir(parents=True, exist_ok=True)
@@ -129,10 +131,10 @@ class Paths:
         return self._check_dir(self._comfyui_work_dir.joinpath('favorites'))
 
     def public_outdir(self) -> pathlib.Path:
-        return self._check_dir(pathlib.Path(data_path).joinpath(WORKDIR_NAME, 'public', 'outputs'))
+        return self._check_dir(pathlib.Path(workdir_path, WORKDIR_NAME, 'public', 'outputs'))
 
     def shared_outdir(self) -> pathlib.Path:
-        return self._check_dir(pathlib.Path(data_path).joinpath(WORKDIR_NAME, 'shared', 'outputs'))
+        return self._check_dir(pathlib.Path(workdir_path, WORKDIR_NAME, 'shared', 'outputs'))
 
     def private_outdir(self) -> pathlib.Path:
         return self._check_dir(self._private_output_dir)

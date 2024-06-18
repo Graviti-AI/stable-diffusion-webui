@@ -143,7 +143,7 @@ function _get_promot_keys() {
                 values: (getArg) => {
                     const input = _parseCSV(
                         getArg(
-                            `X/Y/Z plot:X values:script_${mode}_xyz_plot_${axis.toLowerCase()}_values`,
+                            `X/Y/Z plot:${axis} values:script_${mode}_xyz_plot_${axis.toLowerCase()}_values`,
                         ),
                     )[0].map((item) => item.trim());
 

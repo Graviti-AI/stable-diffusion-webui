@@ -259,6 +259,7 @@ async function tierCheckGenerate(tabname, args) {
 
     _checkSamplingSteps(getArg, permissions, tier);
     _checkControlNetUnits(tabname, getArg, permissions, tier);
+    await _checkSafetyAgreement(getArg, permissions, tier);
 }
 
 async function tierCheckButtonInternal(feature_name) {
@@ -429,4 +430,160 @@ async function upgradeCheck(upgrade_info) {
             },
         },
     );
+}
+
+const _SAFETY_AGREEMENT_KEY = "_safety_agreement";
+let _dirtyWords = null;
+
+async function _getSafetyAgreement() {
+    const params = new URLSearchParams({ field: "prompt_nsfw_accepted" });
+    const url = `/api/user_profile?${params.toString()}`;
+
+    const response = await fetchGet(url);
+    if (!response.ok) {
+        throw `Get Prompt NSFW accepted failed: ${response.statusText}`;
+    }
+    return await response.json();
+}
+
+async function _setSafetyAgreement() {
+    const url = "/api/user_profile";
+    const body = { prompt_nsfw_accepted: true };
+
+    const response = await fetchPut(url, body);
+    if (!response.ok) {
+        throw `Set Prompt NSFW accepted failed: ${response.statusText}`;
+    }
+    return await response.json();
+}
+
+async function _getDirtyWords() {
+    if (!_dirtyWords) {
+        const response = await fetchGet("/public/dirty_words.txt");
+        if (!response.ok) {
+            throw `Request dirty words failed: ${response.statusText}`;
+        }
+        const body = await response.text();
+
+        const lines = body.toLowerCase().split(/[\r\n]+/);
+
+        _dirtyWords = [...new Set(lines)];
+    }
+    return _dirtyWords;
+}
+
+async function _checkPromptDirtyWords(prompt) {
+    prompt = prompt.toLowerCase();
+
+    const words_1 = prompt.split(/\W+/).filter(Boolean);
+    const words_2 = prompt.split(/[\s,]+/).filter(Boolean);
+
+    const words = new Set([...words_1, ...words_2]);
+    if (words.size === 0) {
+        return false;
+    }
+
+    const dirty_words = await _getDirtyWords();
+
+    let results = dirty_words.filter((word) => words.has(word));
+
+    return results.length > 0;
+}
+
+async function _checkSafetyAgreement(getArg, permissions, tier) {
+    if (!permissions.features.PrivateImage.allowed_tiers.includes(tier)) {
+        return;
+    }
+    if (window.Cookies.get(_SAFETY_AGREEMENT_KEY)) {
+        return;
+    }
+
+    if (await _getSafetyAgreement()) {
+        window.Cookies.set(_SAFETY_AGREEMENT_KEY, true, { expires: 360 });
+        return;
+    }
+
+    if (!(await _checkPromptDirtyWords(getArg("prompt")))) {
+        return;
+    }
+
+    const message = `
+        <br/>
+        <p>
+            Potential Not Safe For Work (NSFW) content detected in the prompt. To continue, you must
+            acknowledge and agree to our terms. By clicking <b>I Agree</b>, you confirm that you
+            meet the following criteria and will use the content responsibly in accordance with our
+            policies.
+        </p>
+        <br/>
+        <p>
+            <input id="awn-checkbox-1" type="checkbox" />
+            <label>
+                I am at least 18 years old or of legal age in my jurisdiction
+            </label>
+        </p>
+        <p>
+            <input id="awn-checkbox-2" type="checkbox" />
+            <label>
+                I have read and agree to Diffus's
+                <a
+                    href="https://www.diffus.me/safety/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Safety Agreement
+                </a>
+            </label>
+        </p>
+    `;
+
+    let is_agreed = null;
+
+    const confirm_modal = notifier.confirm(
+        message,
+        () => {
+            is_agreed = true;
+        },
+        () => {
+            is_agreed = false;
+        },
+        {
+            labels: {
+                confirm: "Safety Agreement",
+                confirmOk: "I Agree",
+            },
+        },
+    );
+
+    const checkbox_1 = confirm_modal.el.querySelector("#awn-checkbox-1");
+    const checkbox_2 = confirm_modal.el.querySelector("#awn-checkbox-2");
+
+    function _updateButtonStatus() {
+        if (checkbox_1.checked && checkbox_2.checked) {
+            confirm_modal.okBtn.disabled = false;
+            confirm_modal.okBtn.style.opacity = "";
+            confirm_modal.okBtn.style.cursor = "";
+        } else {
+            confirm_modal.okBtn.disabled = true;
+            confirm_modal.okBtn.style.opacity = 0.35;
+            confirm_modal.okBtn.style.cursor = "not-allowed";
+        }
+    }
+
+    checkbox_1.addEventListener("change", _updateButtonStatus);
+    checkbox_2.addEventListener("change", _updateButtonStatus);
+
+    _updateButtonStatus();
+
+    while (is_agreed === null) {
+        await PYTHON.asyncio.sleep(200);
+    }
+
+    if (is_agreed) {
+        await _setSafetyAgreement();
+        window.Cookies.set(_SAFETY_AGREEMENT_KEY, true, { expires: 360 });
+        return;
+    }
+
+    throw "Safety Agreement has not been agreed";
 }

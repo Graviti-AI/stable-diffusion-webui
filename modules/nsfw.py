@@ -40,6 +40,11 @@ def _get_nsfw_probability(image: Image.Image) -> float:
     return nsfw_probability
 
 
+def check_nsfw(image: Image.Image, threshold: float = 0.75) -> bool:
+    probability = _get_nsfw_probability(image)
+    return probability > threshold
+
+
 def nsfw_blur(
     image: Image.Image, p: "StableDiffusionProcessing", threshold: float = 0.75
 ) -> Image.Image:
@@ -49,8 +54,7 @@ def nsfw_blur(
     if request.headers["user-tire"].lower() in _NSFW_ALLOWED_TIERS:
         return image
 
-    probability = _get_nsfw_probability(image)
-    if probability > threshold:
+    if check_nsfw(image, threshold):
         image = image.filter(ImageFilter.BoxBlur(10))
         setattr(image, "is_nsfw", True)
 
@@ -65,7 +69,7 @@ class NSFWCheckerResponse(BaseModel):
     confidence: float
 
 
-def check_nsfw(_: Request, body: NSFWCheckerRequest) -> NSFWCheckerResponse:
+def get_nsfw_probability(_: Request, body: NSFWCheckerRequest) -> NSFWCheckerResponse:
     base64_image = body.image
 
     if "base64," in base64_image:
@@ -82,7 +86,7 @@ def check_nsfw(_: Request, body: NSFWCheckerRequest) -> NSFWCheckerResponse:
 def setup_nsfw_checker_api(_: gr.Blocks, app: FastAPI) -> None:
     app.add_api_route(
         "/internal/nsfw_checker",
-        check_nsfw,
+        get_nsfw_probability,
         methods=["POST"],
         response_model=NSFWCheckerResponse,
     )

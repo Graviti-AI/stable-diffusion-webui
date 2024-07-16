@@ -804,8 +804,35 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
+const _IS_REGISTER_SURVEY_DONE = "_is_register_survey_done"
+
+async function checkRegisterSurvey() {
+    const is_done = window.Cookies.get(_IS_REGISTER_SURVEY_DONE);
+    if (is_done) {
+        return;
+    }
+
+    const response = await fetch("/survey/register/status", {
+        method: "GET",
+        credentials: "include",
+    });
+    if (!response.ok) {
+        throw `get register survey status failed: ${response.statusText}`;
+    }
+
+    const result = await response.json();
+    if (result.is_new_user && !result.is_completed) {
+        window.open("/welcome", "_self");
+        return;
+    }
+
+    window.Cookies.set(_IS_REGISTER_SURVEY_DONE, true, {expired: 360});
+}
+
 // get user info
-onUiLoaded(function(){
+onUiLoaded(async function(){
+    await checkRegisterSurvey();
+
     setUiPageSize();
     // update generate button text
     updateGenerateBtn_txt2img();

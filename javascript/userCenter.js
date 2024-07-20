@@ -463,6 +463,7 @@ function initUserCenterMenu() {
       left
       offset-y
       nudge-left="12"
+      :nudge-top="nudgeTop"
       min-width="280"
       z-index="1000"
       :close-on-click="true"
@@ -474,6 +475,7 @@ function initUserCenterMenu() {
             size="46"
             v-bind="attrs"
             v-on="on"
+            v-show="loadingFinished"
           >
             <img
               :src="userAvatar"
@@ -523,7 +525,7 @@ function initUserCenterMenu() {
                     color="#ff9800d4"
                     small
                   >
-                    Free Alpha
+                    Free Beta
                   </v-chip>
                 </v-list-item-title>
               </v-list-item-content>
@@ -563,9 +565,11 @@ function initUserCenterMenu() {
     data() {
       return {
         showUserMenu: false,
+        loadingFinished: false,
         userAvatar: "",
         userName: "",
         userEmail: "",
+        nudgeTop: 0,
       };
     },
     methods: {
@@ -588,6 +592,7 @@ function initUserCenterMenu() {
         this.userName = orderInfo.name;
         this.getAvatar(orderInfo.picture, orderInfo.name, (url) => {
           this.userAvatar = url;
+          this.loadingFinished = true;
         });
       },
       redirectToUserCenter() {
@@ -611,6 +616,16 @@ function initUserCenterMenu() {
     },
     mounted() {
       realtimeDataCallbacks.push(this.updateUserInfo);
+    },
+    watch: {
+      showUserMenu(val) {
+        if (val) {
+          let banner = document.getElementById("banner");
+          if (banner) {
+            this.nudgeTop = banner.offsetHeight;
+          }
+        }
+      },
     },
   });
 }

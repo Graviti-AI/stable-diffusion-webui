@@ -2285,3 +2285,87 @@ body.resizing .resize-handle {
     width: 100%; 
   }
 }
+
+
+/* Banner Notification Section Begins */
+#banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #ffa402;
+  color: #303030;
+  text-align: center;
+  z-index: 1000;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 2.8em;
+  padding-right: 2.8em;
+  transition:
+    opacity 0.5s,
+    transform 0.5s;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+#banner-text a {
+  color: #2d2d2d;
+}
+
+#banner-text a:hover {
+  color: #2d2d2d;
+}
+
+#banner-text {
+  color: #303030;
+}
+
+#banner p {
+  font-size: 18px; /* Default size for large screens */
+}
+
+@media (max-width: 768px) {
+  /* Smaller size for screens up to 768px wide */
+  #banner p {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even smaller size for screens up to 480px wide */
+  #banner p {
+    font-size: 12px;
+  }
+}
+
+#banner.hide {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+#close-banner {
+  cursor: pointer;
+  position: absolute;
+  top: 0px;
+  right: 0;
+  width: 2.8em;
+  height: 100%;
+  color: #303030;
+  background: transparent;
+  outline-offset: -2px;
+}
+
+#close-banner-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: helvetica, arial, sans-serif;
+  color: #303030;
+  font-size: 1.4em;
+  font-weight: 100;
+  letter-spacing: normal;
+  padding: 0;
+  height: 100%;
+}
+
+/* Banner Notification Section Ends */

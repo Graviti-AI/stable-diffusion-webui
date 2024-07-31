@@ -26,6 +26,10 @@ function showNotificationBanner() {
     })
     .then((data) => {
       const notificationId = data.notification_id;
+      const notificationMessage = data.message;
+      if (!notificationMessage) {
+        return;
+      }
       const closedBannerNotificationId = Cookies.get(
         "_closed_banner_notification_id",
       );
@@ -34,7 +38,7 @@ function showNotificationBanner() {
       }
       let banner = document.getElementById("banner");
       let content = gradioApp().querySelector(".gradio-container.app");
-      document.getElementById("banner-text").innerHTML = data.message;
+      document.getElementById("banner-text").innerHTML = notificationMessage;
       banner.style.display = "block";
       content.style.marginTop = banner.offsetHeight + "px";
       document.getElementById("close-banner").onclick = function () {

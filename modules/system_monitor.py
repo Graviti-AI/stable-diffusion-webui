@@ -5,7 +5,6 @@ import uuid
 import logging
 import json
 import requests
-import functools
 import inspect
 import base64
 import io
@@ -255,6 +254,15 @@ def _extract_task_id(*args):
         return uuid.uuid4().hex
 
 
+def _extract_func_signature(*args):
+    prefix = 'signature('
+    suffix = ')'
+    for arg in args:
+        if isinstance(arg, str) and arg.startswith(prefix) and arg.endswith(suffix):
+            return json.loads(arg[len(prefix):-len(suffix)])
+    return []
+
+
 def _get_system_monitor_config(request: gr.Request):
     headers = dict(request.headers)
 
@@ -267,45 +275,59 @@ def _get_system_monitor_config(request: gr.Request):
     return monitor_addr, system_monitor_api_secret
 
 
+def _make_func_args(func, *args, **kwargs):
+    func_args = {}
+    func_extra_args = []
+    func_signature = _extract_func_signature(*args)
+    if func_signature:
+        for i, arg_name in enumerate(func_signature):
+            func_args[arg_name] = _serialize_object(args[i])
+    else:
+        signature = inspect.signature(func)
+        positional_args = []
+        for i, param in enumerate(signature.parameters.values()):
+            if param.kind not in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
+                break
+            positional_args.append(param)
+
+        positional_args = positional_args[1:]
+        named_args_count = min(len(positional_args), len(args))
+
+        for i in range(named_args_count):
+            arg_name = positional_args[i].name
+            arg_value = args[i]
+            # values need to be converted to json serializable
+            func_args[arg_name] = _serialize_object(arg_value)
+
+        func_extra_args = _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else []
+
+    for k, v in kwargs.items():
+        func_args[k] = _serialize_object(v)
+    return func_args, func_extra_args
+
+
 def on_task(request: gr.Request, func, task_info, *args, **kwargs):
     monitor_addr, system_monitor_api_secret = _get_system_monitor_config(request)
     if not monitor_addr or not system_monitor_api_secret:
         logger.error('system_monitor_addr or system_monitor_api_secret is not present')
         return None
 
+    # task id as monitor log id
     monitor_log_id = _extract_task_id(*args)
-    # inspect func args
-    signature = inspect.signature(func)
-    positional_args = []
-    for i, param in enumerate(signature.parameters.values()):
-        if param.kind not in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
-            break
-        positional_args.append(param)
-
-    positional_args = positional_args[1:]
-    func_args = {}
-    named_args_count = min(len(positional_args), len(args))
-
-    for i in range(named_args_count):
-        arg_name = positional_args[i].name
-        arg_value = args[i]
-        # values need to be converted to json serializable
-        func_args[arg_name] = _serialize_object(arg_value)
-
-    # get func name
+    # func args
+    func_args, func_extra_args = _make_func_args(func, *args, **kwargs)
+    # api name
     module = inspect.getmodule(func)
-    func_args.update(**kwargs)
     func_name = func.__name__
     fund_module_name = module.__name__ if module else ""
-
-    # send call info to monitor server
     api_name = f'{fund_module_name}.{func_name}'
+    # send call info to monitor server
     request_data = {
         'api': api_name,
         'task_id': monitor_log_id,
         'user': modules.user.User.current_user(request).uid,
         'args': func_args,
-        'extra_args': _serialize_object(args[named_args_count + 1:]) if named_args_count + 1 < len(args) else [],
+        'extra_args': func_extra_args,
         'gpu_consumption': _make_gpu_consumption(api_name, func_args, *args, **kwargs),
         'node': os.getenv('HOST_IP', default=''),
         'added_at': task_info.get('added_at', time.time()),

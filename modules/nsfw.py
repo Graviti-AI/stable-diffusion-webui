@@ -12,7 +12,7 @@ from keras import Model
 from PIL import Image, ImageFilter
 from pydantic import BaseModel
 
-_NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s"}
+_NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s", "appsumo ltd tier 2"}
 
 if TYPE_CHECKING:
     from modules.processing import StableDiffusionProcessing

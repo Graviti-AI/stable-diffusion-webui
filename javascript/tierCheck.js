@@ -331,8 +331,16 @@ async function upgradeCheck(upgrade_info) {
 
             const _ALLOWED_TIERS = ["Basic", "Plus", "Pro", "Api"];
             const allowed_tiers_message = _joinWords(_ALLOWED_TIERS, "or");
+
+            let hint;
+            if (realtimeData.orderInfo.tier.toLowerCase() === "appsumo ltd tier 1") {
+                hint = "lift these restrictions";
+            } else {
+                hint = "enable your private image storage";
+            }
+
             message = `Potential NSFW content was detected in the generated image, \
-                upgrade to ${allowed_tiers_message} to enable your private image storage. \
+                upgrade to ${allowed_tiers_message} to ${hint}. \
                 Or join our ${_AFFILIATE_PROGRAM} \
                 to earn cash or credits and use it to upgrade to a higher plan.`;
 

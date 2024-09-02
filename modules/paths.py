@@ -73,7 +73,7 @@ for d, must_exist, what, options in path_dirs:
 
 
 class Paths:
-    _PRIVATE_IMAGE_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s"}
+    _PRIVATE_IMAGE_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s", "appsumo ltd tier 1", "appsumo ltd tier 2"}
 
     def __init__(self, request: gr.Request | None):
         import hashlib

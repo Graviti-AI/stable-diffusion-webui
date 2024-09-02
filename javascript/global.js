@@ -53,7 +53,9 @@ const tierLevels = {
   plus: 2,
   pro: 3,
   api: 4,
-  "ltd s": 1
+  "ltd s": 1,
+  "appsumo ltd tier 1": 1,
+  "appsumo ltd tier 2": 1,
 };
 
 let connectNewModelApi = true;
@@ -84,7 +86,17 @@ let hasSingPermission = false;
 function changeCreditsPackageLink() {
   const orderInfo = realtimeData.orderInfo;
   if (orderInfo) {
-    if (["basic", "plus", "pro", "api", "ltd s"].includes(orderInfo.tier.toLowerCase())) {
+      if (
+          [
+            "basic",
+            "plus",
+            "pro",
+            "api",
+            "ltd s",
+            "appsumo ltd tier 1",
+            "appsumo ltd tier 2",
+          ].includes(orderInfo.tier.toLowerCase())
+      ) {
       const packageIcon = gradioApp().querySelector("#package");
       if (packageIcon) {
           packageIcon.style.display = "flex";

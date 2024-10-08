@@ -59,16 +59,6 @@ const tierLevels = {
 };
 
 let connectNewModelApi = true;
-function testApi() {
-  const promise = fetchGet(
-    `/internal/favorite_models?model_type='checkpoint'&search_value=&page=1&page_size=1`
-  );
-  promise.then((state) => {
-    if (state.status !== 200) {
-      connectNewModelApi = false;
-    }
-  });
-}
 
 function judgeEnvironment() {
   const origin = location.origin;
@@ -215,5 +205,3 @@ function changeFreeCreditLink() {
 function openPricingTable() {
     window.location.href = "/pricing_table";
 }
-
-testApi();

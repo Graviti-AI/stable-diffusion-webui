@@ -2,13 +2,31 @@
 
 import json
 import os
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-from fastapi import Request
+import gradio as gr
+from fastapi import FastAPI
 from pydantic import BaseModel
 
+from modules import script_callbacks
 from modules.paths import get_binary_path, get_config_path
-from modules.user import User
+
+if TYPE_CHECKING:
+    from modules.processing import StableDiffusionProcessing
+
+MODEL_INFO_KEY = "_AllModelInfo"
+
+
+_USED_MODEL_CONFIG: dict[str, Any] = {
+    "CHECKPOINT": [("Refiner", True)],
+    "LORA": "Lora hashes",
+    "HYPERNETWORK": "Hypernetwork hashes",
+    "EMBEDDING": "TI hashes",
+}
+
+
+def register_used_model_checkpoint_key(key: str, is_short: bool) -> None:
+    _USED_MODEL_CONFIG["CHECKPOINT"].append((key, is_short))
 
 
 class ModelInfoProtocal(Protocol):
@@ -22,7 +40,9 @@ class ModelInfoProtocal(Protocol):
 
 
 class ModelInfo(BaseModel):
-    model_type: Literal["checkpoint", "embedding", "hypernetwork", "lora", "lycoris"]
+    id: int
+    model_type: Literal["CHECKPOINT", "EMBEDDING", "HYPERNETWORK", "LORA", "LYCORIS"]
+    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX"]
     source: str | None
     name: str
     sha256: str
@@ -77,21 +97,42 @@ class AllModelInfo:
     def __init__(self, data: str) -> None:
         self._models = [ModelInfo(**item) for item in json.loads(data)]
 
-        self.checkpoint_models: dict[str, ModelInfo] = {}
+        self._checkpoint_models: list[ModelInfo] = []
         self.embedding_models: dict[str, ModelInfo] = {}
         self.hypernetwork_models: dict[str, ModelInfo] = {}
         self.lora_models: dict[str, ModelInfo] = {}
 
         for model_info in self._models:
             match model_info.model_type:
-                case "checkpoint":
-                    self.checkpoint_models[model_info.title] = model_info
-                case "embedding":
+                case "CHECKPOINT":
+                    self._checkpoint_models.append(model_info)
+                case "EMBEDDING":
                     self.embedding_models[model_info.name_for_extra] = model_info
-                case "hypernetwork":
+                case "HYPERNETWORK":
                     self.hypernetwork_models[model_info.name_for_extra] = model_info
-                case "lora" | "lycoris":
+                case "LORA" | "LYCORIS":
                     self.lora_models[model_info.name_for_extra] = model_info
+
+    def get_checkpoint_by_title(self, title: str) -> ModelInfo | None:
+        for model_info in self._checkpoint_models:
+            if model_info.title == title:
+                return model_info
+
+        return None
+
+    def get_checkpoint_by_short_title(self, short_title: str) -> ModelInfo | None:
+        for model_info in self._checkpoint_models:
+            if model_info.short_title == short_title:
+                return model_info
+
+        return None
+
+    def get_checkpoint_by_hash(self, sha256: str) -> ModelInfo | None:
+        for model_info in self._checkpoint_models:
+            if model_info.sha256.startswith(sha256):
+                return model_info
+
+        return None
 
     def is_xyz_plot_enabled(self) -> bool:
         return any(item.source == "xyz_plot" for item in self._models)
@@ -100,23 +141,86 @@ class AllModelInfo:
         for model in self._models:
             model.check_file_existence()
 
+    def get_used_model_ids(self, p: "StableDiffusionProcessing") -> list[int]:
+        used_model_ids = []
+        extra_params = p.extra_generation_params
 
-class DatabaseAllModelInfo(AllModelInfo):
-    def __init__(self, request: Request) -> None:
-        from scripts.model_hijack.favorite_model import (
-            FavoriteModelDatabase,
-            FavoriteModelDatabaseByTitle,
-        )
+        for model_type, config in _USED_MODEL_CONFIG.items():
+            match model_type:
+                case "CHECKPOINT":
+                    short_title = f"{p.sd_model_name} [{p.sd_model_hash}]"
+                    model_info = self.get_checkpoint_by_short_title(short_title)
+                    if model_info is None:
+                        raise KeyError(short_title)
 
-        user_id = User.current_user(request).uid
+                    used_model_ids.append(model_info.id)
 
-        self.checkpoint_models = FavoriteModelDatabaseByTitle(user_id, "checkpoint")
-        self.embedding_models = FavoriteModelDatabase(user_id, "embedding")
-        self.hypernetwork_models = FavoriteModelDatabase(user_id, "hypernetwork")
-        self.lora_models = FavoriteModelDatabase(user_id, "lora")
+                    for key, is_short in config:
+                        value = extra_params.get(key)
+                        if not value:
+                            continue
 
-    def is_xyz_plot_enabled(self) -> bool:
-        return False
+                        model_info = (
+                            self.get_checkpoint_by_short_title(value)
+                            if is_short
+                            else self.get_checkpoint_by_title(value)
+                        )
+                        if model_info is None:
+                            raise KeyError(value)
 
-    def check_file_existence(self) -> None:
-        return None
+                        used_model_ids.append(model_info.id)
+
+                    continue
+
+                case "LORA":
+                    models = self.lora_models
+                    value = extra_params.get(config)
+
+                case "HYPERNETWORK":
+                    models = self.hypernetwork_models
+                    value = extra_params.get(config)
+
+                case "EMBEDDING":
+                    models = self.embedding_models
+                    value = extra_params.get(config)
+
+                case _:
+                    raise ValueError(f"Unknown model type: '{model_type}'")
+
+            if not value:
+                continue
+
+            used_model_ids.extend(
+                models[item.split(":", 1)[0].strip()].id for item in value.split(",")
+            )
+
+        return list(dict.fromkeys(used_model_ids))
+
+
+class FilesExistenceRequest(BaseModel):
+    models: list[str]
+    configs: list[str]
+
+
+class FilesExistenceResponse(BaseModel):
+    models: list[bool]
+    configs: list[bool]
+
+
+def check_files_existence_by_sha256(body: FilesExistenceRequest) -> FilesExistenceResponse:
+    return FilesExistenceResponse(
+        models=[get_binary_path(sha256.lower()).exists() for sha256 in body.models],
+        configs=[get_config_path(sha256.lower()).exists() for sha256 in body.configs],
+    )
+
+
+def _setup_model_api(_: gr.Blocks, app: FastAPI):
+    app.add_api_route(
+        "/internal/files-existence",
+        check_files_existence_by_sha256,
+        methods=["POST"],
+        response_model=FilesExistenceResponse,
+    )
+
+
+script_callbacks.on_app_started(_setup_model_api)

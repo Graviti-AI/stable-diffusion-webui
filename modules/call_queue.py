@@ -27,7 +27,7 @@ from modules import shared, progress, errors, script_callbacks, devices, fifo_lo
 from modules import sd_vae
 from modules.timer import Timer
 from modules.paths import Paths
-from modules.model_info import DatabaseAllModelInfo, ModelInfo, AllModelInfo
+from modules.model_info import ModelInfo, AllModelInfo
 
 gpu_worker_pool: ThreadPoolExecutor | None = None
 
@@ -65,8 +65,13 @@ def get_private_tempdir(request: gradio.routes.Request) -> pathlib.Path:
 
 
 class __FakeP:
-    def __init__(self, req):
+    def __init__(self, req, feature: str | None = None, prompt: str | None = None):
         self.request = req
+
+        self.task_id: str | None = req.headers.get('x-task-id', None)
+
+        self.feature = feature
+        self.prompt = prompt
 
     def get_request(self):
         return self.request
@@ -82,8 +87,11 @@ def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: 
         image.save(image_path)
         image.already_saved_as = str(image_path)
 
-        params = modules.script_callbacks.ImageSaveParams(image, __FakeP(request), image_path, "")
-        script_callbacks.image_saved_callback(params)
+        script_callbacks.image_saved_callback(
+            script_callbacks.ImageSaveParams(
+                image, __FakeP(request), image_path, None, skip_register=True
+            )
+        )
         return str(image_path)
 
 
@@ -118,12 +126,11 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         # log all gpu calls with monitor, we should log it before task begin
         if func_name in ('txt2img', 'img2img', 'txt2img_upscale'):
             raw_model_info = args[-2]
-            if raw_model_info is None:
-                logger.info("'model_info' is None, searching model by legacy logic")
-                all_model_info = DatabaseAllModelInfo(request)
-            else:
+            if raw_model_info is not None:
                 all_model_info = AllModelInfo(raw_model_info)
                 all_model_info.check_file_existence()
+            else:
+                all_model_info = None
 
             model_title = args[-5]
         else:
@@ -139,8 +146,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
             progress.set_current_task_step('reload_model_weights')
             script_callbacks.state_updated_callback(shared.state)
             if not all_model_info.is_xyz_plot_enabled():
+                model_info = all_model_info.get_checkpoint_by_title(model_title)
+                if model_info is None:
+                    raise KeyError(model_title)
+
                 _check_sd_model(
-                    model_info=all_model_info.checkpoint_models[model_title],
+                    model_info=model_info,
                     embedding_model_info=all_model_info.embedding_models,
                 )
         timer.record('load_models')

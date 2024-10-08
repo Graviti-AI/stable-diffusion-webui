@@ -325,7 +325,7 @@ Requested path was: {f}
     return res
 
 
-def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id, visible=True, interactive=True):
+def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id, visible=True, interactive=True, *, _js=None):
     refresh_components = refresh_component if isinstance(refresh_component, list) else [refresh_component]
 
     label = None
@@ -356,7 +356,8 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
 
     refresh_button = ToolButton(value=refresh_symbol, elem_id=elem_id, tooltip=f"{label}: refresh" if label else "Refresh", visible=visible, interactive=interactive)
     refresh_button.click(
-        fn=refresh,
+        fn=refresh if refresh_method else None,
+        _js=_js,
         inputs=[],
         outputs=refresh_components
     )

@@ -232,6 +232,9 @@ class StableDiffusionProcessing:
 
     is_api: bool = field(default=False, init=False)
 
+    feature: str = ""
+    used_models: dict[str, list[str]] = None
+
     _request = None
     _task_id: Optional[str] = None
     _origin: Optional[str] = None
@@ -272,6 +275,8 @@ class StableDiffusionProcessing:
         self.extra_result_images = []
         self.modified_noise = None
 
+        self.used_models = self.used_models or {}
+
     def set_request(self, request):
         self._request = request
         if request:
@@ -303,6 +308,10 @@ class StableDiffusionProcessing:
             self._all_model_info = DatabaseAllModelInfo(request)
 
         return self._all_model_info
+
+    def clear_geninfo(self) -> None:
+        self.extra_generation_params = {}
+        self.used_models = {}
 
     @property
     def task_id(self) -> Optional[str]:
@@ -954,6 +963,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                 p.comment(comment)
 
             p.extra_generation_params.update(model_hijack.extra_generation_params)
+            p.used_models.update(model_hijack.used_models)
 
             if p.n_iter > 1:
                 shared.state.job = f"Batch {n+1} out of {p.n_iter}"
@@ -1214,6 +1224,8 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
     hr_prompts: list = field(default=None, init=False)
     hr_negative_prompts: list = field(default=None, init=False)
     hr_extra_network_data: list = field(default=None, init=False)
+
+    feature: str = "TXT2IMG"
 
     def __post_init__(self):
         super().__post_init__()
@@ -1596,6 +1608,8 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
     init_img_hash: str = field(default=None, init=False)
     mask_for_overlay: Image = field(default=None, init=False)
     init_latent: torch.Tensor = field(default=None, init=False)
+
+    feature: str = "IMG2IMG"
 
     def __post_init__(self):
         super().__post_init__()

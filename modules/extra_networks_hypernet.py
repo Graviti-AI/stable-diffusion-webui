@@ -27,6 +27,8 @@ class ExtraNetworkHypernet(extra_networks.ExtraNetwork):
         hypernetwork_model_info = p.get_all_model_info().hypernetwork_models if names else {}
         hypernetwork.load_hypernetworks(names, hypernetwork_model_info, multipliers)
 
+        used_models = p.used_models.setdefault("hypernetwork", [])
+
         network_hashes = []
         for item in shared.loaded_hypernetworks:
             shorthash = item.shorthash()
@@ -40,6 +42,8 @@ class ExtraNetworkHypernet(extra_networks.ExtraNetwork):
             alias = alias.replace(":", "").replace(",", "")
 
             network_hashes.append(f"{alias}: {shorthash}")
+
+            used_models.append(item.name)
 
         if network_hashes:
             p.extra_generation_params["Hypernetwork hashes"] = ", ".join(network_hashes)

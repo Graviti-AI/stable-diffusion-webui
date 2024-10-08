@@ -233,20 +233,25 @@ function _findLast(array, callbackFn) {
 
 function _convertModelInfo(model_info, source) {
     return {
+        id: model_info.id,
         model_type: model_info.model_type,
+        base: model_info.base,
         source: source,
-        name: model_info.name,
+        name: model_info.filename,
         sha256: model_info.sha256,
         config_sha256: model_info.config_sha256,
     };
 }
 
-async function _listCandidateModels(all_model_names) {
+async function _listCandidateModels(all_model_names, prompts) {
     const params = new URLSearchParams();
+
+    prompts.forEach((prompt) => params.append("prompt", prompt.value));
     for (let [model_type, model_names] of Object.entries(all_model_names)) {
         model_names.forEach((model_name) => params.append(model_type, model_name));
     }
-    const url = `/internal/candidate_models?${params.toString()}`;
+
+    const url = `/gallery-api/v1/candidate-models?${params.toString()}`;
     try {
         const response = await fetchGet(url);
         if (!response.ok) {
@@ -256,7 +261,12 @@ async function _listCandidateModels(all_model_names) {
             throw _REQUEST_FAILED;
         }
         const content = await response.json();
-        return content.models;
+
+        const results = content.items;
+        results.forEach((item) => {
+            item.model_type = item.model_type.toLowerCase();
+        });
+        return results;
     } catch (error) {
         console.error(`Request candidate models failed due to exception, url: "${url}"`);
         console.error(error);
@@ -275,8 +285,8 @@ function _buildModelTree(models) {
         const model_type = model.model_type === "lycoris" ? "lora" : model.model_type;
         const key =
             model_type === "checkpoint"
-                ? `${model.name} [${model.sha256.slice(0, 10)}]`
-                : _getStem(model.name);
+                ? `${model.filename} [${model.sha256.slice(0, 10)}]`
+                : _getStem(model.filename);
 
         results[model_type][key] = model;
     }
@@ -420,6 +430,10 @@ async function getAllModelInfo(mode, args, all_style_info) {
         }
     }
 
+    return [index, await getAllModelInfoByCheckpointsAndPrompts(checkpoint_titles, prompts)];
+}
+
+async function getAllModelInfoByCheckpointsAndPrompts(checkpoint_titles, prompts) {
     const network_keys = _findExtraNetworkModelKeys(prompts);
     const all_model_names = {
         checkpoint: checkpoint_titles.map((item) => _getStem(_getValue(item).split(" [")[0])),
@@ -428,7 +442,7 @@ async function getAllModelInfo(mode, args, all_style_info) {
     };
 
     try {
-        const candidate_models = await _listCandidateModels(all_model_names);
+        const candidate_models = await _listCandidateModels(all_model_names, prompts);
         const model_tree = _buildModelTree(candidate_models);
         const all_model_info = _getAllModelInfo(
             checkpoint_titles,
@@ -436,12 +450,189 @@ async function getAllModelInfo(mode, args, all_style_info) {
             network_keys,
             model_tree,
         );
-        return [index, all_model_info];
+        return all_model_info;
     } catch (error) {
         if (error === _REQUEST_FAILED) {
             console.error('Set "all_model_info" to null due to request fail');
-            return [index, null];
+            return null;
         }
         throw error;
     }
+}
+
+function _getLastLine(text) {
+    const index = text.lastIndexOf("\n");
+    if (index === -1) {
+        return text;
+    }
+
+    return text.slice(index + 1);
+}
+
+function _splitModelTitle(title) {
+    const sep = " [";
+    const index = title.lastIndexOf(sep);
+
+    if (index === -1 || index === 0 || index === title.length - 1) {
+        throw "Failed to parse the model title";
+    }
+    const stem = title.slice(0, index);
+    const sha256 = title.slice(index + sep.length).replace("]", "");
+
+    return [stem, sha256];
+}
+
+function _splitHashes(input) {
+    if (input.startsWith('"') && input.endsWith('"')) {
+        input = input.slice(1, -1);
+    }
+    return input.split(",");
+}
+
+const _PATTERN = /\s*(\w[\w \-/]+):\s*("(?:\\.|[^\\"])+"|[^,]*)(?:,|$)/;
+const _CONFIGS = [
+    {
+        type: "CHECKPOINT",
+        source: null,
+        flag: (params) => params["Model hash"],
+        values: (params) => [`${params["Model"] ? params["Model"] : ""}: ${params["Model hash"]}`],
+    },
+    {
+        type: "CHECKPOINT",
+        source: "refiner",
+        flag: (params) => params["Refiner"],
+        values: (params) => {
+            const [stem, sha256] = _splitModelTitle(params["Refiner"]);
+            return [`${stem}:${sha256}`];
+        },
+    },
+    {
+        type: "LORA",
+        source: null,
+        flag: (params) => params["Lora hashes"],
+        values: (params) => _splitHashes(params["Lora hashes"]),
+    },
+    {
+        type: "HYPERNETWORK",
+        source: null,
+        flag: (params) => params["Hypernetwork hashes"],
+        values: (params) => _splitHashes(params["Hypernetwork hashes"]),
+    },
+    {
+        type: "EMBEDDING",
+        source: null,
+        flag: (params) => params["TI hashes"],
+        values: (params) => _splitHashes(params["TI hashes"]),
+    },
+];
+
+function _findall(pattern, text) {
+    const regex = new RegExp(pattern, "g");
+    const results = [];
+
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+        if (match.length > 1) {
+            results.push(match.slice(1));
+        } else {
+            results.push([match[0]]);
+        }
+    }
+
+    return results;
+}
+
+function _parsePNGInfo(pnginfo) {
+    const line = _getLastLine(pnginfo.trim());
+    return Object.fromEntries(_findall(_PATTERN, line));
+}
+
+function _parseParams(params) {
+    const results = {
+        CHECKPOINT: [],
+        LORA: [],
+        EMBEDDING: [],
+        HYPERNETWORK: [],
+    };
+
+    for (const config of _CONFIGS) {
+        if (config.flag(params)) {
+            results[config.type].push(...config.values(params));
+        }
+    }
+
+    return results;
+}
+
+async function _listCandidateModelsByHash(hashes) {
+    const params = new URLSearchParams();
+
+    for (let [model_type, values] of Object.entries(hashes)) {
+        values.forEach((value) => params.append(model_type.toLowerCase(), value));
+    }
+
+    const url = `/gallery-api/v1/candidate-models-by-hash?${params.toString()}`;
+    try {
+        const response = await fetchGet(url);
+        if (!response.ok) {
+            console.error(
+                `Request candidate models by hash failed, url: "${url}", reason: "${response.status} ${response.statusText}"`,
+            );
+            throw _REQUEST_FAILED;
+        }
+        const content = await response.json();
+
+        const results = content.items;
+        return results;
+    } catch (error) {
+        console.error(`Request candidate models failed due to exception, url: "${url}"`);
+        console.error(error);
+        throw _REQUEST_FAILED;
+    }
+}
+
+async function _getAllModelInfoFromPNGInfo(pnginfo) {
+    const params = _parsePNGInfo(pnginfo);
+    const hashes = _parseParams(params);
+
+    const models = await _listCandidateModelsByHash(hashes);
+    const all_model_info = [];
+
+    for (const model of models) {
+        const prefix = `${model.model_type.toLowerCase()} model "${model.stem} [${model.sha256}]"`;
+        switch (model.status) {
+            case "NOTFOUND":
+                notifier.alert(`${prefix} not found in the Gallery`);
+                continue;
+
+            case "DELETED":
+                notifier.alert(`${prefix} is a deleted model`);
+                continue;
+
+            case "UNPUBLISHED":
+                notifier.alert(`${prefix} is a unpublished model`);
+                continue;
+
+            case "OK":
+                all_model_info.push(model.info);
+                continue;
+            default:
+                throw `Unknown model status: "${model.status}"`;
+        }
+    }
+    return all_model_info;
+}
+
+async function extractModelsFromPnginfo() {
+    const res = Array.from(arguments);
+    const pnginfo = res[0];
+    const all_model_info = await _getAllModelInfoFromPNGInfo(pnginfo);
+    all_model_info.forEach((item) => {
+        item.model_type = item.model_type.toLowerCase();
+        item.name = item.filename;
+    });
+    res[1] = JSON.stringify(all_model_info);
+
+    return res;
 }

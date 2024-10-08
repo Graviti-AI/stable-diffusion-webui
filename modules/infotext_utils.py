@@ -9,6 +9,7 @@ import sys
 import gradio as gr
 
 import modules.call_utils
+from modules.model_info import AllModelInfo, MODEL_INFO_KEY
 from modules.paths import data_path
 from modules import shared, ui_tempdir, script_callbacks, processing, infotext_versions
 from PIL import Image
@@ -138,7 +139,7 @@ def register_paste_params_button(binding: ParamBinding):
     registered_param_bindings.append(binding)
 
 
-def connect_paste_params_buttons():
+def connect_paste_params_buttons(dummy_component):
     for binding in registered_param_bindings:
         if binding.tabname not in paste_fields:
             continue
@@ -166,7 +167,7 @@ def connect_paste_params_buttons():
             )
 
         if binding.source_text_component is not None and fields is not None:
-            connect_paste(binding.paste_button, fields, binding.source_text_component, override_settings_component, binding.tabname)
+            connect_paste(binding.paste_button, fields, binding.source_text_component, override_settings_component, binding.tabname, dummy_component)
 
         if binding.source_tabname is not None and fields is not None:
             paste_field_names = ['Prompt', 'Negative prompt', 'Steps', 'Face restoration'] + (["Seed"] if shared.opts.send_seed else []) + binding.paste_field_names
@@ -458,8 +459,8 @@ def get_override_settings(params, *, skip_fields=None):
     return res
 
 
-def connect_paste(button, paste_fields, input_comp, override_settings_component, tabname):
-    def paste_func(prompt, request: gr.Request):
+def connect_paste(button, paste_fields, input_comp, override_settings_component, tabname, dummy_component):
+    def paste_func(prompt, raw_model_info, request: gr.Request):
         if not prompt and not shared.cmd_opts.hide_ui_dir_config:
             filename = os.path.join(data_path, "params.txt")
             try:
@@ -471,6 +472,8 @@ def connect_paste(button, paste_fields, input_comp, override_settings_component,
         params = parse_generation_parameters(prompt, request=request)
         script_callbacks.infotext_pasted_callback(prompt, params)
         res = []
+
+        params[MODEL_INFO_KEY] = AllModelInfo(raw_model_info)
 
         for output, key in paste_fields:
             if callable(key):
@@ -515,7 +518,8 @@ def connect_paste(button, paste_fields, input_comp, override_settings_component,
 
     button.click(
         fn=paste_func,
-        inputs=[input_comp],
+        _js="extractModelsFromPnginfo",
+        inputs=[input_comp, dummy_component],
         outputs=[x[0] for x in paste_fields],
         show_progress=False,
     )

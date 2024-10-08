@@ -128,11 +128,12 @@ class _Styles(MutableMapping[str, PromptStyle]):
 
 
 class StyleDatabase:
-    def __init__(self, paths: list[str | Path]):
+    def __init__(self, paths: list[str | Path], is_built_in_style: bool = False):
         self.no_style = PromptStyle("None", "", "", None)
         self.styles = _Styles()
         self.paths = paths
         self.all_styles_files: list[Path] = []
+        self.is_built_in = is_built_in_style
 
         folder, file = os.path.split(self.paths[0])
         if '*' in file or '?' in file:
@@ -190,7 +191,7 @@ class StyleDatabase:
                     negative_prompt = row.get("negative_prompt", "")
                     # Add style to database
                     self.styles[row["name"]] = PromptStyle(
-                        row["name"], prompt, negative_prompt, str(path)
+                        row["name"], prompt, negative_prompt, "do_not_save" if self.is_built_in else str(path)
                     )
         except Exception:
             errors.report(f'Error loading styles from {path}: ', exc_info=True)
@@ -282,4 +283,4 @@ class StyleDatabase:
         return list(reversed(extracted)), prompt, negative_prompt
 
 
-_Styles.BUILTIN_STYLES = StyleDatabase([Path(data_path, 'styles.csv')]).styles.get_styles()
+_Styles.BUILTIN_STYLES = StyleDatabase([Path(data_path, 'styles.csv')], True).styles.get_styles()

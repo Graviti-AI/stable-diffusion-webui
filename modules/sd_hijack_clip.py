@@ -235,6 +235,8 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
             zs.append(z)
 
         if opts.textual_inversion_add_hashes_to_infotext and used_embeddings:
+            used_models = self.hijack.used_models.setdefault("embedding", [])
+
             hashes = []
             for name, embedding in used_embeddings.items():
                 shorthash = embedding.shorthash
@@ -244,10 +246,13 @@ class FrozenCLIPEmbedderWithCustomWordsBase(torch.nn.Module):
                 name = name.replace(":", "").replace(",", "")
                 hashes.append(f"{name}: {shorthash}")
 
+                used_models.append(embedding.name)
+
             if hashes:
                 if self.hijack.extra_generation_params.get("TI hashes"):
                     hashes.append(self.hijack.extra_generation_params.get("TI hashes"))
                 self.hijack.extra_generation_params["TI hashes"] = ", ".join(hashes)
+
 
         if any(x for x in texts if "(" in x or "[" in x) and opts.emphasis != "Original":
             self.hijack.extra_generation_params["Emphasis"] = opts.emphasis

@@ -65,8 +65,13 @@ def get_private_tempdir(request: gradio.routes.Request) -> pathlib.Path:
 
 
 class __FakeP:
-    def __init__(self, req):
+    def __init__(self, req, feature: str | None = None, prompt: str | None = None):
         self.request = req
+
+        self.task_id: str | None = req.headers.get('x-task-id', None)
+
+        self.feature = feature
+        self.prompt = prompt
 
     def get_request(self):
         return self.request
@@ -82,8 +87,11 @@ def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: 
         image.save(image_path)
         image.already_saved_as = str(image_path)
 
-        params = modules.script_callbacks.ImageSaveParams(image, __FakeP(request), image_path, "")
-        script_callbacks.image_saved_callback(params)
+        script_callbacks.image_saved_callback(
+            script_callbacks.ImageSaveParams(
+                image, __FakeP(request), image_path, None, skip_register=True
+            )
+        )
         return str(image_path)
 
 

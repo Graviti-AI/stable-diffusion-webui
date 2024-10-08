@@ -1509,39 +1509,34 @@ def create_ui():
                     # This is the real place to set sd checkpoint
                     sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
 
-                    def update_sd_model_selection_args(request: Optional[gr.Request] = None):
-                        sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
-                        if "choices" in sd_checkpoint_component_args:
-                            sd_checkpoint_component_args["choices"] = [
-                                item for item in sd_checkpoint_component_args["choices"] if "refiner" not in item.lower()]
-                        if ("choices" in sd_checkpoint_component_args
-                                and len(sd_checkpoint_component_args["choices"]) > 0):
-                            default_sd_checkpoint = sd_checkpoint_component_args["choices"][0]
-                        else:
-                            default_sd_checkpoint = shared.opts.data["sd_model_checkpoint"]
-                        sd_checkpoint_component_args["value"] = default_sd_checkpoint
-                        return sd_checkpoint_component_args
-
                     sd_model_selection = sd_checkpoint_options.component(
                         label=sd_checkpoint_options.label,
                         elem_id="sd_model_checkpoint_dropdown",
                         elem_classes=["quicksettings"],
                         visible=True,
-                        **update_sd_model_selection_args())
-                    def filter_out_refiners(request: gr.Request):
-                        updates = sd_checkpoint_options.component_args(request)
-                        if "choices" in updates:
-                            updates["choices"] = [
-                                item for item in updates["choices"] if "refiner" not in item.lower()]
-                        return updates
+                        choices=[],
+                        value=None,
+                    )
                     create_refresh_button(
                         sd_model_selection,
-                        sd_checkpoint_options.refresh,
+                        None,
+                        None,
                         #sd_checkpoint_options.component_args,
-                        filter_out_refiners,
-                        "refresh_sd_model_checkpoint_dropdown")
+                        # filter_outrefiners,
+                        "refresh_sd_model_checkpoint_dropdown",
+                        _js="update_checkpoint_dropdown"
+
+                    )
                     gr.HTML(
                         '<button id="introjs_button" class="mdi mdi-help-circle-outline" style="font-size: 1.4rem;"></button>',
+                    )
+                    gr.HTML('<div id="gallery" />')
+                    gallery_change_checkpoint = gr.Button(elem_id="gallery_change_checkpoint", visible=False);
+                    gallery_change_checkpoint.click(
+                        fn=None,
+                        _js="updateCheckpoint",
+                        inputs=[],
+                        outputs=[sd_model_selection],
                     )
 
                     inspire_button = gr.Button(
@@ -1651,16 +1646,8 @@ def create_ui():
             return gr.update(**choices), gr.update(**choices), gr.update(**choices), gr.update(**choices)
         demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections])
 
-        def update_sd_model_selection(request: gr.Request):
-            sd_checkpoint_component_args = update_sd_model_selection_args(request)
-            hr_checkpoint_names_args = copy.deepcopy(sd_checkpoint_component_args)
-            if "value" in hr_checkpoint_names_args:
-                hr_checkpoint_names_args["value"] = ["Use same checkpoint"]
-            if "choices" in hr_checkpoint_names_args:
-                hr_checkpoint_names_args["choices"] +=  ["Use same checkpoint"]
-            return gr.update(**sd_checkpoint_component_args), gr.update(**hr_checkpoint_names_args)
         demo.load(
-            fn=update_sd_model_selection, inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
+            fn=None, _js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])

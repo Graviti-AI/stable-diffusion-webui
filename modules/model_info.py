@@ -22,7 +22,9 @@ class ModelInfoProtocal(Protocol):
 
 
 class ModelInfo(BaseModel):
+    id: int
     model_type: Literal["checkpoint", "embedding", "hypernetwork", "lora", "lycoris"]
+    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX"]
     source: str | None
     name: str
     sha256: str
@@ -99,6 +101,20 @@ class AllModelInfo:
     def check_file_existence(self) -> None:
         for model in self._models:
             model.check_file_existence()
+
+    def get_used_model_ids(self, used_models: dict[str, list[str]]) -> list[int]:
+        model_ids = []
+
+        for model_type, names in used_models.items():
+            match model_type:
+                case "embedding":
+                    model_ids.extend(self.embedding_models[name].id for name in names)
+                case "hypernetwork":
+                    model_ids.extend(self.hypernetwork_models[name].id for name in names)
+                case "lora":
+                    model_ids.extend(self.lora_models[name].id for name in names)
+
+        return model_ids
 
 
 class DatabaseAllModelInfo(AllModelInfo):

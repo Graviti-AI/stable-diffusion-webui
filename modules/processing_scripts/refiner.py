@@ -1,7 +1,6 @@
 import gradio as gr
 
 from modules import scripts, sd_models
-from modules.shared_items import list_checkpoint_tiles, refresh_checkpoints
 from modules.infotext_utils import PasteField
 from modules.ui_common import create_refresh_button
 from modules.ui_components import InputAccordion
@@ -26,20 +25,16 @@ class ScriptRefiner(scripts.ScriptBuiltinUI):
                 refiner_checkpoint = gr.Dropdown(
                     label='Checkpoint',
                     elem_id=self.elem_id("checkpoint"),
-                    choices=sd_models.checkpoint_tiles(),
-                    value='',
+                    choices=[],
+                    value=None,
                     tooltip="switch to another model in the middle of generation")
-                def refresh_refiners(request: gr.Request):
-                    return {"choices": [item for item in list_checkpoint_tiles(request) if "refiner" in item.lower()]}
-                create_refresh_button(refiner_checkpoint, refresh_checkpoints, refresh_refiners, self.elem_id("checkpoint_refresh"))
+                create_refresh_button(refiner_checkpoint, None, None, self.elem_id("checkpoint_refresh"), _js="updateCheckpointDropdown")
 
                 refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01, elem_id=self.elem_id("switch_at"), tooltip="fraction of sampling steps when the switch to refiner model should happen; 1=never, 0.5=switch in the middle of generation")
-            def update_refiners_when_enabled(request: gr.Request, enable_refiner: bool):
-                if enable_refiner:
-                    return gr.update(**refresh_refiners(request))
-                return gr.update()
+
             enable_refiner.change(
-                update_refiners_when_enabled,
+                fn=None,
+                _js="async (enabled) => enabled ? await updateCheckpointDropdown() : {__type__: 'update'}",
                 inputs=[enable_refiner],
                 outputs=[refiner_checkpoint],
             )

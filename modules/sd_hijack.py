@@ -132,6 +132,7 @@ class StableDiffusionModelHijack:
     def __init__(self):
         import modules.textual_inversion.textual_inversion
 
+        self.used_models = {}
         self.extra_generation_params = {}
         self.comments = []
 
@@ -156,6 +157,7 @@ class StableDiffusionModelHijack:
     def clear_comments(self):
         self.comments = []
         self.extra_generation_params = {}
+        self.used_models = {}
 
     def get_prompt_lengths(self, request, text, cond_stage_model):
         _, token_count = cond_stage_model.process_texts([text], request)

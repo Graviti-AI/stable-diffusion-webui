@@ -215,6 +215,8 @@ class Script(scripts.Script):
             state.job = f"{state.job_no + 1} out of {state.job_count}"
 
             copy_p = copy.copy(p)
+            copy_p.extra_generation_params = {}
+
             for k, v in args.items():
                 if k == "sd_model":
                     copy_p.override_settings['sd_model_checkpoint'] = v

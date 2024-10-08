@@ -541,8 +541,6 @@ function updateImg2imgResizeToTextAfterChangingImage() {
 
 }
 
-
-
 function setRandomSeed(elem_id) {
     var input = gradioApp().querySelector("#" + elem_id + " input");
     if (!input) return [];
@@ -566,32 +564,11 @@ function switchWidthHeight(tabname) {
     return [];
 }
 
-function browseWorkspaceModels() {
-    const browseModelsBtn = gradioApp().querySelector('#browse_models_in_workspace');
-    if (gradioApp().querySelector("div#img2img_extra_networks").classList.contains("hide")) {
-        browseModelsBtn.textContent = 'Hide workspace models';
-    } else {
-        browseModelsBtn.textContent = 'Show workspace models';
-    }
-
-    fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
-}
-
-async function browseModels(){
-    fetchHomePageDataAndUpdateList({tabname: 'img2img', model_type: currentTab.get('img2img'), page: 1});
-}
-
 let uiPageSize;
 
 function setUiPageSize() {
     const contentWidth = document.body.clientWidth - 84;
     uiPageSize = Math.floor(contentWidth / 238) * 2;
-}
-
-function searchModel({page_name, searchValue}) {
-    const requestUrl = connectNewModelApi ? `/internal/favorite_models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${uiPageSize}`
-        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${uiPageSize}&need_refresh=false`;
-    return fetchGet(requestUrl);
 }
 
 function searchPublicModel({page_name, searchValue}) {

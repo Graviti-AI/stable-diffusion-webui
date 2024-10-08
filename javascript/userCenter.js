@@ -152,40 +152,6 @@ function renderInPopup(doc, onClosedCallback=null) {
   }
 }
 
-function showInspirationPopup() {
-  if (typeof posthog === 'object') {
-    posthog.capture('Inspiration button clicked.');
-  }
-  let loadPromise =new Promise((resolve, reject) => {
-    fetch('/inspire/html', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-      })
-    })
-    .then(response => {
-      if (response.status === 200) {
-        return response.text();
-      }
-      return Promise.reject(response);
-    })
-    .then(htmlResponse => {
-      loadImages(htmlResponse)
-      .then((doc) => {resolve(doc)})
-      .catch((error) => {reject(error)});
-    })
-    .catch((error) => {reject(error)});
-  });
-  notifier.async(
-    loadPromise,
-    (doc) => {renderInPopup(doc);},
-    (error) => {console.error('Error:', error);},
-    "Selecting a good piece for you!"
-  );
-}
-
 function popupHtmlResponse(htmlResponse, onClosedCallback=null) {
   loadImages(htmlResponse)
   .then((doc) => {

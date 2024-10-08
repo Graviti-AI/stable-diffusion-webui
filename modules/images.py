@@ -655,7 +655,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
     if info is not None:
         pnginfo[pnginfo_section_name] = info
 
-    params = script_callbacks.ImageSaveParams(image, p, fullfn, pnginfo)
+    params = script_callbacks.ImageSaveParams(image, p, fullfn, pnginfo, skip_register=grid)
     script_callbacks.before_image_saved_callback(params)
 
     image = params.image

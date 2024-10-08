@@ -109,6 +109,7 @@ def run_postprocessing(
                 from modules.processing import StableDiffusionProcessing
                 p = StableDiffusionProcessing()
                 p.set_request(request)
+                p.feature = "EXTRAS"
                 fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True)
 
                 if pp.caption and False:

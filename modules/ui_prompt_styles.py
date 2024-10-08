@@ -38,9 +38,7 @@ def delete_style(request: gr.Request, name, prompt, negative_prompt):
     prompt_styles.styles.pop(name, None)
     prompt_styles.save_styles()
 
-    if style:
-        return '', '', ''
-    return name, prompt, negative_prompt
+    return '', '', ''
 
 
 def materialize_styles(request: gr.Request, prompt, negative_prompt, styles):

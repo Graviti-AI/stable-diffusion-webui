@@ -262,7 +262,7 @@ axis_options = [
     AxisOptionTxt2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers if x.name not in opts.hide_samplers]),
     AxisOptionTxt2Img("Hires sampler", str, apply_field("hr_sampler_name"), confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
     AxisOptionImg2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
-    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_remove_path, confirm=None, cost=1.0, choices=get_user_sd_model_list),
+    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_remove_path, confirm=None, cost=1.0, choices=lambda: []),
     AxisOption("Negative Guidance minimum sigma", float, apply_field("s_min_uncond")),
     AxisOption("Sigma Churn", float, apply_field("s_churn")),
     AxisOption("Sigma min", float, apply_field("s_tmin")),
@@ -287,7 +287,7 @@ axis_options = [
     AxisOption("Token merging ratio high-res", float, apply_override('token_merging_ratio_hr')),
     AxisOption("Always discard next-to-last sigma", str, apply_override('always_discard_next_to_last_sigma', boolean=True), choices=boolean_choice(reverse=True)),
     AxisOption("SGM noise multiplier", str, apply_override('sgm_noise_multiplier', boolean=True), choices=boolean_choice(reverse=True)),
-    AxisOption("Refiner checkpoint", str, apply_field('refiner_checkpoint'), format_value=format_remove_path, confirm=confirm_checkpoints_or_none, cost=1.0, choices=lambda: ['None'] + sorted(sd_models.checkpoints_list, key=str.casefold)),
+    AxisOption("Refiner checkpoint", str, apply_field('refiner_checkpoint'), format_value=format_remove_path, confirm=confirm_checkpoints_or_none, cost=1.0, choices=lambda: []),
     AxisOption("Refiner switch at", float, apply_field('refiner_switch_at')),
     AxisOption("RNG source", str, apply_override("randn_source"), choices=lambda: ["GPU", "CPU", "NV"]),
     AxisOption("FP8 mode", str, apply_override("fp8_storage"), cost=0.9, choices=lambda: ["Disable", "Enable for SDXL", "Enable"]),
@@ -433,6 +433,7 @@ class Script(scripts.Script):
 
     def ui(self, is_img2img):
         self.current_axis_options = [x for x in axis_options if type(x) == AxisOption or x.is_img2img == is_img2img]
+        dummy_component = gr.JSON(visible=False)
 
         with gr.Row():
             with gr.Column(scale=19):
@@ -525,25 +526,35 @@ class Script(scripts.Script):
         xz_swap_args = [x_type, x_values, x_values_dropdown, z_type, z_values, z_values_dropdown]
         swap_xz_axes_button.click(swap_axes, inputs=xz_swap_args, outputs=xz_swap_args)
 
-        def fill(request: gr.Request, axis_type, csv_mode):
-            axis = self.current_axis_options[axis_type]
-            args = modules.call_utils.special_args(axis.choices, [], request)
-            if axis.choices:
+        def fill(request: gr.Request, axis_type, csv_mode, checkpoint_titles):
+            choices = (
+                self.current_axis_options[axis_type].choices
+                if checkpoint_titles is None
+                else lambda: checkpoint_titles
+            )
+            args = modules.call_utils.special_args(choices, [], request)
+
+            if choices:
                 if csv_mode:
-                    return list_to_csv_string(axis.choices(*args)), gr.update()
+                    return list_to_csv_string(choices(*args)), gr.update()
                 else:
-                    return gr.update(), axis.choices(*args)
+                    return gr.update(), choices(*args)
             else:
                 return gr.update(), gr.update()
 
-        fill_x_button.click(fn=fill, inputs=[x_type, csv_mode], outputs=[x_values, x_values_dropdown])
-        fill_y_button.click(fn=fill, inputs=[y_type, csv_mode], outputs=[y_values, y_values_dropdown])
-        fill_z_button.click(fn=fill, inputs=[z_type, csv_mode], outputs=[z_values, z_values_dropdown])
+        fill_x_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[x_type, csv_mode, dummy_component], outputs=[x_values, x_values_dropdown])
+        fill_y_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[y_type, csv_mode, dummy_component], outputs=[y_values, y_values_dropdown])
+        fill_z_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[z_type, csv_mode, dummy_component], outputs=[z_values, z_values_dropdown])
 
-        def select_axis(request: gr.Request, axis_type, axis_values, axis_values_dropdown, csv_mode):
+        def select_axis(request: gr.Request, axis_type, axis_values, axis_values_dropdown, csv_mode, checkpoint_titles):
             axis_type = axis_type or 0  # if axle type is None set to 0
 
-            choices = self.current_axis_options[axis_type].choices
+            choices = (
+                self.current_axis_options[axis_type].choices
+                if checkpoint_titles is None
+                else lambda: checkpoint_titles
+            )
+
             has_choices = choices is not None
 
             if has_choices:
@@ -561,17 +572,17 @@ class Script(scripts.Script):
             return (gr.Button.update(visible=has_choices), gr.Textbox.update(visible=not has_choices or csv_mode, value=axis_values),
                     gr.update(choices=choices if has_choices else None, visible=has_choices and not csv_mode, value=axis_values_dropdown))
 
-        x_type.change(fn=select_axis, inputs=[x_type, x_values, x_values_dropdown, csv_mode], outputs=[fill_x_button, x_values, x_values_dropdown])
-        y_type.change(fn=select_axis, inputs=[y_type, y_values, y_values_dropdown, csv_mode], outputs=[fill_y_button, y_values, y_values_dropdown])
-        z_type.change(fn=select_axis, inputs=[z_type, z_values, z_values_dropdown, csv_mode], outputs=[fill_z_button, z_values, z_values_dropdown])
+        x_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[x_type, x_values, x_values_dropdown, csv_mode, dummy_component], outputs=[fill_x_button, x_values, x_values_dropdown])
+        y_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[y_type, y_values, y_values_dropdown, csv_mode, dummy_component], outputs=[fill_y_button, y_values, y_values_dropdown])
+        z_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[z_type, z_values, z_values_dropdown, csv_mode, dummy_component], outputs=[fill_z_button, z_values, z_values_dropdown])
 
-        def change_choice_mode(csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown):
-            _fill_x_button, _x_values, _x_values_dropdown = select_axis(x_type, x_values, x_values_dropdown, csv_mode)
-            _fill_y_button, _y_values, _y_values_dropdown = select_axis(y_type, y_values, y_values_dropdown, csv_mode)
-            _fill_z_button, _z_values, _z_values_dropdown = select_axis(z_type, z_values, z_values_dropdown, csv_mode)
+        def change_choice_mode(request: gr.Request, csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, checkpoint_titles):
+            _fill_x_button, _x_values, _x_values_dropdown = select_axis(request, x_type, x_values, x_values_dropdown, csv_mode, checkpoint_titles)
+            _fill_y_button, _y_values, _y_values_dropdown = select_axis(request, y_type, y_values, y_values_dropdown, csv_mode, checkpoint_titles)
+            _fill_z_button, _z_values, _z_values_dropdown = select_axis(request, z_type, z_values, z_values_dropdown, csv_mode, checkpoint_titles)
             return _fill_x_button, _x_values, _x_values_dropdown, _fill_y_button, _y_values, _y_values_dropdown, _fill_z_button, _z_values, _z_values_dropdown
 
-        csv_mode.change(fn=change_choice_mode, inputs=[csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown], outputs=[fill_x_button, x_values, x_values_dropdown, fill_y_button, y_values, y_values_dropdown, fill_z_button, z_values, z_values_dropdown])
+        csv_mode.change(fn=change_choice_mode, _js="XYZGridHelpers.change_choice_mode", inputs=[csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, dummy_component], outputs=[fill_x_button, x_values, x_values_dropdown, fill_y_button, y_values, y_values_dropdown, fill_z_button, z_values, z_values_dropdown])
 
         def get_dropdown_update_from_params(axis, params):
             val_key = f"{axis} Values"

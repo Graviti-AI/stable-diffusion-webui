@@ -22,9 +22,7 @@ def javascript_html(request: gr.Request):
     head += f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
     head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue@2.7.14"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/npm/js-base64@3.7.5/base64.min.js"></script>\n'
-    head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/buefy/0.9.23/buefy.min.js"></script>\n'
-    head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vuetify@2.4.0/dist/vuetify.js"></script>\n'
-    head += '<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>\n'
+    head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js"></script>\n'
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
     # head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
@@ -60,13 +58,11 @@ def javascript_html(request: gr.Request):
 def css_html():
     head = "<title>Diffus - Stable Diffusion Made Easy</title>"
 
-    head += '<link href="https://releases.transloadit.com/uppy/v3.7.0/uppy.min.css" rel="stylesheet" />\n'
     head += '<link href="/components/style/notification/style.css?v=0.3" rel="stylesheet" />\n'
     head += '<link href="/components/style/share/shareon.min.css" rel="stylesheet" />\n'
     head += '<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/css/tabby-ui.min.css">\n'
 
-    head += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/buefy/0.9.23/buefy.min.css">\n'
-    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@2.4.0/dist/vuetify.min.css">\n'
+    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.min.css">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">\n'
     head += '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">\n'
     head += '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">\n'

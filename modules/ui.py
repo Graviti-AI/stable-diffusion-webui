@@ -19,9 +19,10 @@ import modules.call_utils
 from modules import gradio_extensons  # noqa: F401
 from modules import sd_hijack, sd_models, script_callbacks, ui_extensions, deepbooru, extra_networks, ui_common, ui_postprocessing, progress, ui_loadsave, shared_items, ui_settings, timer, sysinfo, ui_checkpoint_merger, scripts, sd_samplers, processing, ui_extra_networks, ui_toprow, launch_utils
 from modules import localization, ui_prompt_styles
+from modules.model_info import AllModelInfo, MODEL_INFO_KEY
 from modules.ui_components import FormRow, FormGroup, ToolButton, FormHTML, InputAccordion, ResizeHandleRow
 from modules.paths import script_path, Paths
-from modules.ui_common import create_refresh_button, create_browse_model_button
+from modules.ui_common import create_refresh_button
 from modules.ui_gradio_extensions import reload_javascript
 
 from modules.shared import opts, cmd_opts
@@ -1509,48 +1510,31 @@ def create_ui():
                     # This is the real place to set sd checkpoint
                     sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
 
-                    def update_sd_model_selection_args(request: Optional[gr.Request] = None):
-                        sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
-                        if "choices" in sd_checkpoint_component_args:
-                            sd_checkpoint_component_args["choices"] = [
-                                item for item in sd_checkpoint_component_args["choices"] if "refiner" not in item.lower()]
-                        if ("choices" in sd_checkpoint_component_args
-                                and len(sd_checkpoint_component_args["choices"]) > 0):
-                            default_sd_checkpoint = sd_checkpoint_component_args["choices"][0]
-                        else:
-                            default_sd_checkpoint = shared.opts.data["sd_model_checkpoint"]
-                        sd_checkpoint_component_args["value"] = default_sd_checkpoint
-                        return sd_checkpoint_component_args
-
                     sd_model_selection = sd_checkpoint_options.component(
                         label=sd_checkpoint_options.label,
                         elem_id="sd_model_checkpoint_dropdown",
                         elem_classes=["quicksettings"],
                         visible=True,
-                        **update_sd_model_selection_args())
-                    def filter_out_refiners(request: gr.Request):
-                        updates = sd_checkpoint_options.component_args(request)
-                        if "choices" in updates:
-                            updates["choices"] = [
-                                item for item in updates["choices"] if "refiner" not in item.lower()]
-                        return updates
+                        choices=[],
+                        value=None,
+                    )
                     create_refresh_button(
                         sd_model_selection,
-                        sd_checkpoint_options.refresh,
+                        None,
+                        None,
                         #sd_checkpoint_options.component_args,
-                        filter_out_refiners,
-                        "refresh_sd_model_checkpoint_dropdown")
-                    gr.HTML(
-                        '<button id="introjs_button" class="mdi mdi-help-circle-outline" style="font-size: 1.4rem;"></button>',
+                        # filter_outrefiners,
+                        "refresh_sd_model_checkpoint_dropdown",
+                        _js="updateCheckpointDropdown"
                     )
 
-                    inspire_button = gr.Button(
-                        "Inspire me", elem_id="gallery_inspire_me_button", variant="primary")
-                    inspire_button.click(
-                        None,
-                        None,
-                        None,
-                        _js="showInspirationPopup")
+                    gr.HTML(elem_id="gallery")
+                    gr.Button(elem_id="gallery_change_checkpoint", visible=False).click(
+                        fn=None,
+                        _js="updateCheckpoint",
+                        inputs=[],
+                        outputs=[sd_model_selection],
+                    )
 
                     def get_model_title_from_params(request: gr.Request, params):
                         # sd_models.checkpoint_tiles() is guaranteed to return at least one model title
@@ -1573,8 +1557,21 @@ def create_ui():
                                 return ckpt_info.title
 
                         return checkpoint_tiles[0]
-                    txt2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
-                    img2img_paste_fields.append((sd_model_selection, get_model_title_from_params))
+
+                    def _get_gallery_model_from_params(params: dict) -> dict:
+                        all_model_info: AllModelInfo = params[MODEL_INFO_KEY]
+                        sha256 = params.get("Model hash")
+                        if not sha256:
+                            return gr.update(value=None)
+
+                        model_info = all_model_info.get_checkpoint_by_hash(sha256)
+                        if model_info is None:
+                            return gr.update(value=None)
+
+                        return gr.update(value=model_info.title)
+
+                    txt2img_paste_fields.append((sd_model_selection, _get_gallery_model_from_params))
+                    img2img_paste_fields.append((sd_model_selection, _get_gallery_model_from_params))
 
                     sd_model_selection.change(
                         _js='on_sd_model_selection_updated',
@@ -1589,23 +1586,24 @@ def create_ui():
                         inputs=sd_model_selection,
                         outputs=[txt2img_model_title, img2img_model_title]
                     )
-                    extra_networks_button = create_browse_model_button(
-                        'Show workspace models',
-                        'browse_models_in_workspace',
-                        button_style="width: 200px !important; flex-grow: 0.3 !important; align-self: flex-end;",
-                        js_function="browseWorkspaceModels")
-                    create_browse_model_button(
-                        'Browse All Models',
-                        'browse_all_models',
-                        button_style="width: 200px !important; flex-grow: 0.3 !important; align-self: flex-end;",
-                        js_function="openWorkSpaceDialog")
+                    # extra_networks_button = create_browse_model_button(
+                    #     'Show workspace models',
+                    #     'browse_models_in_workspace',
+                    #     button_style="width: 200px !important; flex-grow: 0.3 !important; align-self: flex-end;",
+                    #     js_function="browseWorkspaceModels")
+                    # create_browse_model_button(
+                    #     'Browse All Models',
+                    #     'browse_all_models',
+                    #     button_style="width: 200px !important; flex-grow: 0.3 !important; align-self: flex-end;",
+                    #     js_function="openWorkSpaceDialog")
 
-        parameters_copypaste.connect_paste_params_buttons()
 
-        with FormRow(variant='compact', elem_id="img2img_extra_networks", visible=False) as extra_networks:
-            extra_networks_ui = ui_extra_networks.create_ui(extra_networks, extra_networks_button, 'img2img')
-            ui_extra_networks.setup_ui(extra_networks_ui, txt2img_gallery)
-            ui_extra_networks.setup_ui(extra_networks_ui, img2img_gallery)
+        parameters_copypaste.connect_paste_params_buttons(dummy_component)
+
+        # with FormRow(variant='compact', elem_id="img2img_extra_networks", visible=False) as extra_networks:
+        #     extra_networks_ui = ui_extra_networks.create_ui(extra_networks, extra_networks_button, 'img2img')
+        #     ui_extra_networks.setup_ui(extra_networks_ui, txt2img_gallery)
+        #     ui_extra_networks.setup_ui(extra_networks_ui, img2img_gallery)
 
         with gr.Tabs(elem_id="tabs") as tabs:
             tab_order = {k: i for i, k in enumerate(opts.ui_tab_order)}
@@ -1651,16 +1649,8 @@ def create_ui():
             return gr.update(**choices), gr.update(**choices), gr.update(**choices), gr.update(**choices)
         demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections])
 
-        def update_sd_model_selection(request: gr.Request):
-            sd_checkpoint_component_args = update_sd_model_selection_args(request)
-            hr_checkpoint_names_args = copy.deepcopy(sd_checkpoint_component_args)
-            if "value" in hr_checkpoint_names_args:
-                hr_checkpoint_names_args["value"] = ["Use same checkpoint"]
-            if "choices" in hr_checkpoint_names_args:
-                hr_checkpoint_names_args["choices"] +=  ["Use same checkpoint"]
-            return gr.update(**sd_checkpoint_component_args), gr.update(**hr_checkpoint_names_args)
         demo.load(
-            fn=update_sd_model_selection, inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
+            fn=None, _js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])

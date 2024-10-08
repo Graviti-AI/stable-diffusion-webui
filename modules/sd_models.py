@@ -195,6 +195,8 @@ re_strip_checksum = re.compile(r"\s*\[[^]]+]\s*$")
 
 
 def get_closet_checkpoint_match(search_string):
+    raise NotImplementedError("Reading models from BE is deprecated, in 'get_closet_checkpoint_match'")
+
     if not search_string:
         return None
 
@@ -230,6 +232,8 @@ def model_hash(filename):
 
 
 def select_checkpoint() -> ModelInfo:
+    raise NotImplementedError("Reading models from BE is deprecated, in 'select_checkpoint'")
+
     """Raises `FileNotFoundError` if no checkpoints are found."""
     model_checkpoint = shared.opts.sd_checkpoint_hash
     if not model_checkpoint:
@@ -534,6 +538,9 @@ class SdModelData:
                     return self.sd_model
 
                 try:
+                    logger.info("Skip reading models from BE, return 'None' in 'SdModelData.get_sd_model'")
+                    return self.sd_model
+
                     load_model(select_checkpoint())
 
                 except Exception as e:
@@ -607,9 +614,11 @@ def _load_model(
     embedding_model_info: dict[str, ModelInfo] | None=None,
     already_loaded_state_dict=None,
 ):
-    from modules import sd_hijack
-    checkpoint_info = checkpoint_info or select_checkpoint()
+    if checkpoint_info is None:
+        logger.info("Skip reading models from BE, return 'None' in '_load_model'")
+        return None
 
+    from modules import sd_hijack
     timer = Timer('sd_models.load_model', checkpoint_info.title)
 
     if model_data.sd_model:

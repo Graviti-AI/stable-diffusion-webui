@@ -22,7 +22,7 @@ from modules.rng import slerp # noqa: F401
 from modules.sd_hijack import model_hijack
 from modules.sd_samplers_common import images_tensor_to_samples, decode_first_stage, approximation_indexes
 from modules.shared import opts, cmd_opts, state
-from modules.model_info import AllModelInfo, ModelInfo, DatabaseAllModelInfo
+from modules.model_info import AllModelInfo, ModelInfo
 from modules.nsfw import nsfw_blur
 import modules.shared as shared
 import modules.paths as paths
@@ -232,6 +232,8 @@ class StableDiffusionProcessing:
 
     is_api: bool = field(default=False, init=False)
 
+    feature: str = ""
+
     _request = None
     _task_id: Optional[str] = None
     _origin: Optional[str] = None
@@ -298,11 +300,19 @@ class StableDiffusionProcessing:
 
     def get_all_model_info(self) -> AllModelInfo:
         if self._all_model_info is None:
-            request = self.get_request()
-            assert request is not None
-            self._all_model_info = DatabaseAllModelInfo(request)
+            raise NotImplementedError("Trying to 'set_all_model_info' before 'set_all_model_info'")
 
         return self._all_model_info
+
+    def get_base(self) -> str:
+        return (
+            self.get_all_model_info()
+            .get_checkpoint_by_short_title(f"{self.sd_model_name} [{self.sd_model_hash}]")
+            .base
+        )
+
+    def get_used_model_ids(self) -> list[int]:
+        return self.get_all_model_info().get_used_model_ids(self)
 
     @property
     def task_id(self) -> Optional[str]:
@@ -793,7 +803,7 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
         p.scripts.before_process(p)
 
     stored_opts = {k: getattr(opts, k) for k in p.override_settings.keys()}
-    all_checkpoint_models = p.get_all_model_info().checkpoint_models
+    all_model_info = p.get_all_model_info()
 
     try:
         # if no checkpoint override or the override checkpoint can't be found, remove override entry and load opts checkpoint
@@ -806,7 +816,10 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
             opts.set(k, v, is_api=True, run_callbacks=False)
 
             if k == 'sd_model_checkpoint':
-                checkpoint = all_checkpoint_models[v]
+                checkpoint = all_model_info.get_checkpoint_by_title(v)
+                if checkpoint is None:
+                    raise KeyError(v)
+
                 sd_models.reload_model_weights(info=checkpoint)
 
             if k == 'sd_vae':
@@ -857,7 +870,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         p.tiling = opts.tiling
 
     if p.refiner_checkpoint not in (None, "", "None", "none"):
-        p.refiner_checkpoint_info = p.get_all_model_info().checkpoint_models.get(p.refiner_checkpoint)
+        p.refiner_checkpoint_info = p.get_all_model_info().get_checkpoint_by_title(p.refiner_checkpoint)
         if p.refiner_checkpoint_info is None:
             raise Exception(f'Could not find checkpoint with name {p.refiner_checkpoint}')
 
@@ -1215,6 +1228,8 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
     hr_negative_prompts: list = field(default=None, init=False)
     hr_extra_network_data: list = field(default=None, init=False)
 
+    feature: str = "TXT2IMG"
+
     def __post_init__(self):
         super().__post_init__()
 
@@ -1270,7 +1285,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
         if self.enable_hr:
             self.extra_generation_params["Denoising strength"] = self.denoising_strength
             if self.hr_checkpoint_name and self.hr_checkpoint_name != 'Use same checkpoint':
-                self.hr_checkpoint_info = self.get_all_model_info().checkpoint_models.get(self.hr_checkpoint_name)
+                self.hr_checkpoint_info = self.get_all_model_info().get_checkpoint_by_title(self.hr_checkpoint_name)
 
                 if self.hr_checkpoint_info is None:
                     raise Exception(f'Could not find checkpoint with name {self.hr_checkpoint_name}')
@@ -1543,7 +1558,8 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
             if shared.opts.hires_fix_use_firstpass_conds:
                 self.calculate_hr_conds()
 
-            elif shared.sd_model.sd_checkpoint_info == sd_models.select_checkpoint():  # if in lowvram mode, we need to calculate conds right away, before the cond NN is unloaded
+            # elif shared.sd_model.sd_checkpoint_info == sd_models.select_checkpoint():  # if in lowvram mode, we need to calculate conds right away, before the cond NN is unloaded
+            else:
                 with devices.autocast():
                     extra_networks.activate(self, self.hr_extra_network_data)
 
@@ -1596,6 +1612,8 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
     init_img_hash: str = field(default=None, init=False)
     mask_for_overlay: Image = field(default=None, init=False)
     init_latent: torch.Tensor = field(default=None, init=False)
+
+    feature: str = "IMG2IMG"
 
     def __post_init__(self):
         super().__post_init__()

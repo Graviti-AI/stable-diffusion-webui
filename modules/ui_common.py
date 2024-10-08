@@ -325,7 +325,7 @@ Requested path was: {f}
     return res
 
 
-def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id, visible=True, interactive=True):
+def create_refresh_button(refresh_component, refresh_method, refreshed_args, elem_id, visible=True, interactive=True, *, _js=None):
     refresh_components = refresh_component if isinstance(refresh_component, list) else [refresh_component]
 
     label = None
@@ -356,7 +356,8 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
 
     refresh_button = ToolButton(value=refresh_symbol, elem_id=elem_id, tooltip=f"{label}: refresh" if label else "Refresh", visible=visible, interactive=interactive)
     refresh_button.click(
-        fn=refresh,
+        fn=refresh if refresh_method else None,
+        _js=_js,
         inputs=[],
         outputs=refresh_components
     )
@@ -502,20 +503,6 @@ def create_upload_button(
     uploaded_filepath.change(None, None, None, _js=notify_upload_finished_js)
     return button
 
-
-def create_browse_model_button(label, elem_id, button_style="", js_function='browseWorkspaceModels', visible=True, ):
-    button = gr.Button(label, elem_id=elem_id, variant="secondary", visible=visible)
-    button.click(None, list(), list(), _js=js_function)
-    if button_style:
-        gr.HTML("""
-        <style>
-        #{button_id} {{
-            {button_style};
-        }}
-        <\\style>
-        """.format(button_id=elem_id, button_style=button_style), visible=False)
-    button.style(full_width=False)
-    return button
 
 def get_static_files(filepath: str):
     full_path = os.path.join(script_path, "static", filepath)

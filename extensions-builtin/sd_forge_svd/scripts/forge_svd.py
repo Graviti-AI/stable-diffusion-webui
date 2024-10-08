@@ -10,7 +10,7 @@ from modules.paths import models_path
 from modules.ui_common import ToolButton, refresh_symbol
 from modules.ui_components import ResizeHandleRow 
 from modules.system_monitor import monitor_call_context
-from modules.call_queue import wrap_gradio_gpu_call
+from modules.call_queue import wrap_gradio_gpu_call, __FakeP
 from modules.paths import Paths
 from modules import shared
 
@@ -114,6 +114,10 @@ def predict(request: gr.Request, filename, width, height, video_frames, motion_b
     output_dir.mkdir(parents=True, exist_ok=True)
 
     video_filename = write_images_to_mp4(outputs, output_dir=output_dir, fps=fps)
+
+    script_callbacks.image_saved_callback(
+        script_callbacks.ImageSaveParams(None, __FakeP(request, "SVD"), video_filename, None)
+    )
 
     return outputs, video_filename
 

@@ -73,7 +73,7 @@ for d, must_exist, what, options in path_dirs:
 
 
 class Paths:
-    _PRIVATE_IMAGE_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s", "appsumo ltd tier 1", "appsumo ltd tier 2"}
+    PRIVATE_IMAGE_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s", "appsumo ltd tier 1", "appsumo ltd tier 2"}
 
     def __init__(self, request: gr.Request | None):
         import hashlib
@@ -200,22 +200,6 @@ class Paths:
     # dir to store user model previews
     def model_previews_dir(self) -> pathlib.Path:
         return self._check_dir(self._work_dir.joinpath("model_previews"))
-
-    def save_image(self, filename: str):
-        if os.getenv("NOT_SAVE_FREE_IMAGES_TO_PUBLIC", 'false').lower() in ('true', 'yes', '1'):
-            return
-        # copy the generated image to public dir if user is free tier.
-        if not self.user.tire or self.user.tire.lower() not in self._PRIVATE_IMAGE_ALLOWED_TIERS:
-            src_path = pathlib.Path(filename)
-
-            if not src_path.is_relative_to(self._output_dir):
-                return
-
-            relative_to = src_path.relative_to(self._output_dir)
-            dst_path = self.public_outdir().joinpath(relative_to)
-            if not dst_path.parent.exists():
-                dst_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(src_path, dst_path)
 
 
 class Prioritize:

@@ -4,11 +4,15 @@ import json
 import os
 from typing import Literal, Protocol
 
-from fastapi import Request
+import gradio as gr
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
+from modules import script_callbacks
 from modules.paths import get_binary_path, get_config_path
 from modules.user import User
+
+MODEL_INFO_KEY = "_AllModelInfo"
 
 
 class ModelInfoProtocal(Protocol):
@@ -22,7 +26,9 @@ class ModelInfoProtocal(Protocol):
 
 
 class ModelInfo(BaseModel):
-    model_type: Literal["checkpoint", "embedding", "hypernetwork", "lora", "lycoris"]
+    id: int
+    model_type: Literal["CHECKPOINT", "EMBEDDING", "HYPERNETWORK", "LORA", "LYCORIS"]
+    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX"]
     source: str | None
     name: str
     sha256: str
@@ -84,13 +90,13 @@ class AllModelInfo:
 
         for model_info in self._models:
             match model_info.model_type:
-                case "checkpoint":
+                case "CHECKPOINT":
                     self.checkpoint_models[model_info.title] = model_info
-                case "embedding":
+                case "EMBEDDING":
                     self.embedding_models[model_info.name_for_extra] = model_info
-                case "hypernetwork":
+                case "HYPERNETWORK":
                     self.hypernetwork_models[model_info.name_for_extra] = model_info
-                case "lora" | "lycoris":
+                case "LORA" | "LYCORIS":
                     self.lora_models[model_info.name_for_extra] = model_info
 
     def is_xyz_plot_enabled(self) -> bool:
@@ -100,23 +106,66 @@ class AllModelInfo:
         for model in self._models:
             model.check_file_existence()
 
+    def get_used_model_ids(self, used_models: dict[str, list[str]]) -> list[int]:
+        model_ids = []
 
-class DatabaseAllModelInfo(AllModelInfo):
-    def __init__(self, request: Request) -> None:
-        from scripts.model_hijack.favorite_model import (
-            FavoriteModelDatabase,
-            FavoriteModelDatabaseByTitle,
-        )
+        for model_type, names in used_models.items():
+            match model_type:
+                case "EMBEDDING":
+                    model_ids.extend(self.embedding_models[name].id for name in names)
+                case "HYPERNETWORK":
+                    model_ids.extend(self.hypernetwork_models[name].id for name in names)
+                case "LORA":
+                    model_ids.extend(self.lora_models[name].id for name in names)
 
-        user_id = User.current_user(request).uid
+        return model_ids
 
-        self.checkpoint_models = FavoriteModelDatabaseByTitle(user_id, "checkpoint")
-        self.embedding_models = FavoriteModelDatabase(user_id, "embedding")
-        self.hypernetwork_models = FavoriteModelDatabase(user_id, "hypernetwork")
-        self.lora_models = FavoriteModelDatabase(user_id, "lora")
 
-    def is_xyz_plot_enabled(self) -> bool:
-        return False
+# class DatabaseAllModelInfo(AllModelInfo):
+#     def __init__(self, request: Request) -> None:
+#         from scripts.model_hijack.favorite_model import (
+#             FavoriteModelDatabase,
+#             FavoriteModelDatabaseByTitle,
+#         )
 
-    def check_file_existence(self) -> None:
-        return None
+#         user_id = User.current_user(request).uid
+
+#         self.checkpoint_models = FavoriteModelDatabaseByTitle(user_id, "checkpoint")
+#         self.embedding_models = FavoriteModelDatabase(user_id, "embedding")
+#         self.hypernetwork_models = FavoriteModelDatabase(user_id, "hypernetwork")
+#         self.lora_models = FavoriteModelDatabase(user_id, "lora")
+
+#     def is_xyz_plot_enabled(self) -> bool:
+#         return False
+
+#     def check_file_existence(self) -> None:
+#         return None
+
+
+class FilesExistenceRequest(BaseModel):
+    models: list[str]
+    configs: list[str]
+
+
+class FilesExistenceResponse(BaseModel):
+    models: list[bool]
+    configs: list[bool]
+
+
+def check_files_existence_by_sha256(body: FilesExistenceRequest) -> FilesExistenceResponse:
+    return FilesExistenceResponse(
+        models=[get_binary_path(sha256.lower()).exists() for sha256 in body.models],
+        configs=[get_config_path(sha256.lower()).exists() for sha256 in body.configs],
+    )
+
+
+def _setup_model_api(_: gr.Blocks, app: FastAPI):
+    app.add_api_route(
+        "/internal/files-existence",
+        check_files_existence_by_sha256,
+        methods=["POST"],
+        response_model=FilesExistenceResponse,
+    )
+
+
+script_callbacks.on_app_started(_setup_model_api)

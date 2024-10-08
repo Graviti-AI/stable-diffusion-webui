@@ -45,6 +45,8 @@ class ExtraNetworkLora(extra_networks.ExtraNetwork):
         networks.load_networks(names, lora_model_info, te_multipliers, unet_multipliers, dyn_dims)
 
         if shared.opts.lora_add_hashes_to_infotext:
+            used_models = p.used_models.setdefault("LORA", [])
+
             network_hashes = []
             for item in networks.loaded_networks:
                 shorthash = item.network_on_disk.shorthash
@@ -58,6 +60,8 @@ class ExtraNetworkLora(extra_networks.ExtraNetwork):
                 alias = alias.replace(":", "").replace(",", "")
 
                 network_hashes.append(f"{alias}: {shorthash}")
+
+                used_models.append(item.name)
 
             if network_hashes:
                 p.extra_generation_params["Lora hashes"] = ", ".join(network_hashes)

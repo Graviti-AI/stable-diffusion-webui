@@ -396,6 +396,23 @@ function renderHtmlResponse(elem, url, method, onSucceeded=null, onFailed=null, 
   });
 }
 
+function setupIntercom(userId, userName, userEmail, userCreatedAt) {
+  try {
+    const date = new Date(userCreatedAt);
+    window.Intercom("boot", {
+      api_base: "https://api-iam.intercom.io",
+      app_id: "idmms6yo",
+      user_id: userId,
+      name: userName,
+      email: userEmail,
+      created_at: Math.floor(date.getTime() / 1000),
+    });
+    window.Intercom("update");
+  } catch (error) {
+    console.error("Intercom setup error:", error);
+  }
+}
+
 
 let _isUserCenterInited = false;
 function initUserCenter(realtimeData) {
@@ -445,6 +462,7 @@ function initUserCenter(realtimeData) {
     );
   }
   _isUserCenterInited = true;
+  setupIntercom(orderInfo.user_id, orderInfo.nickname, orderInfo.email, orderInfo.registered_time);
 }
 // initialize user center
 realtimeDataCallbacks.push(initUserCenter);

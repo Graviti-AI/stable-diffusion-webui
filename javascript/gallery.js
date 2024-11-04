@@ -83,6 +83,11 @@ function _updateExtraNetwork(tabname, text) {
     return added;
 }
 
+const _TAB_ID_TO_NAME = {
+    tab_txt2img: "txt2img",
+    tab_img2img: "img2img",
+};
+
 var galleryApp;
 
 function initGallery() {
@@ -178,11 +183,13 @@ function initGallery() {
                 notifier.success(`Checkpoint is set to <b>${_checkpoint_name}</b>`);
             },
             setExtraNetwork(model_type, filename) {
-                const tabname = get_uiCurrentTab().textContent.trim();
-                if (!["txt2img", "img2img"].includes(tabname)) {
+                const tab_id = get_uiCurrentTabContent().id.trim();
+                if (!["tab_txt2img", "tab_img2img"].includes(tab_id)) {
                     notifier.alert(`Please switch your tab to <b>txt2img</b> or <b>img2img</b>.`);
                     return;
                 }
+
+                const tabname = _TAB_ID_TO_NAME[tab_id];
 
                 let text;
                 const stem = getStem(filename);

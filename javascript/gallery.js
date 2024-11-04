@@ -1,5 +1,10 @@
 async function listFavoriteCheckpoints() {
-    const params = new URLSearchParams({ is_favorite: true, type: "CHECKPOINT", sort: "NAME" });
+    const params = new URLSearchParams({
+        is_favorite: true,
+        type: "CHECKPOINT",
+        sort: "NAME",
+        limit: 10000,
+    });
     const url = `/gallery-api/v1/models?${params.toString()}`;
 
     const response = await fetchGet(url);

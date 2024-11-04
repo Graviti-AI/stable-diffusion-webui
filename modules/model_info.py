@@ -8,7 +8,6 @@ import gradio as gr
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from modules import script_callbacks
 from modules.paths import get_binary_path, get_config_path
 
 if TYPE_CHECKING:
@@ -42,7 +41,7 @@ class ModelInfoProtocal(Protocol):
 class ModelInfo(BaseModel):
     id: int
     model_type: Literal["CHECKPOINT", "EMBEDDING", "HYPERNETWORK", "LORA", "LYCORIS"]
-    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX"]
+    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX", None]
     source: str | None
     name: str
     sha256: str
@@ -214,13 +213,10 @@ def check_files_existence_by_sha256(body: FilesExistenceRequest) -> FilesExisten
     )
 
 
-def _setup_model_api(_: gr.Blocks, app: FastAPI):
+def setup_model_api(_: gr.Blocks, app: FastAPI):
     app.add_api_route(
         "/internal/files-existence",
         check_files_existence_by_sha256,
         methods=["POST"],
         response_model=FilesExistenceResponse,
     )
-
-
-script_callbacks.on_app_started(_setup_model_api)

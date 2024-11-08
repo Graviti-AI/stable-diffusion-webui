@@ -89,7 +89,7 @@ def extract_image_path_or_save_if_needed(request: gradio.routes.Request, image: 
 
         script_callbacks.image_saved_callback(
             script_callbacks.ImageSaveParams(
-                image, __FakeP(request), image_path, None, skip_register=True
+                image, __FakeP(request), str(image_path), None, skip_register=True
             )
         )
         return str(image_path)

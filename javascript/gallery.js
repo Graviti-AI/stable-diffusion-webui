@@ -246,10 +246,10 @@ function initGallery() {
             closeGallery() {
                 this.galleryOpen = false;
             },
-            runTxt2Img(pnginfo, models) {
+            runImage(pnginfo, models, tabname) {
                 gallery_run_pnginfo = pnginfo;
                 gallery_run_models = models;
-                gradioApp().getElementById("paste").click();
+                gradioApp().getElementById(`${tabname}_paste`).click();
                 this.galleryOpen = false;
             },
             async isPrivateModelAllowed() {

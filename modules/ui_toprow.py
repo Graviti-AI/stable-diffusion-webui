@@ -151,7 +151,7 @@ class Toprow:
         with gr.Row(elem_id=f"{self.id_part}_tools"):
             from modules.ui import paste_symbol, clear_prompt_symbol, restore_progress_symbol
 
-            self.paste = ToolButton(value=paste_symbol, elem_id="paste", tooltip="Read generation parameters from prompt or last generation if prompt is empty into user interface.")
+            self.paste = ToolButton(value=paste_symbol, elem_id=f"{self.id_part}_paste", tooltip="Read generation parameters from prompt or last generation if prompt is empty into user interface.")
             self.clear_prompt_button = ToolButton(value=clear_prompt_symbol, elem_id=f"{self.id_part}_clear_prompt", tooltip="Clear prompt")
             self.apply_styles = ToolButton(value=ui_prompt_styles.styles_materialize_symbol, elem_id=f"{self.id_part}_style_apply", tooltip="Apply all selected styles to prompts.")
 

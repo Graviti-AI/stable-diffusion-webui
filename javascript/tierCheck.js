@@ -173,16 +173,6 @@ function _checkSamplingSteps(getArg, permissions, tier) {
     throw `The used sampling steps (${steps}) has exceeded the maximum limit (${max_sampling_steps}) for current tier.`;
 }
 
-async function checkComfyUI() {
-    const permissions = await getFeaturePermissions();
-    const feature = permissions.features["ComfyUI"];
-
-    if (feature.allowed_tiers.includes(realtimeData.orderInfo.tier)) {
-        return;
-    }
-    _tierCheckFailed([feature]);
-}
-
 function _tierCheckFailed(features) {
     const feature_names = features.map((item) => item.name);
     const features_message = _joinWords(feature_names);

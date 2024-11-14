@@ -488,10 +488,10 @@ function initUserCenterMenu() {
                 <v-list-item-title>ComfyUI
                   <v-chip
                     class="ml-2"
-                    color="#ff9800d4"
+                    color="#66BB6A"
                     small
                   >
-                    Free Beta
+                    New
                   </v-chip>
                 </v-list-item-title>
               </v-list-item-content>
@@ -565,8 +565,6 @@ function initUserCenterMenu() {
         window.location.href = "/user";
       },
       async redirectToComfy() {
-        await checkComfyUI();
-
         const comfyInfo = channelResult.sub_pages.find(item => item.name.toLowerCase() === "comfyui");
         if (comfyInfo) {
           window.open(comfyInfo.url, "_blank");

@@ -125,7 +125,7 @@ function initGallery() {
                 <iframe
                     ref="iframe"
                     id="gallery-iframe"
-                    src="gallery/"
+                    src="app/gallery/"
                     width="100%"
                     height="100%"
                 />

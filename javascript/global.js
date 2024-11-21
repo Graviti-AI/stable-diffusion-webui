@@ -1,5 +1,5 @@
 const PRICING_URL = 'https://www.diffus.me/pricing';
-const SUBSCRIPTION_URL = "/pricing_table"
+const SUBSCRIPTION_URL = "/app/pricing-table"
 let galleryModelTotalPage = {
   personal: {
     checkpoints: 1,
@@ -164,11 +164,11 @@ function supportDifferentPriceType(priceType, linkNode) {
       };
     } else if (priceInfo && priceInfo.pricing_table_id) {
       if (priceType === 'upgrade') {
-        linkNode.href = '/pricing_table';
+        linkNode.href = '/app/pricing-table';
       } else if (priceType === 'api') {
-        linkNode.href = '/pricing_table/api';
+        linkNode.href = '/app/pricing-table/api';
       } else if (priceType === 'add_ons') {
-        linkNode.href = '/pricing_table/addons';
+        linkNode.href = '/app/pricing-table/addons';
       } else {
         linkNode.href = `/user#/subscription?priceType=${priceType}`;
       }
@@ -177,7 +177,7 @@ function supportDifferentPriceType(priceType, linkNode) {
         item_name: priceType
       };
     } else {
-      linkNode.href = (priceInfo && priceInfo.link) || '/pricing_table';
+      linkNode.href = (priceInfo && priceInfo.link) || '/app/pricing-table';
       itemListInfo = {
         item_id: linkNode.href,
         item_name: priceType
@@ -203,5 +203,5 @@ function changeFreeCreditLink() {
 }
 
 function openPricingTable() {
-    window.location.href = "/pricing_table";
+    window.location.href = "/app/pricing-table";
 }

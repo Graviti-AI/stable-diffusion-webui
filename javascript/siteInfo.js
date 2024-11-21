@@ -56,6 +56,26 @@ class ChannelInfo {
     }
   }
 
+  chooseLanguage(availableLanguages, userLanguage) {
+    // Normalize the language code to xx_XX format
+    userLanguage = userLanguage.replace('-', '_');
+
+    // Check for a direct match
+    if (availableLanguages.includes(userLanguage)) {
+      return userLanguage;
+    }
+
+    // Check for a match with only the language part
+    const languagePart = userLanguage.split('_')[0];
+    const matchedLanguage = availableLanguages.find(lang => lang.startsWith(languagePart));
+    if (matchedLanguage) {
+      return matchedLanguage;
+    }
+
+    // Fallback to default language
+    return 'None';
+  }
+
   initialLanguage() {
     if (!window.Cookies) return;
 
@@ -76,18 +96,19 @@ class ChannelInfo {
       if (channelResult && channelResult.language) {
         selectedLanguage = channelResult.language;
       } else {
-        selectedLanguage = navigator.language.replaceAll('-', '_');
+        selectedLanguage = navigator.language || navigator.userLanguage;
       }
     }
+
+    selectedLanguage = this.chooseLanguage(languageList, selectedLanguage)
 
     // always update cookie, to keep it not expired
     const cookieMeta = { expires: 365, domain: 'diffus.me' };
     Cookies.set(languageCookieKey, selectedLanguage, cookieMeta);
 
     // update language-select list to show current selected language
-    const language = languageList.includes(selectedLanguage) ? selectedLanguage : 'None';
-    setSelectChecked('language-select', language);
-    if (!cookieLanguage && language != 'None'){
+    setSelectChecked('language-select', selectedLanguage);
+    if (!cookieLanguage && language != 'None') {
       location.reload();
     }
 

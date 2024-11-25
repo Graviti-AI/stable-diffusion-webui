@@ -671,3 +671,146 @@ async function extractModelsFromPnginfo() {
 
     return res;
 }
+
+async function _queryTaskResult(task_id) {
+    const url = `/gallery-api/v1/tasks/${task_id}/progresses`;
+    while (true) {
+        const response = await fetchGet(url);
+        if (!response.ok) {
+            throw `Falied to query task progress: "${response.status} ${response.statusText}"`;
+        }
+
+        const content = await response.json();
+
+        switch (content.status) {
+            case "QUEUED":
+                await PYTHON.asyncio.sleep(2000);
+                break;
+
+            case "PREPARING":
+            case "RUNNING":
+                break;
+
+            case "FAILED":
+                throw `Failed to import model from Civitai: ${content.message}`;
+
+            case "SUCCESS":
+                return content.result;
+
+            default:
+                throw `Unknown progress status: "${content.status}"`;
+        }
+
+        await PYTHON.asyncio.sleep(1000);
+    }
+}
+
+async function _queryModelId(sha256) {
+    const url = `/gallery-api/v1/models?sha256=${sha256}`;
+
+    for (let i = 0; i < 200; i++) {
+        const response = await fetchGet(url);
+        if (!response.ok) {
+            throw `Failed to get model: "${response.status} ${response.statusText}"`;
+        }
+
+        const content = await response.json();
+
+        if (content.items.length === 0) {
+            await PYTHON.asyncio.sleep(3000);
+        }
+        return content.items[0].id;
+    }
+
+    throw "Failed to get model: timeout";
+}
+
+async function _addFavoriteModel(model_id) {
+    const response = await fetchPost({
+        url: "/gallery-api/v1/favorites/models",
+        data: { ids: [model_id] },
+    });
+    if (!response.ok) {
+        throw `Failed to add favorite model: "${response.status} ${response.statusText}"`;
+    }
+
+    const content = await response.json();
+
+    return content.items.length > 0;
+}
+
+async function _checkModelURLFromCivitai() {
+    const params = new URLSearchParams(location.search);
+    const sha256 = params.get("hash");
+    if (!sha256) {
+        return;
+    }
+
+    switch_to_txt2img();
+
+    const response = await fetchPost({
+        url: "/gallery-api/v1/tasks",
+        data: { sha256: sha256, auto_register: true },
+    });
+    if (!response.ok) {
+        throw `Failed to check civitai model: "${response.status} ${response.statusText}"`;
+    }
+
+    const result = await response.json();
+    switch (result.status) {
+        case "MODEL_EXISTS":
+            model = result.models[0];
+            if (await _addFavoriteModel(model.id)) {
+                notifier.success(
+                    `Successfully add civitai model (${sha256.slice(0, 10)}) to your favorite.`,
+                );
+            }
+            if (model.model_type === "CHECKPOINT") {
+                galleryApp.setCheckpoint(model.filename, model.sha256);
+            } else {
+                galleryApp.setExtraNetwork(model.model_type, model.filename);
+            }
+            return;
+
+        case "TASK_EXISTS":
+        case "TASK_CREATED":
+            notifier.warning(
+                `Model (${sha256.slice(0, 10)}) in our gallery. Importing it from Civitai now, it could take up to 5 minutes. Meanwhile, feel free to check out thousands of models already in our galery.`,
+            );
+
+            const task_result = await _queryTaskResult(result.task_id);
+            model_id = task_result.model_id;
+            if (!model_id) {
+                model_id = await _queryModelId(task_result.sha256);
+            }
+
+            if (await _addFavoriteModel(model_id)) {
+                notifier.success(
+                    `Successfully add civitai model (${sha256.slice(0, 10)}) to your favorite. You can use it from the gallery`,
+                );
+            }
+            return;
+
+        case "UNSUPPORTED":
+            throw `Failed to import model from Civitai: ${result.message}`;
+
+        case "INVALID_INFO":
+            throw `Failed to import model from Civitai: ${result.message}. Please import it in model gallery manually.`;
+
+        case "BINARY_EXISTS":
+        case "UPLOAD_REQUIRED":
+            throw `Failed to import model from Civitai: invalid status "${model.status}"`;
+
+        default:
+            throw `Failed to import model from Civitai: unknown status: "${model.status}"`;
+    }
+}
+
+async function checkModelURLFromCivitai() {
+    try {
+        await _checkModelURLFromCivitai();
+    } catch (error) {
+        notifier.alert(error);
+        throw error;
+    }
+}

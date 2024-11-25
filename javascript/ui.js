@@ -571,99 +571,6 @@ function setUiPageSize() {
     uiPageSize = Math.floor(contentWidth / 238) * 2;
 }
 
-function searchPublicModel({page_name, searchValue}) {
-    const requestUrl = connectNewModelApi ? `/internal/models?model_type=${model_type_mapper[page_name]}&search_value=${searchValue}&page=1&page_size=${uiPageSize}`
-        : `/sd_extra_networks/models?page_name=${page_name}&page=1&search_value=${searchValue}&page_size=${uiPageSize}&need_refresh=false`;
-    return fetchGet(requestUrl);
-}
-
-async function getModelFromUrl() {
-
-    // get model form url
-    const urlParam = new URLSearchParams(location.search);
-    // const checkpointModelValueFromUrl = urlParam.get('checkpoint');
-
-    // document.cookie = `selected_checkpoint_model=${checkpointModelValueFromUrl}`;
-    const keyMapModelType = {
-        "checkpoint": "checkpoints",
-        "c": "checkpoints",
-        "lora": "lora",
-        "l": "lora",
-        "ti": "textual_inversion",
-        "t": "textual_inversion",
-        "hn": "hypernetworks",
-        "h": "hypernetworks",
-        "lycoris": "lora",
-        "y": "lora",
-    }
-
-    const promiseList = [];
-    const urlList = Array.from(urlParam.entries());
-    const urlKeys =  [];
-    const urlValues =  [];
-    let checkpoint = null;
-
-    for (const [key, value] of urlList) {
-        if (keyMapModelType[key]) {
-            if (checkpoint) {
-                notifier.alert('There are multiple checkpoint in the url, we will use the first one and discard the rest')
-                break;
-            }
-            if (key === 'checkpoint') {
-                checkpoint = value;
-            }
-            // query is in public models
-            const publicModelResponse = searchPublicModel({ page_name: keyMapModelType[key], searchValue: value.toLowerCase() })
-            promiseList.push(publicModelResponse);
-            urlKeys.push(key);
-            urlValues.push(value);
-        }
-    }
-
-    if(promiseList.length === 0) return;
-    const allPromise = Promise.all(promiseList);
-
-    notifier.asyncBlock(allPromise, async (promisesRes) => {
-        promisesRes.forEach(async (publicModelResponse, index) => {
-            if (publicModelResponse && publicModelResponse.status === 200) {
-                const { model_list, allow_negative_prompt } = await publicModelResponse.json();
-                if (model_list && model_list.length > 0) {
-                        // add to personal workspace
-                        const res = await fetchPost({ data: {model_id: model_list[0].id}, url: `/internal/favorite_models` });
-                        if(res.status === 200) {
-                            notifier.success(`Added model ${model_list[0].name} to your workspace successfully.`)
-                        } else if (res.status === 409) {
-                            const { detail } = await res.json();
-                            notifier.info(detail);
-                        } else {
-                            notifier.alert(`Added model ${model_list[0].name} to your workspace Failed`)
-                        }
-                        if(urlKeys[index] === 'checkpoint') {
-                            // checkpoint dont need to replace text
-                            selectCheckpoint(model_list[0].sha256 || model_list[0].shorthash || model_list[0].name);
-                        } else {
-                            if (model_list[0].prompt) {
-                                cardClicked('txt2img', eval(model_list[0].prompt), allow_negative_prompt);
-                            }
-                        }
-                } else {
-                    fetchPost({
-                        data: {"sha256": urlValues[index]},
-                        url: "/download-civitai-model"
-                    })
-                    notifier.warning(`We could not find model (${urlValues[index]}) in our library. Trying to download it from Civitai, it could take up to 5 minutes. Meanwhile, feel free to check out thousands of models already in our library.`, {
-                        labels: {
-                            warning: 'DOWNLOADIND MODEL'
-                        }
-                    })
-                }
-             } else {
-                notifier.alert(`Query Failed`);
-             }
-        })
-    });
-}
-
 function imgExists(url, imgNode, name){
     const img = new Image();
     img.src= url;
@@ -788,7 +695,7 @@ onUiLoaded(function(){
     updateGenerateBtn_txt2img();
     updateGenerateBtn_img2img();
 
-    getModelFromUrl();
+    checkModelURLFromCivitai();
 
     const {search} = location;
     const isDarkTheme = /theme=dark/g.test(search);

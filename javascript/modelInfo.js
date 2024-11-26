@@ -255,8 +255,9 @@ async function _listCandidateModels(all_model_names, prompts) {
     try {
         const response = await fetchGet(url);
         if (!response.ok) {
+            message = await response.text();
             console.error(
-                `Request candidate models failed, url: "${url}", reason: "${response.status} ${response.statusText}"`,
+                `Request candidate models failed, url: "${url}", reason: "${response.status} ${message}"`,
             );
             throw _REQUEST_FAILED;
         }
@@ -573,8 +574,9 @@ async function _listCandidateModelsByHash(hashes) {
     try {
         const response = await fetchGet(url);
         if (!response.ok) {
+            message = await response.text();
             console.error(
-                `Request candidate models by hash failed, url: "${url}", reason: "${response.status} ${response.statusText}"`,
+                `Request candidate models by hash failed, url: "${url}", reason: "${response.status} ${message}"`,
             );
             throw _REQUEST_FAILED;
         }
@@ -677,7 +679,8 @@ async function _queryTaskResult(task_id) {
     while (true) {
         const response = await fetchGet(url);
         if (!response.ok) {
-            throw `Falied to query task progress: "${response.status} ${response.statusText}"`;
+            message = await response.text();
+            throw `Falied to query task progress: "${response.status} ${message}"`;
         }
 
         const content = await response.json();
@@ -711,7 +714,8 @@ async function _queryModelId(sha256) {
     for (let i = 0; i < 200; i++) {
         const response = await fetchGet(url);
         if (!response.ok) {
-            throw `Failed to get model: "${response.status} ${response.statusText}"`;
+            message = await response.text();
+            throw `Failed to get model: "${response.status} ${message}"`;
         }
 
         const content = await response.json();
@@ -731,7 +735,8 @@ async function _addFavoriteModel(model_id) {
         data: { ids: [model_id] },
     });
     if (!response.ok) {
-        throw `Failed to add favorite model: "${response.status} ${response.statusText}"`;
+        message = await response.text();
+        throw `Failed to add favorite model: "${response.status} ${message}"`;
     }
 
     const content = await response.json();
@@ -753,7 +758,8 @@ async function _checkModelURLFromCivitai() {
         data: { sha256: sha256, auto_register: true },
     });
     if (!response.ok) {
-        throw `Failed to check civitai model: "${response.status} ${response.statusText}"`;
+        message = await response.text();
+        throw `Failed to check civitai model: "${response.status} ${message}"`;
     }
 
     const result = await response.json();

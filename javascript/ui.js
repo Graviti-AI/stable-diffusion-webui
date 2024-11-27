@@ -112,7 +112,8 @@ function create_tab_index_args(tabId, args) {
 function get_img2img_tab_index() {
     let res = Array.from(arguments);
     res.splice(-2);
-    res[0] = get_tab_index('mode_img2img');
+    res[0] = randomId();
+    res[1] = get_tab_index('mode_img2img');
     return res;
 }
 

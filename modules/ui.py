@@ -38,6 +38,7 @@ from modules import prompt_parser
 from modules.sd_hijack import model_hijack
 from modules.infotext_utils import image_from_url_text, PasteField
 
+from modules.system_monitor import monitor_call_context
 from modules_forge.forge_util import prepare_free_memory
 
 create_setting_component = ui_settings.create_setting_component
@@ -130,6 +131,30 @@ def apply_styles(request: gr.Request, prompt, prompt_neg, styles):
     prompt_neg = shared.prompt_styles(request).apply_negative_styles_to_prompt(prompt_neg, styles)
 
     return [gr.Textbox.update(value=prompt), gr.Textbox.update(value=prompt_neg), gr.Dropdown.update(value=[])]
+
+
+def interrogate_processor_getter(interrogation_function):
+    def processor(request: gr.Request, id_task, *args):
+        def monitored_interrogation_function(image):
+            with monitor_call_context(
+                request,
+                "extras.caption",
+                "extras.caption",
+                decoded_params={
+                    "width": image.width,
+                    "height": image.height,
+                    "option_number": 1,
+                },
+            ):
+                return interrogation_function(image)
+
+        results = process_interrogate(monitored_interrogation_function, *args)
+        if not results:
+            return None
+
+        return results + [""]
+
+    return processor
 
 
 def process_interrogate(interrogation_function, mode, ii_input_dir, ii_output_dir, *ii_singles):
@@ -1113,6 +1138,7 @@ def create_ui():
                 _js="get_img2img_tab_index",
                 inputs=[
                     dummy_component,
+                    dummy_component,
                     img2img_batch_input_dir,
                     img2img_batch_output_dir,
                     init_img,
@@ -1121,7 +1147,7 @@ def create_ui():
                     inpaint_color_sketch,
                     init_img_inpaint,
                 ],
-                outputs=[toprow.prompt, dummy_component],
+                outputs=[toprow.prompt, dummy_component, dummy_component, upgrade_info],
             )
             img2img_params_default_values = get_default_values_from_components(
                 img2img_args["inputs"], img2img_signature_args, img2img_params_default_values)
@@ -1155,13 +1181,21 @@ def create_ui():
 
             assert toprow.button_interrogate is not None, "button_interrogate has not yet been created"
             toprow.button_interrogate.click(
-                fn=lambda *args: process_interrogate(interrogate, *args),
+                fn=wrap_gradio_gpu_call(
+                    interrogate_processor_getter(interrogate),
+                    extra_outputs=["", None],
+                    add_monitor_state=True
+                ),
                 **interrogate_args,
             )
 
             assert toprow.button_deepbooru is not None, "button_deepbooru has not yet been created"
             toprow.button_deepbooru.click(
-                fn=lambda *args: process_interrogate(interrogate_deepbooru, *args),
+                fn=wrap_gradio_gpu_call(
+                    interrogate_processor_getter(interrogate_deepbooru),
+                    extra_outputs=["", None],
+                    add_monitor_state=True
+                ),
                 **interrogate_args,
             )
 

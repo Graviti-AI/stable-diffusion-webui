@@ -6,10 +6,12 @@ import json
 
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
+from modules_forge.forge_util import prepare_free_memory
 
 
 def run_postprocessing(
         request: gr.Request, id_task, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
+    prepare_free_memory(True)
     devices.torch_gc()
 
     shared.state.begin(job="extras")

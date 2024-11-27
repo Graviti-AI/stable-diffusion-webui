@@ -5,6 +5,7 @@ from copy import copy
 from typing import List, Optional, Union, Callable, Dict, Tuple, Literal
 from dataclasses import dataclass
 import numpy as np
+import gc
 
 from lib_controlnet.utils import svg_preprocess, read_image, judge_image_type
 from lib_controlnet import (
@@ -19,7 +20,8 @@ from lib_controlnet.controlnet_ui.photopea import Photopea
 from lib_controlnet.enums import InputMode, HiResFixOption
 from modules import shared, script_callbacks
 from modules.ui_components import FormRow
-from modules_forge.forge_util import HWC3
+from modules_forge.forge_util import HWC3, prepare_free_memory
+
 from lib_controlnet.external_code import UiControlNetUnit
 
 
@@ -823,6 +825,9 @@ class ControlNetUiGroup(object):
                     *self.openpose_editor.update(""),
                 )
 
+
+            prepare_free_memory(True)
+
             img = HWC3(image["image"])
             mask = HWC3(image["mask"])
 
@@ -877,6 +882,7 @@ class ControlNetUiGroup(object):
                 result = img
 
             result = external_code.visualize_inpaint_mask(result)
+
             return (
                 # Update to `generated_image`
                 gr.update(value=result, visible=True, interactive=False),

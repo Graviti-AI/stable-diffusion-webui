@@ -38,6 +38,8 @@ from modules import prompt_parser
 from modules.sd_hijack import model_hijack
 from modules.infotext_utils import image_from_url_text, PasteField
 
+from modules_forge.forge_util import prepare_free_memory
+
 create_setting_component = ui_settings.create_setting_component
 
 warnings.filterwarnings("default" if opts and opts.show_warnings else "ignore", category=UserWarning)
@@ -131,6 +133,8 @@ def apply_styles(request: gr.Request, prompt, prompt_neg, styles):
 
 
 def process_interrogate(interrogation_function, mode, ii_input_dir, ii_output_dir, *ii_singles):
+    prepare_free_memory(True)
+
     if mode in {0, 1, 3, 4}:
         return [interrogation_function(ii_singles[mode]), None]
     elif mode == 2:

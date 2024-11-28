@@ -20,7 +20,7 @@ def report_exception(c, job):
 
 
 class ImageSaveParams:
-    def __init__(self, image, p, filename, pnginfo, *, skip_register=False):
+    def __init__(self, image, p, filename, pnginfo, *, skip_register=False, nsfw_result=None):
         self.image = image
         """the PIL image itself"""
 
@@ -34,6 +34,7 @@ class ImageSaveParams:
         """dictionary with parameters for image's PNG info data; infotext will have the key 'parameters'"""
 
         self.skip_register = skip_register
+        self.nsfw_result = nsfw_result
 
 
 class ExtraNoiseParams:

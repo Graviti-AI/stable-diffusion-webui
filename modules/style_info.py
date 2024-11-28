@@ -9,7 +9,6 @@ from typing_extensions import Self
 
 import modules.script_callbacks as script_callbacks
 from modules.model_info import setup_model_api
-from modules.nsfw import setup_nsfw_checker_api
 from modules.shared import prompt_styles
 from modules.styles import PromptStyle, StyleDatabase
 
@@ -62,4 +61,3 @@ def setup_style_api(_: gr.Blocks, app: FastAPI) -> None:
 
 script_callbacks.on_app_started(setup_style_api)
 script_callbacks.on_app_started(setup_model_api)
-script_callbacks.on_app_started(setup_nsfw_checker_api)

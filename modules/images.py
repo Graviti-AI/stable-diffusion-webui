@@ -574,7 +574,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         image.save(filename, format=image_format, quality=opts.jpeg_quality)
 
 
-def save_image(image, path, basename, seed=None, prompt=None, extension='png', info=None, short_filename=False, no_prompt=False, grid=False, pnginfo_section_name='parameters', p=None, existing_info=None, forced_filename=None, suffix="", save_to_dirs=None):
+def save_image(image, path, basename, seed=None, prompt=None, extension='png', info=None, short_filename=False, no_prompt=False, grid=False, pnginfo_section_name='parameters', p=None, existing_info=None, forced_filename=None, suffix="", save_to_dirs=None, *, nsfw_result=None):
     """Save an image.
 
     Args:
@@ -655,7 +655,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
     if info is not None:
         pnginfo[pnginfo_section_name] = info
 
-    params = script_callbacks.ImageSaveParams(image, p, fullfn, pnginfo, skip_register=grid)
+    params = script_callbacks.ImageSaveParams(image, p, fullfn, pnginfo, skip_register=grid, nsfw_result=nsfw_result)
     script_callbacks.before_image_saved_callback(params)
 
     image = params.image

@@ -1103,10 +1103,10 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     p.scripts.postprocess_image_after_composite(p, pp)
                     image = pp.image
 
-                image = nsfw_blur(image, p)
+                image, nsfw_result = nsfw_blur(image, p.prompts[i], p)
 
                 if save_samples and not getattr(image, "is_nsfw", False):
-                    images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p)
+                    images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p, nsfw_result=nsfw_result)
 
                 text = infotext(i)
                 infotexts.append(text)

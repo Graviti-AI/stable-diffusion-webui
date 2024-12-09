@@ -1531,7 +1531,7 @@ def create_ui():
                                 "<div id='upgrade' title='Unlock more credits' class='upgrade-content' style='display: none'><a href='/app/pricing-table'><img src='/public/image/lightning.png'/><span>Upgrade</span></a></div>"
                                 "<div id='affiliate' title='Affiliate' class='upgrade-content' style='display: flex'><a href='/affiliate/everyone' target='_blank'><span class='mdi mdi-currency-usd' style='font-size=20px'></span><span>Affiliate</span></a></div>"
                               "</div>"
-                              "<a id='user-credits-app' href='/user'>"
+                              "<a id='user-credits-app' href='/app/account/'>"
                               "</a>"
                             "</div>"
                           "</div>"

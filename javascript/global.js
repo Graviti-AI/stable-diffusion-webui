@@ -170,7 +170,7 @@ function supportDifferentPriceType(priceType, linkNode) {
       } else if (priceType === 'add_ons') {
         linkNode.href = '/app/pricing-table/addons';
       } else {
-        linkNode.href = `/user#/subscription?priceType=${priceType}`;
+        linkNode.href = `/app/pricing-table`;
       }
       itemListInfo = {
         item_id: priceInfo.pricing_table_id,

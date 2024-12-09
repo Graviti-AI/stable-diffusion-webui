@@ -18,15 +18,15 @@ class SignForCredits {
         await response.json();
       if (continue_signed_days === 1) {
         notifier.success(
-          'Get extra 5 credits tomorrow,<a href="/user#/billing">See Details</a>'
+          'Get extra 5 credits tomorrow,<a href="/app/account/billing">See Details</a>'
         );
       } else if (continue_signed_days >= 2 && continue_signed_days <= 6) {
         notifier.success(
-          `Extra ${gained_inference_count} Credits today. Get extra 5 credits tomorrow<p><a href="/user#/billing">See Details</a></p>`
+          `Extra ${gained_inference_count} Credits today. Get extra 5 credits tomorrow<p><a href="/app/account/billing">See Details</a></p>`
         );
       } else {
         notifier.success(
-          `Congratulations! Extra ${gained_inference_count} Credits today! Earn extra 30 credits daily<p><a href="/user#/billing">See Details</a></p>`
+          `Congratulations! Extra ${gained_inference_count} Credits today! Earn extra 30 credits daily<p><a href="/app/account/billing">See Details</a></p>`
         );
       }
       reportEarnCreditsEvent("daily_check_in", 20 + gained_inference_count);
@@ -65,7 +65,7 @@ class SignForCredits {
         // set after reload
         // if (Cookies && Cookies.get(languageCookieKey)) {
         //     if (localStorage.getItem('show-data-survey-info') !== 'true') {
-        //         notifier.info('Help us improve our product and get a 20% discount coupon. <a href="/user#/billing"> Start Survey</a>',  {durations: {info: 0}});
+        //         notifier.info('Help us improve our product and get a 20% discount coupon. <a href="/app/account/billing"> Start Survey</a>',  {durations: {info: 0}});
         //         localStorage.setItem('show-data-survey-info', 'true');
         //     }
         // }

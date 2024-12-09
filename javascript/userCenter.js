@@ -562,7 +562,7 @@ function initUserCenterMenu() {
         });
       },
       redirectToUserCenter() {
-        window.location.href = "/user";
+        window.location.href = "/app/account/";
       },
       async redirectToComfy() {
         const comfyInfo = channelResult.sub_pages.find(item => item.name.toLowerCase() === "comfyui");
@@ -571,7 +571,7 @@ function initUserCenterMenu() {
         }
       },
       cancelSubscription() {
-        window.location.href = "/user#/billing?cancel_subscription=true";
+        window.location.href = "/app/account/billing?cancel_subscription=true";
       },
       logout() {
         document.cookie = "auth-session=;";

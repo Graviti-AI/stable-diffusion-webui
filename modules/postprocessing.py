@@ -6,7 +6,9 @@ import json
 
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
+from modules.nsfw import nsfw_blur
 from modules_forge.forge_util import prepare_free_memory
+
 
 
 def run_postprocessing(
@@ -109,10 +111,15 @@ def run_postprocessing(
                 from modules.processing import get_fixed_seed
                 # we make a StableDiffusionProcessing here to let on_image_saved script can get request from it
                 from modules.processing import StableDiffusionProcessing
+
                 p = StableDiffusionProcessing()
                 p.set_request(request)
                 p.feature = "EXTRAS"
-                fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True)
+
+                pp.image, nsfw_result = nsfw_blur(pp.image, None, p)
+
+                if not getattr(pp.image, "is_nsfw", False):
+                    fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, nsfw_result=nsfw_result)
 
                 if pp.caption and False:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from modules.processing import StableDiffusionProcessing
 
 
-def _check_nsfw(endpoint: str, image: Image.Image, prompt: str) -> dict[str, Any]:
+def _check_nsfw(endpoint: str, image: Image.Image, prompt: str | None) -> dict[str, Any]:
     from modules.api.api import encode_pil_to_base64
 
     url = f"{endpoint}/api/v3/internal/moderation/content"
@@ -33,14 +33,12 @@ def _check_nsfw(endpoint: str, image: Image.Image, prompt: str) -> dict[str, Any
     response.raise_for_status()
 
     result = response.json()
-    print("DEBUG: ")
-    print(result)
 
     return result
 
 
 def nsfw_blur(
-    image: Image.Image, prompt: str, p: "StableDiffusionProcessing"
+    image: Image.Image, prompt: str | None, p: "StableDiffusionProcessing"
 ) -> tuple[Image.Image, dict[str, Any] | None]:
     request = p.get_request()
     assert request is not None

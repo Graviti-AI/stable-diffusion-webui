@@ -10,9 +10,6 @@ import gradio as gr
 class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Checkpoints')
-        self.min_model_size_mb = 1e3
-        self.max_model_size_mb = 15e3
-
         self.allow_prompt = False
 
     def refresh(self, request: gr.Request):

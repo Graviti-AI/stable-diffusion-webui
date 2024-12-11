@@ -199,8 +199,6 @@ class ExtraNetworksPage:
         self.btn_copy_path_tpl = shared.html("extra-networks-copy-path-button.html")
         self.btn_metadata_tpl = shared.html("extra-networks-metadata-button.html")
         self.btn_edit_item_tpl = shared.html("extra-networks-edit-item-button.html")
-        self.max_model_size_mb = None  # If `None`, there is no limitation
-        self.min_model_size_mb = None  # If `None`, there is no limitation
 
     @staticmethod
     def read_metadata_from_file(metadata_path: str):

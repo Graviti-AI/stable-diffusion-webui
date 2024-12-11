@@ -14,8 +14,6 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Lora')
         self.title = "Lora/Lycoris"
-        self.min_model_size_mb = 1
-        self.max_model_size_mb = 2e3
 
     def refresh(self, request: gr.Request):
         networks.list_available_networks()

@@ -8,8 +8,6 @@ from modules.hashes import sha256_from_cache
 class ExtraNetworksPageHypernetworks(ui_extra_networks.ExtraNetworksPage):
     def __init__(self):
         super().__init__('Hypernetworks')
-        self.min_model_size_mb = 10
-        self.max_model_size_mb = 1e3
 
     def refresh(self, _):
         shared.reload_hypernetworks()

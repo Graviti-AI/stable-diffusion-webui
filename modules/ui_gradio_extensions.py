@@ -28,21 +28,21 @@ def javascript_html(request: gr.Request):
     # head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
     head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
     head += '<script type="text/javascript" src="/components/js/notification/index.var.js"></script>\n'
-    head += '<script type="text/javascript" src="/components/js/share/shareon.iife.js" defer init></script>\n'
-    head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
-    head += f'<script type="text/javascript" src="/public/js/analytics/consent.js?version={time.time()}"></script>\n'
-    head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
-    head += f'<script type="text/javascript" src="/public/js/analytics/init.js?version={time.time()}"></script>\n'
     head += f"""
     <script>
-        configGtag('{base64_encoded_user_id}', {{'user_tier': '{user.tire}'}});
+        window.encodedUserId = '{base64_encoded_user_id}';
+        window.userTier = '{user.tire}';
     </script>
     """
-    head += f'<script type="module" src="/public/js/analytics/cookieconsent-config.mjs?version={time.time()}"></script>\n'
+    head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
+    head += f'<script defer type="text/javascript" src="/public/js/analytics/consent.js?version={time.time()}"></script>\n'
+    head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
+    head += f'<script defer type="text/javascript" src="/public/js/analytics/init.js?version={time.time()}"></script>\n'
+    head += f'<script defer type="module" src="/public/js/analytics/cookieconsent-config.mjs?version={time.time()}"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
     head += '<script src="/components/js/scrollload/index.js"></script>\n'
     head += '<script src=" https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
-    head += f'<script type="text/javascript" src="/public/js/analytics/turn.js?version={time.time()}"></script>\n'
+    head += f'<script defer type="text/javascript" src="/public/js/analytics/turn.js?version={time.time()}"></script>\n'
 
     for script in scripts.list_scripts("javascript", ".js"):
         head += f'<script type="text/javascript" src="{webpath(script.path)}"></script>\n'

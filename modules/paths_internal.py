@@ -7,7 +7,7 @@ import shlex
 from pathlib import Path
 
 
-normalized_filepath = lambda filepath: str(Path(filepath).resolve())
+normalized_filepath = lambda filepath: str(Path(filepath).absolute())
 
 commandline_args = os.environ.get('COMMANDLINE_ARGS', "")
 sys.argv += shlex.split(commandline_args)
@@ -24,6 +24,7 @@ default_sd_model_file = sd_model_file
 # Parse the --data-dir flag first so we can use it as a base for our other argument default values
 parser_pre = argparse.ArgumentParser(add_help=False)
 parser_pre.add_argument("--data-dir", type=str, default=os.path.dirname(modules_path), help="base path where all user data is stored", )
+parser_pre.add_argument("--models-dir", type=str, default=None, help="base path where models are stored; overrides --data-dir", )
 parser_pre.add_argument("--work-dir", type=str, default=os.path.dirname(modules_path), help="base path where all user workdir", )
 parser_pre.add_argument("--model-dir", type=str, default=os.path.dirname(modules_path), help="base path where all user workdir", )
 
@@ -41,6 +42,6 @@ configs_dir = os.path.join(model_dir_path, "configs")
 extensions_dir = os.path.join(script_path, "extensions")
 extensions_builtin_dir = os.path.join(script_path, "extensions-builtin")
 config_states_dir = os.path.join(script_path, "config_states")
-default_output_dir = os.path.join(data_path, "output")
+default_output_dir = os.path.join(data_path, "outputs")
 
 roboto_ttf_file = os.path.join(modules_path, 'Roboto-Regular.ttf')

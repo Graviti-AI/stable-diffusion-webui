@@ -1,7 +1,17 @@
+huggingface_space_mirror/
+random_test.py
 __pycache__
 *.ckpt
 *.safetensors
 *.pth
+*.dev.js
+*_s.py
+*_u.py
+*_m.py
+*_i.py
+.DS_Store
+/output/
+/outputs/
 /ESRGAN/*
 /SwinIR/*
 /repositories
@@ -39,6 +49,9 @@ notification.mp3
 /package-lock.json
 /.coverage*
 /test/test_outputs
+/cache
+trace.json
+/sysinfo-????-??-??-??-??.json
 /test/results.xml
 coverage.xml
 **/tests/**/expectations

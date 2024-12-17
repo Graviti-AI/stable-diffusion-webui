@@ -7,7 +7,7 @@ import json
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
 from modules.nsfw import nsfw_blur
-from modules_forge.forge_util import prepare_free_memory
+from modules_forge.utils import prepare_free_memory
 
 
 
@@ -21,15 +21,18 @@ def run_postprocessing(
     outputs = []
     caption_results = []
 
+    if isinstance(image, dict):
+        image = image["composite"]
+
     def get_images(extras_mode, image, image_folder, input_dir):
         if extras_mode == 1:
             for img in image_folder:
                 if isinstance(img, Image.Image):
-                    image = img
+                    image = images.fix_image(img)
                     fn = ''
                 else:
-                    image = Image.open(os.path.abspath(img.name))
-                    fn = os.path.splitext(img.orig_name)[0]
+                    image = images.read(os.path.abspath(img.name))
+                    fn = os.path.splitext(img.name)[0]
                 yield image, fn
         elif extras_mode == 2:
             import modules.call_utils
@@ -60,12 +63,12 @@ def run_postprocessing(
         shared.state.textinfo = name
         shared.state.skipped = False
 
-        if shared.state.interrupted:
+        if shared.state.interrupted or shared.state.stopping_generation:
             break
 
         if isinstance(image_placeholder, str):
             try:
-                image_data = Image.open(image_placeholder)
+                image_data = images.read(image_placeholder)
             except Exception:
                 continue
         else:
@@ -74,13 +77,13 @@ def run_postprocessing(
         if image_data.width > 2048 or image_data.height > 2048:
             raise Exception(f'image oversize: maximum weight/height is 2048')
 
-        shared.state.assign_current_image(image_data)
+        image_data = image_data if image_data.mode in ("RGBA", "RGB") else image_data.convert("RGB")
 
         parameters, existing_pnginfo = images.read_info_from_image(image_data)
         if parameters:
             existing_pnginfo["parameters"] = parameters
 
-        initial_pp = scripts_postprocessing.PostprocessedImage(image_data.convert("RGB"))
+        initial_pp = scripts_postprocessing.PostprocessedImage(image_data)
         initial_pp.set_request(request)
 
         scripts.scripts_postproc.run(initial_pp, args)
@@ -108,7 +111,6 @@ def run_postprocessing(
             shared.state.assign_current_image(pp.image)
 
             if save_output:
-                from modules.processing import get_fixed_seed
                 # we make a StableDiffusionProcessing here to let on_image_saved script can get request from it
                 from modules.processing import StableDiffusionProcessing
 
@@ -119,7 +121,7 @@ def run_postprocessing(
                 pp.image, nsfw_result = nsfw_blur(pp.image, None, p)
 
                 if not getattr(pp.image, "is_nsfw", False):
-                    fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, seed=get_fixed_seed(-1), extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, nsfw_result=nsfw_result)
+                    fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, nsfw_result=nsfw_result)
 
                 if pp.caption and False:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"
@@ -153,8 +155,6 @@ def run_postprocessing(
                 else:
                     caption_results.append(None)
 
-        image_data.close()
-
     devices.torch_gc()
     shared.state.end()
 
@@ -180,13 +180,15 @@ def monitor_extras_params(component, name: str, extractor: str | None = None) ->
     component.change(None, inputs=[], outputs=[component], _js=js)
 
 
-def run_extras(request: gr.Request, id_task, extras_mode, resize_mode, image, image_folder, input_dir, output_dir, show_extras_results, gfpgan_visibility, codeformer_visibility, codeformer_weight, upscaling_resize, upscaling_resize_w, upscaling_resize_h, upscaling_crop, extras_upscaler_1, extras_upscaler_2, extras_upscaler_2_visibility, upscale_first: bool, save_output: bool = True):
+def run_extras(request: gr.Request, id_task, extras_mode, resize_mode, image, image_folder, input_dir, output_dir, show_extras_results, gfpgan_visibility, codeformer_visibility, codeformer_weight, upscaling_resize, upscaling_resize_w, upscaling_resize_h, upscaling_crop, extras_upscaler_1, extras_upscaler_2, extras_upscaler_2_visibility, upscale_first: bool, save_output: bool = True, max_side_length: int = 0):
     """old handler for API"""
 
     args = scripts.scripts_postproc.create_args_for_run({
         "Upscale": {
+            "upscale_enabled": True,
             "upscale_mode": resize_mode,
             "upscale_by": upscaling_resize,
+            "max_side_length": max_side_length,
             "upscale_to_width": upscaling_resize_w,
             "upscale_to_height": upscaling_resize_h,
             "upscale_crop": upscaling_crop,

@@ -80,6 +80,11 @@ def css_html():
     if os.path.exists(user_css):
         head += stylesheet(user_css)
 
+    from modules.shared_gradio_themes import resolve_var
+    light = resolve_var('background_fill_primary')
+    dark = resolve_var('background_fill_primary_dark')
+    head += f'<style>html {{ background-color: {light}; }} @media (prefers-color-scheme: dark) {{ html {{background-color:  {dark}; }} }}</style>'
+
     return head
 
 
@@ -89,7 +94,7 @@ def reload_javascript():
     def template_response(*args, **kwargs):
         js = javascript_html(args[1]['request'])
         res = shared.GradioTemplateResponseOriginal(*args, **kwargs)
-        res.body = res.body.replace(b'</head>', f'{js}</head>'.encode("utf8"))
+        res.body = res.body.replace(b'</head>', f'{js}<meta name="referrer" content="no-referrer"/></head>'.encode("utf8"))
         res.body = res.body.replace(b'</body>', f'{css}</body>'.encode("utf8"))
         res.init_headers()
         return res

@@ -1,24 +1,11 @@
 import importlib
 import logging
-import os
 import sys
 import warnings
 import os
 
-from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
-
 from modules.launch_utils import startup_timer
-
-
-class HiddenPrints:
-    def __enter__(self):
-        self._original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
+from concurrent.futures import ThreadPoolExecutor
 
 
 def imports():
@@ -36,22 +23,14 @@ def imports():
     import gradio  # noqa: F401
     startup_timer.record("import gradio")
 
-    with HiddenPrints():
-        from modules import paths, timer, import_hook, errors  # noqa: F401
-        startup_timer.record("setup paths")
-
-        import ldm.modules.encoders.modules  # noqa: F401
-        import ldm.modules.diffusionmodules.model
-        startup_timer.record("import ldm")
-
-        import sgm.modules.encoders.modules  # noqa: F401
-        startup_timer.record("import sgm")
+    from modules import paths, timer, import_hook, errors  # noqa: F401
+    startup_timer.record("setup paths")
 
     from modules import shared_init
     shared_init.initialize()
     startup_timer.record("initialize shared")
 
-    from modules import processing, gradio_extensons, ui  # noqa: F401
+    from modules import processing, gradio_extensions, ui  # noqa: F401
     startup_timer.record("other imports")
 
 
@@ -102,6 +81,7 @@ def initialize():
 
     from modules import initialize_util
     initialize_util.fix_torch_version()
+    initialize_util.fix_pytorch_lightning()
     initialize_util.fix_asyncio_event_loop_policy()
     initialize_util.validate_tls_options()
     initialize_util.configure_sigint_handler()
@@ -158,7 +138,7 @@ def initialize_rest(*, reload_script_modules=False):
     with startup_timer.subcategory("load scripts"):
         scripts.load_scripts()
 
-    if reload_script_modules:
+    if reload_script_modules and shared.opts.enable_reloading_ui_scripts:
         for module in [module for name, module in sys.modules.items() if name.startswith("modules.ui")]:
             importlib.reload(module)
         startup_timer.record("reload script modules")
@@ -171,23 +151,13 @@ def initialize_rest(*, reload_script_modules=False):
     sd_vae.refresh_vae_list()
     startup_timer.record("refresh VAE")
 
-    import modules.textual_inversion.textual_inversion as textual_inversion
-    textual_inversion.list_textual_inversion_templates()
-    startup_timer.record("refresh textual inversion templates")
-
-    from modules import script_callbacks, sd_hijack_optimizations, sd_hijack
-    script_callbacks.on_list_optimizers(sd_hijack_optimizations.list_optimizers)
-    sd_hijack.list_optimizers()
-    startup_timer.record("scripts list_optimizers")
-
     from modules import sd_unet
     sd_unet.list_unets()
     startup_timer.record("scripts list_unets")
 
-    if not cmd_opts.skip_load_default_model:
-        from modules_forge import main_thread
-        import modules.sd_models
-        main_thread.async_run(modules.sd_models.model_data.get_sd_model)
+    from modules import shared_items
+    shared_items.reload_hypernetworks()
+    startup_timer.record("reload hypernetworks")
 
     from modules import ui_extra_networks
     ui_extra_networks.initialize()
@@ -197,3 +167,10 @@ def initialize_rest(*, reload_script_modules=False):
     extra_networks.initialize()
     extra_networks.register_default_extra_networks()
     startup_timer.record("initialize extra networks")
+
+    if not cmd_opts.skip_google_blockly:
+        from modules_forge import google_blockly
+        google_blockly.initialization()
+        startup_timer.record("initialize google blockly")
+
+    return

@@ -2,6 +2,8 @@ import gradio as gr
 from modules import scripts, shared, ui_common, postprocessing, call_queue, ui_toprow
 import modules.infotext_utils as parameters_copypaste
 from modules.ui_components import ResizeHandleRow
+from modules_forge.forge_canvas.canvas import ForgeCanvas
+
 from modules.postprocessing import monitor_extras_params
 
 import os
@@ -23,7 +25,7 @@ def create_ui():
         with gr.Column(variant='compact'):
             with gr.Tabs(elem_id="mode_extras"):
                 with gr.TabItem('Single Image', id="single_image", elem_id="extras_single_tab") as tab_single:
-                    extras_image = gr.Image(label="Source", source="upload", interactive=True, type="pil", elem_id="extras_image")
+                    extras_image = ForgeCanvas(elem_id="extras_image", height=512, no_scribbles=True).background
 
                 with gr.TabItem('Batch Process', id="batch_process", elem_id="extras_batch_process_tab") as tab_batch:
                     image_batch = gr.Files(label="Batch Process", interactive=True, elem_id="extras_image_batch")
@@ -67,6 +69,17 @@ def create_ui():
     monitor_extras_params(source_widths, "source_widths")
     monitor_extras_params(source_heights, "source_heights")
 
+    submit_click_inputs = [
+        dummy_component,
+        tab_index,
+        extras_image,
+        image_batch,
+        extras_batch_input_dir,
+        extras_batch_output_dir,
+        show_extras_results,
+        *script_inputs
+    ]
+
     submit.click(
         fn=call_queue.wrap_gradio_gpu_call(
             postprocessing.run_postprocessing,
@@ -75,16 +88,7 @@ def create_ui():
             add_monitor_state=True
         ),
         _js="submit_extras",
-        inputs=[
-            dummy_component,
-            tab_index,
-            extras_image,
-            image_batch,
-            extras_batch_input_dir,
-            extras_batch_output_dir,
-            show_extras_results,
-            *script_inputs
-        ],
+        inputs=submit_click_inputs,
         outputs=[
             output_panel.gallery,
             output_panel.generation_info,

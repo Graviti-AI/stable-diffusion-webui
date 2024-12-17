@@ -39,27 +39,57 @@ function setupExtraNetworksForTab(tabname) {
         // tabname_full = {tabname}_{extra_networks_tabname}
         var tabname_full = elem.id;
         var search = gradioApp().querySelector("#" + tabname_full + "_extra_search");
-        var sort_mode = gradioApp().querySelector("#" + tabname_full + "_extra_sort");
         var sort_dir = gradioApp().querySelector("#" + tabname_full + "_extra_sort_dir");
         var refresh = gradioApp().querySelector("#" + tabname_full + "_extra_refresh");
+        var currentSort = '';
 
         // If any of the buttons above don't exist, we want to skip this iteration of the loop.
-        if (!search || !sort_mode || !sort_dir || !refresh) {
+        if (!search || !sort_dir || !refresh) {
             return; // `return` is equivalent of `continue` but for forEach loops.
         }
 
         var applyFilter = function(force) {
             var searchTerm = search.value.toLowerCase();
+
+            // get UI preset
+            radioUI = gradioApp().querySelector('#forge_ui_preset');
+            radioButtons = radioUI.getElementsByTagName('input');
+            UIresult = 3;   //  default to 'all'
+            for (i = 0; i < radioButtons.length; i++) {
+                if (radioButtons[i].checked) {
+                    UIresult = i;
+                }
+            }
+
             gradioApp().querySelectorAll('#' + tabname + '_extra_tabs div.card').forEach(function(elem) {
                 var searchOnly = elem.querySelector('.search_only');
-                var text = Array.prototype.map.call(elem.querySelectorAll('.search_terms'), function(t) {
+                var text = Array.prototype.map.call(elem.querySelectorAll('.search_terms, .description'), function(t) {
                     return t.textContent.toLowerCase();
                 }).join(" ");
 
-                var visible = text.indexOf(searchTerm) != -1;
-                if (searchOnly && searchTerm.length < 4) {
-                    visible = false;
+                var visible = true;
+                if (searchOnly && searchTerm.length < 4)    visible = false;
+
+                splitSearch = searchTerm.split(" ");
+                splitSearch.forEach(function(partial) {
+                    if (text.indexOf(partial) == -1)        visible = false;
+                })
+
+                sdversion = elem.getAttribute('data-sort-sdversion');
+                if (sdversion == null) ;
+                else if (sdversion == 'SdVersion.Unknown')  ;
+                else if (opts.lora_filter_disabled == True) ;
+                else if (UIresult == 3) ;   //  'all'
+                else if (UIresult == 0) {   //  'sd'
+                    if (sdversion != 'SdVersion.SD1' && sdversion != 'SdVersion.SD2')   visible = false;
                 }
+                else if (UIresult == 1) {   //  'xl'
+                    if (sdversion != 'SdVersion.SDXL')  visible = false;
+                }
+                else if (UIresult == 2) {   //  'flux'
+                    if (sdversion != 'SdVersion.Flux')  visible = false;
+                }
+                
                 if (visible) {
                     elem.classList.remove("hidden");
                 } else {
@@ -70,45 +100,51 @@ function setupExtraNetworksForTab(tabname) {
             applySort(force);
         };
 
-        var applySort = function(force) {
-            var cards = gradioApp().querySelectorAll('#' + tabname + '_extra_tabs div.card');
-            var reverse = sort_dir.dataset.sortdir == "Descending";
-            var sortKey = sort_mode.dataset.sortmode.toLowerCase().replace("sort", "").replaceAll(" ", "_").replace(/_+$/, "").trim() || "name";
-            sortKey = "sort" + sortKey.charAt(0).toUpperCase() + sortKey.slice(1);
-            var sortKeyStore = sortKey + "-" + (reverse ? "Descending" : "Ascending") + "-" + cards.length;
 
-            if (sortKeyStore == sort_mode.dataset.sortkey && !force) {
+        var applySort = function(force) {
+            var cards = gradioApp().querySelectorAll('#' + tabname_full + ' div.card');
+            var parent = gradioApp().querySelector('#' + tabname_full + "_cards");
+            var reverse = sort_dir.dataset.sortdir == "Descending";
+            var activeSearchElem = gradioApp().querySelector('#' + tabname_full + "_controls .extra-network-control--sort.extra-network-control--enabled");
+            var sortKey = activeSearchElem ? activeSearchElem.dataset.sortkey : "default";
+            var sortKeyDataField = "sort" + sortKey.charAt(0).toUpperCase() + sortKey.slice(1);
+            var sortKeyStore = sortKey + "-" + sort_dir.dataset.sortdir + "-" + cards.length;
+
+            if (sortKeyStore == currentSort && !force) {
                 return;
             }
-            sort_mode.dataset.sortkey = sortKeyStore;
+            currentSort = sortKeyStore;
 
-            cards.forEach(function(card) {
-                card.originalParentElement = card.parentElement;
-            });
             var sortedCards = Array.from(cards);
             sortedCards.sort(function(cardA, cardB) {
-                var a = cardA.dataset[sortKey];
-                var b = cardB.dataset[sortKey];
+                var a = cardA.dataset[sortKeyDataField];
+                var b = cardB.dataset[sortKeyDataField];
                 if (!isNaN(a) && !isNaN(b)) {
                     return parseInt(a) - parseInt(b);
                 }
 
                 return (a < b ? -1 : (a > b ? 1 : 0));
             });
+
             if (reverse) {
                 sortedCards.reverse();
             }
-            cards.forEach(function(card) {
-                card.remove();
-            });
+
+            parent.innerHTML = '';
+
+            var frag = document.createDocumentFragment();
             sortedCards.forEach(function(card) {
-                card.originalParentElement.appendChild(card);
+                frag.appendChild(card);
             });
+            parent.appendChild(frag);
         };
 
-        search.addEventListener("input", applyFilter);
+        search.addEventListener("input", function() {
+            applyFilter();
+        });
         applySort();
         applyFilter();
+
         extraNetworksApplySort[tabname_full] = applySort;
         extraNetworksApplyFilter[tabname_full] = applyFilter;
 
@@ -286,6 +322,15 @@ function saveCardPreview(event, tabname, filename) {
     event.preventDefault();
 }
 
+function extraNetworksSearchButton(tabname, extra_networks_tabname, event) {
+    var searchTextarea = gradioApp().querySelector("#" + tabname + "_" + extra_networks_tabname + "_extra_search");
+    var button = event.target;
+    var text = button.classList.contains("search-all") ? "" : button.textContent.trim();
+
+    searchTextarea.value = text;
+    updateInput(searchTextarea);
+}
+
 function extraNetworksTreeProcessFileClick(event, btn, tabname, extra_networks_tabname) {
     /**
      * Processes `onclick` events when user clicks on files in tree.
@@ -304,7 +349,7 @@ function extraNetworksTreeProcessDirectoryClick(event, btn, tabname, extra_netwo
      * Processes `onclick` events when user clicks on directories in tree.
      *
      * Here is how the tree reacts to clicks for various states:
-     * unselected unopened directory: Diretory is selected and expanded.
+     * unselected unopened directory: Directory is selected and expanded.
      * unselected opened directory: Directory is selected.
      * selected opened directory: Directory is collapsed and deselected.
      * chevron is clicked: Directory is expanded or collapsed. Selected state unchanged.
@@ -397,36 +442,17 @@ function extraNetworksTreeOnClick(event, tabname, extra_networks_tabname) {
 }
 
 function extraNetworksControlSortOnClick(event, tabname, extra_networks_tabname) {
-    /**
-     * Handles `onclick` events for the Sort Mode button.
-     *
-     * Modifies the data attributes of the Sort Mode button to cycle between
-     * various sorting modes.
-     *
-     * @param event                     The generated event.
-     * @param tabname                   The name of the active tab in the sd webui. Ex: txt2img, img2img, etc.
-     * @param extra_networks_tabname    The id of the active extraNetworks tab. Ex: lora, checkpoints, etc.
-     */
-    var curr_mode = event.currentTarget.dataset.sortmode;
-    var el_sort_dir = gradioApp().querySelector("#" + tabname + "_" + extra_networks_tabname + "_extra_sort_dir");
-    var sort_dir = el_sort_dir.dataset.sortdir;
-    if (curr_mode == "path") {
-        event.currentTarget.dataset.sortmode = "name";
-        event.currentTarget.dataset.sortkey = "sortName-" + sort_dir + "-640";
-        event.currentTarget.setAttribute("title", "Sort by filename");
-    } else if (curr_mode == "name") {
-        event.currentTarget.dataset.sortmode = "date_created";
-        event.currentTarget.dataset.sortkey = "sortDate_created-" + sort_dir + "-640";
-        event.currentTarget.setAttribute("title", "Sort by date created");
-    } else if (curr_mode == "date_created") {
-        event.currentTarget.dataset.sortmode = "date_modified";
-        event.currentTarget.dataset.sortkey = "sortDate_modified-" + sort_dir + "-640";
-        event.currentTarget.setAttribute("title", "Sort by date modified");
-    } else {
-        event.currentTarget.dataset.sortmode = "path";
-        event.currentTarget.dataset.sortkey = "sortPath-" + sort_dir + "-640";
-        event.currentTarget.setAttribute("title", "Sort by path");
-    }
+    /** Handles `onclick` events for Sort Mode buttons. */
+
+    var self = event.currentTarget;
+    var parent = event.currentTarget.parentElement;
+
+    parent.querySelectorAll('.extra-network-control--sort').forEach(function(x) {
+        x.classList.remove('extra-network-control--enabled');
+    });
+
+    self.classList.add('extra-network-control--enabled');
+
     applyExtraNetworkSort(tabname + "_" + extra_networks_tabname);
 }
 
@@ -461,8 +487,25 @@ function extraNetworksControlTreeViewOnClick(event, tabname, extra_networks_tabn
      * @param tabname                   The name of the active tab in the sd webui. Ex: txt2img, img2img, etc.
      * @param extra_networks_tabname    The id of the active extraNetworks tab. Ex: lora, checkpoints, etc.
      */
-    gradioApp().getElementById(tabname + "_" + extra_networks_tabname + "_tree").classList.toggle("hidden");
-    event.currentTarget.classList.toggle("extra-network-control--enabled");
+    var button = event.currentTarget;
+    button.classList.toggle("extra-network-control--enabled");
+    var show = !button.classList.contains("extra-network-control--enabled");
+
+    var pane = gradioApp().getElementById(tabname + "_" + extra_networks_tabname + "_pane");
+    pane.classList.toggle("extra-network-dirs-hidden", show);
+}
+
+function clickLoraRefresh() {
+    const targets = ['txt2img_lora', 'txt2img_checkpoints', 'txt2img_textural_inversion', 'img2img_lora', 'img2img_checkpoints', 'img2img_textural_inversion'];
+    targets.forEach(function(t) {
+        const tab = gradioApp().getElementById(t + '-button');
+        if (tab && tab.getAttribute('aria-selected') == "true") {
+            const applyFunction = extraNetworksApplyFilter[t];
+            if (applyFunction) {
+                applyFunction(true);
+            }
+        }
+    });
 }
 
 function extraNetworksControlRefreshOnClick(event, tabname, extra_networks_tabname) {
@@ -541,12 +584,76 @@ function popupId(id, type='common') {
     popup(storedPopupIds[id], type);
 }
 
+function extraNetworksFlattenMetadata(obj) {
+    const result = {};
+
+    // Convert any stringified JSON objects to actual objects
+    for (const key of Object.keys(obj)) {
+        if (typeof obj[key] === 'string') {
+            try {
+                const parsed = JSON.parse(obj[key]);
+                if (parsed && typeof parsed === 'object') {
+                    obj[key] = parsed;
+                }
+            } catch (error) {
+                continue;
+            }
+        }
+    }
+
+    // Flatten the object
+    for (const key of Object.keys(obj)) {
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
+            const nested = extraNetworksFlattenMetadata(obj[key]);
+            for (const nestedKey of Object.keys(nested)) {
+                result[`${key}/${nestedKey}`] = nested[nestedKey];
+            }
+        } else {
+            result[key] = obj[key];
+        }
+    }
+
+    // Special case for handling modelspec keys
+    for (const key of Object.keys(result)) {
+        if (key.startsWith("modelspec.")) {
+            result[key.replaceAll(".", "/")] = result[key];
+            delete result[key];
+        }
+    }
+
+    // Add empty keys to designate hierarchy
+    for (const key of Object.keys(result)) {
+        const parts = key.split("/");
+        for (let i = 1; i < parts.length; i++) {
+            const parent = parts.slice(0, i).join("/");
+            if (!result[parent]) {
+                result[parent] = "";
+            }
+        }
+    }
+
+    return result;
+}
+
 function extraNetworksShowMetadata(text) {
-    var elem = document.createElement('div');
+    try {
+        let parsed = JSON.parse(text);
+        if (parsed && typeof parsed === 'object') {
+            parsed = extraNetworksFlattenMetadata(parsed);
+            const table = createVisualizationTable(parsed, 0);
+            popup(table);
+            return;
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    var elem = document.createElement('pre');
     elem.classList.add('popup-metadata');
     elem.innerHTML = text;
 
-    popup(elem, 'meta');
+    popup(elem);
+    return;
 }
 
 function requestGet(url, data, handler, errorHandler) {
@@ -575,34 +682,35 @@ function requestGet(url, data, handler, errorHandler) {
     xhr.send(js);
 }
 
-function extraNetworksCopyCardPath(event, path) {
-    navigator.clipboard.writeText(path);
+function extraNetworksCopyCardPath(event) {
+    navigator.clipboard.writeText(event.target.getAttribute("data-clipboard-text"));
     event.stopPropagation();
 }
 
-async function extraNetworksRequestMetadata(event, extraPage, cardName) {
-    event.stopPropagation()
+function extraNetworksRequestMetadata(event, extraPage) {
+    var showError = function() {
+        extraNetworksShowMetadata("there was an error getting metadata");
+    };
 
-    var showError = function(){ extraNetworksShowMetadata("<h1>there was an error getting metadata</h1>"); }
+    var cardName = event.target.parentElement.parentElement.getAttribute("data-name");
+    if (cardName == null) { // from tree
+        cardName = event.target.parentElement.parentElement.parentElement.getAttribute("data-name");
+    }
 
-    try {
-        const response = await fetch(
-            `/sd_extra_networks/metadata?page=${encodeURIComponent(extraPage)}&item=${encodeURIComponent(cardName)}`,
-            {method: "GET"});
-        const metadata_html_str = await response.text();
-        if(metadata_html_str){
-            extraNetworksShowMetadata(metadata_html_str)
-        } else{
-            showError()
+    requestGet("./sd_extra_networks/metadata", {page: extraPage, item: cardName}, function(data) {
+        if (data && data.metadata) {
+            extraNetworksShowMetadata(data.metadata);
+        } else {
+            showError();
         }
-    } catch (error) {
-        showError()
-  }
+    }, showError);
+
+    event.stopPropagation();
 }
 
 var extraPageUserMetadataEditors = {};
 
-function extraNetworksEditUserMetadata(event, tabname, extraPage, cardName) {
+function extraNetworksEditUserMetadata(event, tabname, extraPage) {
     var id = tabname + '_' + extraPage + '_edit_user_metadata';
 
     var editor = extraPageUserMetadataEditors[id];
@@ -614,6 +722,10 @@ function extraNetworksEditUserMetadata(event, tabname, extraPage, cardName) {
         extraPageUserMetadataEditors[id] = editor;
     }
 
+    var cardName = event.target.parentElement.parentElement.getAttribute("data-name");
+    if (cardName == null) { // from tree
+        cardName = event.target.parentElement.parentElement.parentElement.getAttribute("data-name");
+    }
     editor.nameTextarea.value = cardName;
     updateInput(editor.nameTextarea);
 

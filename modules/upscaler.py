@@ -7,7 +7,6 @@ from PIL import Image
 import modules.shared
 from modules import modelloader, shared
 
-
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 NEAREST = (Image.Resampling.NEAREST if hasattr(Image, 'Resampling') else Image.NEAREST)
 
@@ -21,7 +20,7 @@ class Upscaler:
     filter = None
     model = None
     user_path = None
-    scalers: []
+    scalers: list
     tile = True
 
     def __init__(self, create_dirs=False):
@@ -57,8 +56,11 @@ class Upscaler:
         dest_w = int((img.width * scale) // 8 * 8)
         dest_h = int((img.height * scale) // 8 * 8)
 
-        for _ in range(3):
-            if img.width >= dest_w and img.height >= dest_h:
+        for i in range(3):
+            if img.width >= dest_w and img.height >= dest_h and (i > 0 or scale != 1):
+                break
+
+            if shared.state.interrupted:
                 break
 
             shape = (img.width, img.height)
@@ -91,13 +93,14 @@ class UpscalerData:
     scaler: Upscaler = None
     model: None
 
-    def __init__(self, name: str, path: str, upscaler: Upscaler = None, scale: int = 4, model=None):
+    def __init__(self, name: str, path: str, upscaler: Upscaler = None, scale: int = 4, model=None, sha256: str = None):
         self.name = name
         self.data_path = path
         self.local_data_path = path
         self.scaler = upscaler
         self.scale = scale
         self.model = model
+        self.sha256 = sha256
 
     def __repr__(self):
         return f"<UpscalerData name={self.name} path={self.data_path} scale={self.scale}>"

@@ -26,6 +26,7 @@ class ScriptRefiner(scripts.ScriptBuiltinUI):
             with gr.Row():
                 refiner_checkpoint = gr.Dropdown(
                     label='Checkpoint',
+                    info='(use model of same architecture)',
                     elem_id=self.elem_id("checkpoint"),
                     choices=[],
                     value=None,
@@ -43,7 +44,7 @@ class ScriptRefiner(scripts.ScriptBuiltinUI):
 
         def lookup_checkpoint(title):
             info = sd_models.get_closet_checkpoint_match(title)
-            return None if info is None else info.title
+            return None if info is None else info.short_title
 
         def _gallery_lookup_checkpoint(params: dict) -> dict:
             all_model_info: AllModelInfo = params[MODEL_INFO_KEY]
@@ -67,7 +68,6 @@ class ScriptRefiner(scripts.ScriptBuiltinUI):
 
     def setup(self, p, enable_refiner, refiner_checkpoint, refiner_switch_at):
         # the actual implementation is in sd_samplers_common.py, apply_refiner
-
         if not enable_refiner or refiner_checkpoint in (None, "", "None"):
             p.refiner_checkpoint = None
             p.refiner_switch_at = None

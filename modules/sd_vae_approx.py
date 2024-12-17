@@ -8,9 +8,9 @@ sd_vae_approx_models = {}
 
 
 class VAEApprox(nn.Module):
-    def __init__(self):
+    def __init__(self, latent_channels=4):
         super(VAEApprox, self).__init__()
-        self.conv1 = nn.Conv2d(4, 8, (7, 7))
+        self.conv1 = nn.Conv2d(latent_channels, 8, (7, 7))
         self.conv2 = nn.Conv2d(8, 16, (5, 5))
         self.conv3 = nn.Conv2d(16, 32, (3, 3))
         self.conv4 = nn.Conv2d(32, 64, (3, 3))
@@ -40,7 +40,16 @@ def download_model(model_path, model_url):
 
 
 def model():
-    model_name = "vaeapprox-sdxl.pt" if getattr(shared.sd_model, 'is_sdxl', False) else "model.pt"
+    if not shared.sd_model.is_webui_legacy_model():
+        return None
+
+    if shared.sd_model.is_sd3:
+        model_name = "vaeapprox-sd3.pt"
+    elif shared.sd_model.is_sdxl:
+        model_name = "vaeapprox-sdxl.pt"
+    else:
+        model_name = "model.pt"
+
     loaded_model = sd_vae_approx_models.get(model_name)
 
     if loaded_model is None:
@@ -52,7 +61,7 @@ def model():
             model_path = os.path.join(paths.models_path, "VAE-approx", model_name)
             download_model(model_path, 'https://github.com/AUTOMATIC1111/stable-diffusion-webui/releases/download/v1.0.0-pre/' + model_name)
 
-        loaded_model = VAEApprox()
+        loaded_model = VAEApprox(latent_channels=shared.sd_model.forge_objects.vae.latent_channels)
         loaded_model.load_state_dict(torch.load(model_path, map_location='cpu' if devices.device.type != 'cuda' else None))
         loaded_model.eval()
         loaded_model.to(devices.device, devices.dtype)
@@ -62,25 +71,4 @@ def model():
 
 
 def cheap_approximation(sample):
-    # https://discuss.huggingface.co/t/decoding-latents-to-rgb-without-upscaling/23204/2
-
-    if shared.sd_model.is_sdxl:
-        coeffs = [
-            [ 0.3448,  0.4168,  0.4395],
-            [-0.1953, -0.0290,  0.0250],
-            [ 0.1074,  0.0886, -0.0163],
-            [-0.3730, -0.2499, -0.2088],
-        ]
-    else:
-        coeffs = [
-            [ 0.298,  0.207,  0.208],
-            [ 0.187,  0.286,  0.173],
-            [-0.158,  0.189,  0.264],
-            [-0.184, -0.271, -0.473],
-        ]
-
-    coefs = torch.tensor(coeffs).to(sample.device)
-
-    x_sample = torch.einsum("...lxy,lr -> ...rxy", sample, coefs)
-
-    return x_sample
+    return torch.einsum("...lxy,lr -> ...rxy", sample, torch.tensor(shared.sd_model.model_config.latent_format.latent_rgb_factors).to(sample.device))

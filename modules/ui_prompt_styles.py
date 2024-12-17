@@ -71,6 +71,7 @@ class UiPromptStyles:
                     return {"choices": list(shared.prompt_styles(request).styles.keys())}
 
                 ui_common.create_refresh_button([self.dropdown, self.selection], shared.reload_style, current_prompt_styles, f"refresh_{tabname}_styles")
+                self.materialize = ui_components.ToolButton(value=styles_materialize_symbol, elem_id=f"{tabname}_style_apply_dialog", tooltip="Apply all selected styles from the style selection dropdown in main UI to the prompt. Strips comments, if enabled.")
                 self.copy = ui_components.ToolButton(value=styles_copy_symbol, elem_id=f"{tabname}_style_copy", tooltip="Copy main UI prompt to style.")
 
             with gr.Row():

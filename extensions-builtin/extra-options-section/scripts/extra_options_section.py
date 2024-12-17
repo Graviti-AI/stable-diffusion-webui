@@ -1,7 +1,7 @@
 import math
 
 import gradio as gr
-from modules import scripts, shared, ui_components, ui_settings, infotext_utils
+from modules import scripts, shared, ui_components, ui_settings, infotext_utils, errors
 from modules.ui_components import FormColumn
 
 
@@ -25,6 +25,11 @@ class ExtraOptionsSection(scripts.Script):
         extra_options = shared.opts.extra_options_img2img if is_img2img else shared.opts.extra_options_txt2img
         elem_id_tabname = "extra_options_" + ("img2img" if is_img2img else "txt2img")
 
+        not_allowed = ['sd_model_checkpoint', 'sd_vae', 'CLIP_stop_at_last_layers', 'forge_additional_modules']
+        for na in not_allowed:
+            if na in extra_options:
+                extra_options.remove(na)
+
         mapping = {k: v for v, k in infotext_utils.infotext_to_setting_name_mapping}
 
         with gr.Blocks() as interface:
@@ -42,7 +47,11 @@ class ExtraOptionsSection(scripts.Script):
                             setting_name = extra_options[index]
 
                             with FormColumn():
-                                comp = ui_settings.create_setting_component(setting_name)
+                                try:
+                                    comp = ui_settings.create_setting_component(setting_name)
+                                except KeyError:
+                                    errors.report(f"Can't add extra options for {setting_name} in ui")
+                                    continue
 
                             self.comps.append(comp)
                             self.setting_names.append(setting_name)

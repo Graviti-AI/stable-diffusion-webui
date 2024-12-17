@@ -5,12 +5,17 @@ import sys
 from modules import errors
 
 
+loaded_scripts = {}
+
+
 def load_module(path):
     module_name = os.path.basename(path).strip(".py")
     module_spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
     sys.modules[module_name] = module
+
+    loaded_scripts[path] = module
     return module
 
 

@@ -4,7 +4,6 @@ import shutil
 import sys
 from modules.paths_internal import models_path, script_path, data_path, workdir_path, binary_dir, model_dir_path, configs_dir, extensions_dir, extensions_builtin_dir, MODEL_CONTAINER_NAME, cwd  # noqa: F401
 
-import modules.safe  # noqa: F401
 import modules.user
 
 import gradio as gr
@@ -13,41 +12,15 @@ WORKDIR_NAME = os.getenv('WORKDIR_NAME', 'workdir')
 COMFYUI_WORKDIR_NAME = os.getenv('COMFYUI_WORKDIR_NAME', WORKDIR_NAME)
 workdir = pathlib.Path(workdir_path, WORKDIR_NAME)
 
-def mute_sdxl_imports():
-    """create fake modules that SDXL wants to import but doesn't actually use for our purposes"""
-
-    class Dummy:
-        pass
-
-    module = Dummy()
-    module.LPIPS = None
-    sys.modules['taming.modules.losses.lpips'] = module
-
-    module = Dummy()
-    module.StableDataModuleFromConfig = None
-    sys.modules['sgm.data'] = module
-
-
-# data_path = cmd_opts_pre.data
 sys.path.insert(0, script_path)
 
-# search for directory of stable diffusion in following places
-sd_path = None
-possible_sd_paths = [os.path.join(script_path, 'repositories/stable-diffusion-stability-ai'), '.', os.path.dirname(script_path)]
-for possible_sd_path in possible_sd_paths:
-    if os.path.exists(os.path.join(possible_sd_path, 'ldm/models/diffusion/ddpm.py')):
-        sd_path = os.path.abspath(possible_sd_path)
-        break
-
-assert sd_path is not None, f"Couldn't find Stable Diffusion in any of: {possible_sd_paths}"
-
-mute_sdxl_imports()
+sd_path = os.path.dirname(__file__)
 
 path_dirs = [
-    (sd_path, 'ldm', 'Stable Diffusion', []),
-    (os.path.join(sd_path, '../generative-models'), 'sgm', 'Stable Diffusion XL', ["sgm"]),
-    (os.path.join(sd_path, '../BLIP'), 'models/blip.py', 'BLIP', []),
-    (os.path.join(sd_path, '../k-diffusion'), 'k_diffusion/sampling.py', 'k_diffusion', ["atstart"]),
+    (os.path.join(sd_path, '../repositories/BLIP'), 'models/blip.py', 'BLIP', []),
+    (os.path.join(sd_path, '../packages_3rdparty'), 'gguf/quants.py', 'packages_3rdparty', []),
+    # (os.path.join(sd_path, '../repositories/k-diffusion'), 'k_diffusion/sampling.py', 'k_diffusion', ["atstart"]),
+    (os.path.join(sd_path, '../repositories/huggingface_guess'), 'huggingface_guess/detection.py', 'huggingface_guess', []),
 ]
 
 paths = {}
@@ -60,13 +33,6 @@ for d, must_exist, what, options in path_dirs:
         d = os.path.abspath(d)
         if "atstart" in options:
             sys.path.insert(0, d)
-        elif "sgm" in options:
-            # Stable Diffusion XL repo has scripts dir with __init__.py in it which ruins every extension's scripts dir, so we
-            # import sgm and remove it from sys.path so that when a script imports scripts.something, it doesbn't use sgm's scripts dir.
-
-            sys.path.insert(0, d)
-            import sgm  # noqa: F401
-            sys.path.pop(0)
         else:
             sys.path.append(d)
         paths[what] = d
@@ -224,13 +190,3 @@ def get_binary_path(sha256: str) -> pathlib.Path:
 def get_config_path(sha256: str) -> pathlib.Path:
     sha256 = sha256.lower()
     return pathlib.Path(configs_dir) / sha256
-
-
-import ldm_patched.utils.path_utils as ldm_patched_path_utils
-
-ldm_patched_path_utils.base_path = data_path
-ldm_patched_path_utils.models_dir = models_path
-ldm_patched_path_utils.output_directory = os.path.join(data_path, "output")
-ldm_patched_path_utils.temp_directory = os.path.join(data_path, "temp")
-ldm_patched_path_utils.input_directory = os.path.join(data_path, "input")
-ldm_patched_path_utils.user_directory = os.path.join(data_path, "user")

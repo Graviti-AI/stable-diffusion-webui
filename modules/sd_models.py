@@ -1,33 +1,31 @@
 import logging
 import collections
-import os.path
+import importlib
+import os
 import sys
+import math
 import threading
+import enum
 
 import torch
 import re
 import safetensors.torch
 from omegaconf import OmegaConf, ListConfig
-from os import mkdir
 from urllib import request
-from typing import Optional
-import ldm.modules.midas as midas
-import gradio as gr
 import gc
+import contextlib
 
-from ldm.util import instantiate_from_config
-
-from modules import paths, shared, modelloader, devices, script_callbacks, sd_vae, sd_disable_initialization, errors, hashes, sd_models_config, sd_unet, sd_models_xl, cache, extra_networks, processing, lowvram, sd_hijack, sd_models_types, patches
+from modules import paths, shared, modelloader, devices, script_callbacks, sd_vae, sd_disable_initialization, errors, hashes, sd_models_config, sd_unet, sd_models_xl, cache, extra_networks, processing, lowvram, sd_hijack, patches
+from modules.shared import opts, cmd_opts
 from modules.timer import Timer
 import numpy as np
-from modules_forge import forge_loader
-import modules_forge.ops as forge_ops
-from ldm_patched.modules.ops import manual_cast
-from ldm_patched.modules import model_management as model_management
-import ldm_patched.modules.model_patcher
+from backend.loader import forge_loader
+from backend import memory_management
+from backend.args import dynamic_args
+from backend.utils import load_torch_file
 
 
-from modules.model_info import ModelInfo, ModelInfoProtocal
+from modules.model_info import ModelInfo
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +36,14 @@ checkpoints_list = {}
 checkpoint_aliases = {}
 checkpoint_alisases = checkpoint_aliases  # for compatibility with old name
 checkpoints_loaded = collections.OrderedDict()
+
+
+class ModelType(enum.Enum):
+    SD1 = 1
+    SD2 = 2
+    SDXL = 3
+    SSD = 4
+    SD3 = 5
 
 
 def replace_key(d, key, new_key, value):
@@ -134,14 +140,20 @@ class CheckpointInfo:
 
         return self.shorthash
 
+    def __str__(self):
+        return str(dict(filename=self.filename, hash=self.hash))
 
-try:
-    # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
-    from transformers import logging, CLIPModel  # noqa: F401
+    def __repr__(self):
+        return str(dict(filename=self.filename, hash=self.hash))
 
-    logging.set_verbosity_error()
-except Exception:
-    pass
+
+# try:
+#     # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
+#     from transformers import logging, CLIPModel  # noqa: F401
+#
+#     logging.set_verbosity_error()
+# except Exception:
+#     pass
 
 
 def setup_model():
@@ -153,14 +165,8 @@ def setup_model():
     patch_given_betas()
 
 
-def checkpoint_tiles(req: Optional[gr.Request] = None, use_short=False):
-    def convert(name):
-        return int(name) if name.isdigit() else name.lower()
-
-    def alphanumeric_key(key):
-        return [convert(c) for c in re.split('([0-9]+)', key)]
-
-    return sorted([x.short_title if use_short else x.title  for x in checkpoints_list.values()], key=alphanumeric_key)
+def checkpoint_tiles(use_short=False):
+    return [x.short_title if use_short else x.name for x in checkpoints_list.values()]
 
 
 def list_models():
@@ -170,12 +176,8 @@ def list_models():
     checkpoint_alisases.clear()
 
     cmd_ckpt = shared.cmd_opts.ckpt
-    if shared.cmd_opts.no_download_sd_model or cmd_ckpt != shared.sd_model_file or os.path.exists(cmd_ckpt):
-        model_url = None
-    else:
-        model_url = "https://huggingface.co/lllyasviel/fav_models/resolve/main/fav/realisticVisionV51_v51VAE.safetensors"
 
-    model_list = modelloader.load_models(model_path=model_path, model_url=model_url, command_path=shared.cmd_opts.ckpt_dir, ext_filter=[".ckpt", ".safetensors"], download_name="realisticVisionV51_v51VAE.safetensors", ext_blacklist=[".vae.ckpt", ".vae.safetensors"])
+    model_list = modelloader.load_models(model_path=model_path, model_url=None, command_path=shared.cmd_opts.ckpt_dir, ext_filter=[".ckpt", ".safetensors", ".gguf"], download_name=None, ext_blacklist=[".vae.ckpt", ".vae.safetensors"])
 
     if os.path.exists(cmd_ckpt):
         checkpoint_info = CheckpointInfo(cmd_ckpt)
@@ -193,6 +195,15 @@ def list_models():
 
 re_strip_checksum = re.compile(r"\s*\[[^]]+]\s*$")
 
+def match_checkpoint_to_name(name):
+    name = name.split(' [')[0]
+
+    for ckptname in checkpoints_list.values():
+        title = ckptname.title.split(' [')[0]
+        if (name in title) or (title in name):
+            return ckptname.short_title if shared.opts.sd_checkpoint_dropdown_use_short else ckptname.name.split(' [')[0]
+
+    return name
 
 def get_closet_checkpoint_match(search_string):
     raise NotImplementedError("Reading models from BE is deprecated, in 'get_closet_checkpoint_match'")
@@ -244,14 +255,8 @@ def select_checkpoint() -> ModelInfo:
         return checkpoint_info
 
     if len(checkpoints_list) == 0:
-        error_message = "No checkpoints found. When searching for checkpoints, looked at:"
-        if shared.cmd_opts.ckpt is not None:
-            error_message += f"\n - file {os.path.abspath(shared.cmd_opts.ckpt)}"
-        error_message += f"\n - directory {model_path}"
-        if shared.cmd_opts.ckpt_dir is not None:
-            error_message += f"\n - directory {os.path.abspath(shared.cmd_opts.ckpt_dir)}"
-        error_message += "Can't run without a checkpoint. Find and place a .ckpt or .safetensors file into any of those locations."
-        raise FileNotFoundError(error_message)
+        print('You do not have any model!')
+        return None
 
     checkpoint_info = next(iter(checkpoints_list.values()))
     if model_checkpoint is not None:
@@ -260,45 +265,12 @@ def select_checkpoint() -> ModelInfo:
     return checkpoint_info
 
 
-checkpoint_dict_replacements_sd1 = {
-    'cond_stage_model.transformer.embeddings.': 'cond_stage_model.transformer.text_model.embeddings.',
-    'cond_stage_model.transformer.encoder.': 'cond_stage_model.transformer.text_model.encoder.',
-    'cond_stage_model.transformer.final_layer_norm.': 'cond_stage_model.transformer.text_model.final_layer_norm.',
-}
-
-checkpoint_dict_replacements_sd2_turbo = { # Converts SD 2.1 Turbo from SGM to LDM format.
-    'conditioner.embedders.0.': 'cond_stage_model.',
-}
-
-
 def transform_checkpoint_dict_key(k, replacements):
-    for text, replacement in replacements.items():
-        if k.startswith(text):
-            k = replacement + k[len(text):]
-
-    return k
+    pass
 
 
 def get_state_dict_from_checkpoint(pl_sd):
-    pl_sd = pl_sd.pop("state_dict", pl_sd)
-    pl_sd.pop("state_dict", None)
-
-    is_sd2_turbo = 'conditioner.embedders.0.model.ln_final.weight' in pl_sd and pl_sd['conditioner.embedders.0.model.ln_final.weight'].size()[0] == 1024
-
-    sd = {}
-    for k, v in pl_sd.items():
-        if is_sd2_turbo:
-            new_key = transform_checkpoint_dict_key(k, checkpoint_dict_replacements_sd2_turbo)
-        else:
-            new_key = transform_checkpoint_dict_key(k, checkpoint_dict_replacements_sd1)
-
-        if new_key is not None:
-            sd[new_key] = v
-
-    pl_sd.clear()
-    pl_sd.update(sd)
-
-    return pl_sd
+    pass
 
 
 def read_metadata_from_safetensors(filename):
@@ -310,47 +282,27 @@ def read_metadata_from_safetensors(filename):
         json_start = file.read(2)
 
         assert metadata_len > 2 and json_start in (b'{"', b"{'"), f"{filename} is not a safetensors file"
-        json_data = json_start + file.read(metadata_len-2)
-        json_obj = json.loads(json_data)
 
         res = {}
-        for k, v in json_obj.get("__metadata__", {}).items():
-            res[k] = v
-            if isinstance(v, str) and v[0:1] == '{':
-                try:
-                    res[k] = json.loads(v)
-                except Exception:
-                    pass
+
+        try:
+            json_data = json_start + file.read(metadata_len-2)
+            json_obj = json.loads(json_data)
+            for k, v in json_obj.get("__metadata__", {}).items():
+                res[k] = v
+                if isinstance(v, str) and v[0:1] == '{':
+                    try:
+                        res[k] = json.loads(v)
+                    except Exception:
+                        pass
+        except Exception:
+             errors.report(f"Error reading metadata from file: {filename}", exc_info=True)
 
         return res
 
 
-def read_state_dict(
-    model_info: ModelInfoProtocal | str, print_global_state=False, map_location=None
-):
-    if isinstance(model_info, str):
-        filename = model_info
-        is_safetensors = os.path.splitext(filename)[-1] == ".safetensors"
-    else:
-        filename = model_info.filename
-        is_safetensors = model_info.is_safetensors
-
-    if is_safetensors:
-        device = map_location or shared.weight_load_location or devices.get_optimal_device_name()
-
-        if not shared.opts.disable_mmap_load_safetensors:
-            pl_sd = safetensors.torch.load_file(filename, device=device)
-        else:
-            pl_sd = safetensors.torch.load(open(filename, 'rb').read())
-            pl_sd = {k: v.to(device) for k, v in pl_sd.items()}
-    else:
-        pl_sd = torch.load(filename, map_location=map_location or shared.weight_load_location)
-
-    if print_global_state and "global_step" in pl_sd:
-        print(f"Global Step: {pl_sd['global_step']}")
-
-    sd = get_state_dict_from_checkpoint(pl_sd)
-    return sd
+def read_state_dict(checkpoint_file, print_global_state=False, map_location=None):
+    pass
 
 
 def get_checkpoint_state_dict(checkpoint_info: ModelInfo, timer):
@@ -365,198 +317,108 @@ def get_checkpoint_state_dict(checkpoint_info: ModelInfo, timer):
         return checkpoints_loaded[checkpoint_info.sha256]
 
     print(f"Loading weights [{sd_model_hash}] from {checkpoint_info.name}")
-    res = read_state_dict(checkpoint_info)
+    res = load_torch_file(checkpoint_info)
     timer.record("load weights from disk")
 
     return res
 
 
-class SkipWritingToConfig:
-    """This context manager prevents load_model_weights from writing checkpoint name to the config when it loads weight."""
-
-    skip = False
-    previous = None
-
-    def __enter__(self):
-        self.previous = SkipWritingToConfig.skip
-        SkipWritingToConfig.skip = True
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        SkipWritingToConfig.skip = self.previous
+def SkipWritingToConfig():
+    return contextlib.nullcontext()
 
 
 def check_fp8(model):
-    if model is None:
-        return None
-    if devices.get_optimal_device_name() == "mps":
-        enable_fp8 = False
-    elif shared.opts.fp8_storage == "Enable":
-        enable_fp8 = True
-    elif getattr(model, "is_sdxl", False) and shared.opts.fp8_storage == "Enable for SDXL":
-        enable_fp8 = True
-    else:
-        enable_fp8 = False
-    return enable_fp8
+    pass
 
 
-def load_model_weights(model, checkpoint_info: ModelInfo, state_dict, timer):
-    sd_model_hash = checkpoint_info.calculate_shorthash()
-    timer.record("calculate hash")
+def set_model_type(model, state_dict):
+    pass
 
-    if not SkipWritingToConfig.skip:
-        shared.opts.data["sd_model_checkpoint"] = checkpoint_info.title
 
-    if state_dict is None:
-        state_dict = get_checkpoint_state_dict(checkpoint_info, timer)
+def set_model_fields(model):
+    pass
 
-    if shared.opts.sd_checkpoint_cache > 0:
-        # cache newly loaded model
-        checkpoints_loaded[checkpoint_info.sha256] = state_dict.copy()
 
-    model.load_state_dict(state_dict, strict=False)
-    timer.record("apply weights to model")
-
-    del state_dict
-
-    # clean up cache if limit is reached
-    while len(checkpoints_loaded) > shared.opts.sd_checkpoint_cache:
-        checkpoints_loaded.popitem(last=False)
-
-    model.sd_model_hash = sd_model_hash
-    model.sd_model_checkpoint = checkpoint_info.filename
-    model.sd_checkpoint_info = checkpoint_info
-    shared.opts.data["sd_checkpoint_hash"] = checkpoint_info.sha256
-
-    if hasattr(model, 'logvar'):
-        model.logvar = model.logvar.to(devices.device)  # fix for training
-
-    sd_vae.delete_base_vae()
-    sd_vae.clear_loaded_vae()
-    vae_file, vae_source = sd_vae.resolve_vae(checkpoint_info.filename).tuple()
-    sd_vae.load_vae(model, vae_file, vae_source)
-    timer.record("load VAE")
+def load_model_weights(model, checkpoint_info: CheckpointInfo, state_dict, timer):
+    pass
 
 
 def enable_midas_autodownload():
-    """
-    Gives the ldm.modules.midas.api.load_model function automatic downloading.
-
-    When the 512-depth-ema model, and other future models like it, is loaded,
-    it calls midas.api.load_model to load the associated midas depth model.
-    This function applies a wrapper to download the model to the correct
-    location automatically.
-    """
-
-    midas_path = os.path.join(paths.models_path, 'midas')
-
-    # stable-diffusion-stability-ai hard-codes the midas model path to
-    # a location that differs from where other scripts using this model look.
-    # HACK: Overriding the path here.
-    for k, v in midas.api.ISL_PATHS.items():
-        file_name = os.path.basename(v)
-        midas.api.ISL_PATHS[k] = os.path.join(midas_path, file_name)
-
-    midas_urls = {
-        "dpt_large": "https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt",
-        "dpt_hybrid": "https://github.com/intel-isl/DPT/releases/download/1_0/dpt_hybrid-midas-501f0c75.pt",
-        "midas_v21": "https://github.com/AlexeyAB/MiDaS/releases/download/midas_dpt/midas_v21-f6b98070.pt",
-        "midas_v21_small": "https://github.com/AlexeyAB/MiDaS/releases/download/midas_dpt/midas_v21_small-70d6b9c8.pt",
-    }
-
-    midas.api.load_model_inner = midas.api.load_model
-
-    def load_model_wrapper(model_type):
-        path = midas.api.ISL_PATHS[model_type]
-        if not os.path.exists(path):
-            if not os.path.exists(midas_path):
-                mkdir(midas_path)
-
-            print(f"Downloading midas model weights for {model_type} to {path}")
-            request.urlretrieve(midas_urls[model_type], path)
-            print(f"{model_type} downloaded")
-
-        return midas.api.load_model_inner(model_type)
-
-    midas.api.load_model = load_model_wrapper
+    pass
 
 
 def patch_given_betas():
-    import ldm.models.diffusion.ddpm
-
-    def patched_register_schedule(*args, **kwargs):
-        """a modified version of register_schedule function that converts plain list from Omegaconf into numpy"""
-
-        if isinstance(args[1], ListConfig):
-            args = (args[0], np.array(args[1]), *args[2:])
-
-        original_register_schedule(*args, **kwargs)
-
-    original_register_schedule = patches.patch(__name__, ldm.models.diffusion.ddpm.DDPM, 'register_schedule', patched_register_schedule)
+    pass
 
 
-def repair_config(sd_config):
-
-    if not hasattr(sd_config.model.params, "use_ema"):
-        sd_config.model.params.use_ema = False
-
-    if hasattr(sd_config.model.params, 'unet_config'):
-        if shared.cmd_opts.no_half:
-            sd_config.model.params.unet_config.params.use_fp16 = False
-        elif shared.cmd_opts.upcast_sampling:
-            sd_config.model.params.unet_config.params.use_fp16 = True
-
-    if getattr(sd_config.model.params.first_stage_config.params.ddconfig, "attn_type", None) == "vanilla-xformers" and not shared.xformers_available:
-        sd_config.model.params.first_stage_config.params.ddconfig.attn_type = "vanilla"
-
-    # For UnCLIP-L, override the hardcoded karlo directory
-    if hasattr(sd_config.model.params, "noise_aug_config") and hasattr(sd_config.model.params.noise_aug_config.params, "clip_stats_path"):
-        karlo_path = os.path.join(paths.models_path, 'karlo')
-        sd_config.model.params.noise_aug_config.params.clip_stats_path = sd_config.model.params.noise_aug_config.params.clip_stats_path.replace("checkpoints/karlo_models", karlo_path)
+def repair_config(sd_config, state_dict=None):
+    pass
 
 
-sd1_clip_weight = 'cond_stage_model.transformer.text_model.embeddings.token_embedding.weight'
-sd2_clip_weight = 'cond_stage_model.model.transformer.resblocks.0.attn.in_proj_weight'
-sdxl_clip_weight = 'conditioner.embedders.1.model.ln_final.weight'
-sdxl_refiner_clip_weight = 'conditioner.embedders.0.model.ln_final.weight'
+def rescale_zero_terminal_snr_abar(alphas_cumprod):
+    alphas_bar_sqrt = alphas_cumprod.sqrt()
+
+    # Store old values.
+    alphas_bar_sqrt_0 = alphas_bar_sqrt[0].clone()
+    alphas_bar_sqrt_T = alphas_bar_sqrt[-1].clone()
+
+    # Shift so the last timestep is zero.
+    alphas_bar_sqrt -= (alphas_bar_sqrt_T)
+
+    # Scale so the first timestep is back to the old value.
+    alphas_bar_sqrt *= alphas_bar_sqrt_0 / (alphas_bar_sqrt_0 - alphas_bar_sqrt_T)
+
+    # Convert alphas_bar_sqrt to betas
+    alphas_bar = alphas_bar_sqrt ** 2  # Revert sqrt
+    alphas_bar[-1] = 4.8973451890853435e-08
+    return alphas_bar
+
+
+def apply_alpha_schedule_override(sd_model, p=None):
+    """
+    Applies an override to the alpha schedule of the model according to settings.
+    - downcasts the alpha schedule to half precision
+    - rescales the alpha schedule to have zero terminal SNR
+    """
+
+    if not hasattr(sd_model, 'alphas_cumprod') or not hasattr(sd_model, 'alphas_cumprod_original'):
+        return
+
+    sd_model.alphas_cumprod = sd_model.alphas_cumprod_original.to(shared.device)
+
+    if opts.use_downcasted_alpha_bar:
+        if p is not None:
+            p.extra_generation_params['Downcast alphas_cumprod'] = opts.use_downcasted_alpha_bar
+        sd_model.alphas_cumprod = sd_model.alphas_cumprod.half().to(shared.device)
+
+    if opts.sd_noise_schedule == "Zero Terminal SNR":
+        if p is not None:
+            p.extra_generation_params['Noise Schedule'] = opts.sd_noise_schedule
+        sd_model.alphas_cumprod = rescale_zero_terminal_snr_abar(sd_model.alphas_cumprod).to(shared.device)
+
+
+# This is a dummy class for backward compatibility when model is not load - for extensions like prompt all in one.
+class FakeInitialModel:
+    def __init__(self):
+        self.cond_stage_model = None
+        self.chunk_length = 75
+
+    def get_prompt_lengths_on_ui(self, prompt):
+        r = len(prompt.strip('!,. ').replace(' ', ',').replace('.', ',').replace('!', ',').replace(',,', ',').replace(',,', ',').replace(',,', ',').replace(',,', ',').split(','))
+        return r, math.ceil(max(r, 1) / self.chunk_length) * self.chunk_length
 
 
 class SdModelData:
     def __init__(self):
-        self.sd_model: Optional[sd_models_types.WebuiSdModel] = None
-        self.loaded_sd_models = []
-        self.was_loaded_at_least_once = False
-        self.lock = threading.RLock()
+        self.sd_model = FakeInitialModel()
+        self.forge_loading_parameters = {}
+        self.forge_hash = ''
 
-    def get_sd_model(self) -> Optional[sd_models_types.WebuiSdModel]:
-        if self.was_loaded_at_least_once:
-            return self.sd_model
-
-        if self.sd_model is None:
-            with self.lock:
-                if self.sd_model is not None or self.was_loaded_at_least_once:
-                    return self.sd_model
-
-                try:
-                    logger.info("Skip reading models from BE, return 'None' in 'SdModelData.get_sd_model'")
-                    return self.sd_model
-
-                    load_model(select_checkpoint())
-
-                except Exception as e:
-                    errors.display(e, "loading stable diffusion model", full_traceback=True)
-                    print("", file=sys.stderr)
-                    print("Stable diffusion model failed to load", file=sys.stderr)
-                    self.sd_model = None
-
+    def get_sd_model(self):
         return self.sd_model
 
-    def set_sd_model(self, v, already_loaded=False):
+    def set_sd_model(self, v):
         self.sd_model = v
-        if already_loaded:
-            sd_vae.base_vae = getattr(v, "base_vae", None)
-            sd_vae.loaded_vae_file = getattr(v, "loaded_vae_file", None)
-            sd_vae.checkpoint_info = v.sd_checkpoint_info
 
     def unload_current(self):
         with self.lock:
@@ -573,15 +435,7 @@ model_data = SdModelData()
 
 
 def get_empty_cond(sd_model):
-
-    p = processing.StableDiffusionProcessingTxt2Img()
-    extra_networks.activate(p, {})
-
-    if hasattr(sd_model, 'conditioner'):
-        d = sd_model.get_learned_conditioning([""])
-        return d['crossattn']
-    else:
-        return sd_model.cond_stage_model([""])
+    pass
 
 
 def send_model_to_cpu(m):
@@ -600,102 +454,29 @@ def send_model_to_trash(m):
     pass
 
 
-def load_model(
-    checkpoint_info: ModelInfo | None,
-    embedding_model_info: dict[str, ModelInfo] | None=None,
-    already_loaded_state_dict=None,
-):
-    with model_data.lock:
-        return _load_model(checkpoint_info, embedding_model_info, already_loaded_state_dict)
+def instantiate_from_config(config, state_dict=None):
+    pass
 
 
-def _load_model(
-    checkpoint_info: ModelInfo | None,
-    embedding_model_info: dict[str, ModelInfo] | None=None,
-    already_loaded_state_dict=None,
-):
-    if checkpoint_info is None:
-        logger.info("Skip reading models from BE, return 'None' in '_load_model'")
-        return None
+def get_obj_from_str(string, reload=False):
+    pass
 
-    from modules import sd_hijack
-    timer = Timer('sd_models.load_model', checkpoint_info.title)
 
-    if model_data.sd_model:
-        if model_data.sd_model.sd_checkpoint_info.sha256 == checkpoint_info.sha256:
-            return model_data.sd_model
-
-        model_data.sd_model = None
-        model_data.loaded_sd_models = []
-        model_management.unload_all_models()
-        model_management.soft_empty_cache()
-        gc.collect()
-
-    timer.record("unload existing model")
-
-    if already_loaded_state_dict is not None:
-        state_dict = already_loaded_state_dict
-    else:
-        state_dict = get_checkpoint_state_dict(checkpoint_info, timer)
-
-    if shared.opts.sd_checkpoint_cache > 0:
-        # cache newly loaded model
-        checkpoints_loaded[checkpoint_info] = state_dict.copy()
-
-    sd_model = forge_loader.load_model_for_a1111(timer=timer, checkpoint_info=checkpoint_info, state_dict=state_dict)
-    sd_model.filename = checkpoint_info.filename
-
-    del state_dict
-
-    # clean up cache if limit is reached
-    while len(checkpoints_loaded) > shared.opts.sd_checkpoint_cache:
-        checkpoints_loaded.popitem(last=False)
-
-    shared.opts.data["sd_checkpoint_hash"] = checkpoint_info.sha256
-
-    sd_vae.delete_base_vae()
-    sd_vae.clear_loaded_vae()
-    vae_file, vae_source = sd_vae.resolve_vae(checkpoint_info.filename).tuple()
-    sd_vae.load_vae(sd_model, vae_file, vae_source)
-    timer.record("load VAE")
-
-    model_data.set_sd_model(sd_model)
-    model_data.was_loaded_at_least_once = True
-
-    if embedding_model_info is not None:
-        sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings(embedding_model_info, force_reload=True)  # Reload embeddings after model load as they may or may not fit the model
-
-        timer.record("load textual inversion embeddings")
-
-    script_callbacks.model_loaded_callback(sd_model)
-
-    timer.record("scripts callbacks")
-
-    with torch.no_grad():
-        sd_model.cond_stage_model_empty_prompt = get_empty_cond(sd_model)
-
-    timer.record("calculate empty prompt")
-
-    print(f"Model loaded in {timer.summary()}.")
-
-    return sd_model
+def load_model(checkpoint_info=None, already_loaded_state_dict=None):
+    pass
 
 
 def reuse_model_from_already_loaded(sd_model, checkpoint_info, timer):
     pass
 
 
-def reload_model_weights(
-    sd_model=None,
-    info: ModelInfo | None=None,
-    embedding_model_info: dict[str, ModelInfo] | None=None,
-    force_reload: bool = False,
-):
-    return load_model(info, embedding_model_info)
+def reload_model_weights(sd_model=None, info=None, forced_reload=False):
+    pass
 
 
 def unload_model_weights(sd_model=None, info=None):
-    return sd_model
+    memory_management.unload_all_models()
+    return
 
 
 def apply_token_merging(sd_model, token_merging_ratio):
@@ -704,7 +485,7 @@ def apply_token_merging(sd_model, token_merging_ratio):
 
     print(f'token_merging_ratio = {token_merging_ratio}')
 
-    from ldm_patched.contrib.external_tomesd import TomePatcher
+    from backend.misc.tomesd import TomePatcher
 
     sd_model.forge_objects.unet = TomePatcher().patch(
         model=sd_model.forge_objects.unet,
@@ -712,3 +493,60 @@ def apply_token_merging(sd_model, token_merging_ratio):
     )
 
     return
+
+
+@torch.inference_mode()
+def forge_model_reload():
+    current_hash = str(model_data.forge_loading_parameters)
+
+    if model_data.forge_hash == current_hash:
+        return model_data.sd_model, False
+
+    print('Loading Model: ' + str(model_data.forge_loading_parameters))
+
+    timer = Timer()
+
+    if model_data.sd_model:
+        model_data.sd_model = None
+        memory_management.unload_all_models()
+        memory_management.soft_empty_cache()
+        gc.collect()
+
+    timer.record("unload existing model")
+
+    checkpoint_info = model_data.forge_loading_parameters['checkpoint_info']
+
+    if checkpoint_info is None:
+        raise ValueError('You do not have any model! Please download at least one model in [models/Stable-diffusion].')
+
+    state_dict = checkpoint_info.filename
+    additional_state_dicts = model_data.forge_loading_parameters.get('additional_modules', [])
+
+    timer.record("cache state dict")
+
+    dynamic_args['forge_unet_storage_dtype'] = model_data.forge_loading_parameters.get('unet_storage_dtype', None)
+    dynamic_args['embedding_dir'] = cmd_opts.embeddings_dir
+    dynamic_args['emphasis_name'] = opts.emphasis
+    sd_model = forge_loader(state_dict, additional_state_dicts=additional_state_dicts)
+    timer.record("forge model load")
+
+    sd_model.extra_generation_params = {}
+    sd_model.comments = []
+    sd_model.sd_checkpoint_info = checkpoint_info
+    sd_model.filename = checkpoint_info.filename
+    sd_model.sd_model_hash = checkpoint_info.calculate_shorthash()
+    timer.record("calculate hash")
+
+    shared.opts.data["sd_checkpoint_hash"] = checkpoint_info.sha256
+
+    model_data.set_sd_model(sd_model)
+
+    script_callbacks.model_loaded_callback(sd_model)
+
+    timer.record("scripts callbacks")
+
+    print(f"Model loaded in {timer.summary()}.")
+
+    model_data.forge_hash = current_hash
+
+    return sd_model, True

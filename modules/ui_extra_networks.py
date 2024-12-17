@@ -1,26 +1,25 @@
 import functools
 import os.path
 import urllib.parse
+from base64 import b64decode
+from io import BytesIO
 from pathlib import Path
 from typing import Optional, Union
 from dataclasses import dataclass
 
 from modules import shared, ui_extra_networks_user_metadata, errors, extra_networks, util
 from modules.images import read_info_from_image, save_image_with_geninfo
-from modules.paths import Paths
-from modules.ui_common import create_upload_button, ToolButton
 import gradio as gr
 import json
 import html
 from fastapi.exceptions import HTTPException
+from PIL import Image
 
 from modules.infotext_utils import image_from_url_text
 
 extra_pages = []
 allowed_dirs = set()
 default_allowed_preview_extensions = ["png", "jpg", "jpeg", "webp", "gif"]
-
-up_down_symbol = '\u2195\ufe0f' # ↕️
 
 @functools.cache
 def allowed_preview_extensions_with_extra(extra_extensions=None):
@@ -112,30 +111,29 @@ def fetch_file(filename: str = ""):
     return FileResponse(filename, headers={"Accept-Ranges": "bytes"})
 
 
-def make_html_metadata(metadata):
-    from starlette.responses import HTMLResponse
-    if not metadata:
-        return HTMLResponse("<h1>404, could not find metadata</h1>")
+def fetch_cover_images(page: str = "", item: str = "", index: int = 0):
+    from starlette.responses import Response
+
+    page = next(iter([x for x in extra_pages if x.name == page]), None)
+    if page is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    metadata = page.metadata.get(item)
+    if metadata is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    cover_images = json.loads(metadata.get('ssmd_cover_images', {}))
+    image = cover_images[index] if index < len(cover_images) else None
+    if not image:
+        raise HTTPException(status_code=404, detail="File not found")
 
     try:
-        metadata["trigger_word"] = "".join(
-            [f"<div class='model-metadata-trigger-word'>{word.strip()}</div>"
-             for item in metadata["trigger_word"]
-             for word in item.split(",") if word.strip()])
-        metadata["tags"] = "".join(
-            [f"<div class='model-metadata-tag'>{item}</div>" for item in metadata["tags"]])
-        metadata["metadata"] = "".join(
-            [f"""<tr class='model-metadata-metadata-table-row'>
-                <td class='model-metadata-metadata-table-key'>{key}:</td>
-                <td class='model-metadata-metadata-table-value'>{metadata['metadata'][key]}</td>
-             </tr>"""
-             for key in metadata["metadata"]])
-        metadata["metadata"] = f"<table>{metadata['metadata']}</table>"
-
-        metadata_html = shared.html("extra-networks-metadata.html").format(**metadata)
-        return HTMLResponse(metadata_html)
-    except Exception as e:
-        return HTMLResponse(f"<h1>500, {e.__str__()}</h1>")
+        image = Image.open(BytesIO(b64decode(image)))
+        buffer = BytesIO()
+        image.save(buffer, format=image.format)
+        return Response(content=buffer.getvalue(), media_type=image.get_format_mimetype())
+    except Exception as err:
+        raise ValueError(f"File cannot be fetched: {item}. Failed to load cover image.") from err
 
 
 def get_metadata(page: str = "", item: str = ""):
@@ -148,6 +146,8 @@ def get_metadata(page: str = "", item: str = ""):
     metadata = page.metadata.get(item)
     if metadata is None:
         return JSONResponse({})
+
+    metadata = {i:metadata[i] for i in metadata if i != 'ssmd_cover_images'}  # those are cover images, and they are too big to display in UI as text
 
     return JSONResponse({"metadata": json.dumps(metadata, indent=4, ensure_ascii=False)})
 
@@ -172,6 +172,7 @@ def get_single_card(page: str = "", tabname: str = "", name: str = ""):
 
 def add_pages_to_demo(app):
     app.add_api_route("/sd_extra_networks/thumb", fetch_file, methods=["GET"])
+    app.add_api_route("/sd_extra_networks/cover-images", fetch_cover_images, methods=["GET"])
     app.add_api_route("/sd_extra_networks/metadata", get_metadata, methods=["GET"])
     app.add_api_route("/sd_extra_networks/get-single-card", get_single_card, methods=["GET"])
 
@@ -180,6 +181,7 @@ def quote_js(s):
     s = s.replace('\\', '\\\\')
     s = s.replace('"', '\\"')
     return f'"{s}"'
+
 
 class ExtraNetworksPage:
     def __init__(self, title):
@@ -194,19 +196,13 @@ class ExtraNetworksPage:
         self.lister = util.MassFileLister()
         # HTML Templates
         self.pane_tpl = shared.html("extra-networks-pane.html")
+        self.pane_content_tree_tpl = shared.html("extra-networks-pane-tree.html")
+        self.pane_content_dirs_tpl = shared.html("extra-networks-pane-dirs.html")
         self.card_tpl = shared.html("extra-networks-card.html")
         self.btn_tree_tpl = shared.html("extra-networks-tree-button.html")
         self.btn_copy_path_tpl = shared.html("extra-networks-copy-path-button.html")
         self.btn_metadata_tpl = shared.html("extra-networks-metadata-button.html")
         self.btn_edit_item_tpl = shared.html("extra-networks-edit-item-button.html")
-
-    @staticmethod
-    def read_metadata_from_file(metadata_path: str):
-        metadata = None
-        if os.path.exists(metadata_path):
-            with open(metadata_path, "r", encoding='utf8') as f:
-                metadata = json.load(f)
-        return metadata
 
     def refresh(self, request: gr.Request):
         pass
@@ -218,6 +214,16 @@ class ExtraNetworksPage:
         desc = metadata.get("description", None)
         if desc is not None:
             item["description"] = desc
+        vae = metadata.get('vae_te', None)
+        if vae is None:     # fallback to old type
+            vae = metadata.get("vae", None)
+        if vae is not None:
+            if isinstance(vae, str):
+                vae = [vae]
+            item["vae"] = vae
+        version = metadata.get("sd_version_str", None)
+        if version is not None:
+            item["sd_version_str"] = version
 
         item["user_metadata"] = metadata
 
@@ -268,7 +274,7 @@ class ExtraNetworksPage:
         background_image = f'<img src="{html.escape(preview)}" class="preview" loading="lazy">' if preview else ''
 
         onclick = item.get("onclick", None)
-        if onclick is None:
+        if onclick is None:     #   this path is 'Textual Inversion' and 'Lora'
             # Don't quote prompt/neg_prompt since they are stored as js strings already.
             onclick_js_tpl = "cardClicked('{tabname}', {prompt}, {neg_prompt}, {allow_neg});"
             onclick = onclick_js_tpl.format(
@@ -280,6 +286,9 @@ class ExtraNetworksPage:
                 }
             )
             onclick = html.escape(onclick)
+        else:                   #   this path is 'Checkpoints'
+            vae = item.get("vae", [])
+            onclick = html.escape(f"selectVAE({vae});") + onclick
 
         btn_copy_path = self.btn_copy_path_tpl.format(**{"filename": item["filename"]})
         btn_metadata = ""
@@ -288,14 +297,12 @@ class ExtraNetworksPage:
             btn_metadata = self.btn_metadata_tpl.format(
                 **{
                     "extra_networks_tabname": self.extra_networks_tabname,
-                    "name": html.escape(item["name"]),
                 }
             )
         btn_edit_item = self.btn_edit_item_tpl.format(
             **{
                 "tabname": tabname,
                 "extra_networks_tabname": self.extra_networks_tabname,
-                "name": html.escape(item["name"]),
             }
         )
 
@@ -317,10 +324,12 @@ class ExtraNetworksPage:
         if search_only and shared.opts.extra_networks_hidden_models == "Never":
             return ""
 
+        item_sort_keys = item.get("sort_keys", {})
+        item_sort_keys["SDversion"] = item.get("sd_version_str", "SdVersion.Unknown")
         sort_keys = " ".join(
             [
                 f'data-sort-{k}="{html.escape(str(v))}"'
-                for k, v in item.get("sort_keys", {}).items()
+                for k, v in item_sort_keys.items()
             ]
         ).strip()
 
@@ -521,6 +530,47 @@ class ExtraNetworksPage:
 
         return f"<ul class='tree-list tree-list--tree'>{res}</ul>"
 
+    def create_dirs_view_html(self, tabname: str) -> str:
+        """Generates HTML for displaying folders."""
+
+        subdirs = {}
+        for parentdir in [os.path.abspath(x) for x in self.allowed_directories_for_previews()]:
+            for root, dirs, _ in sorted(os.walk(parentdir, followlinks=True), key=lambda x: shared.natural_sort_key(x[0])):
+                for dirname in sorted(dirs, key=shared.natural_sort_key):
+                    x = os.path.join(root, dirname)
+
+                    if not os.path.isdir(x):
+                        continue
+
+                    subdir = os.path.abspath(x)[len(parentdir):]
+
+                    if shared.opts.extra_networks_dir_button_function:
+                        if not subdir.startswith(os.path.sep):
+                            subdir = os.path.sep + subdir
+                    else:
+                        while subdir.startswith(os.path.sep):
+                            subdir = subdir[1:]
+
+                    is_empty = len(os.listdir(x)) == 0
+                    if not is_empty and not subdir.endswith(os.path.sep):
+                        subdir = subdir + os.path.sep
+
+                    if (os.path.sep + "." in subdir or subdir.startswith(".")) and not shared.opts.extra_networks_show_hidden_directories:
+                        continue
+
+                    subdirs[subdir] = 1
+
+        if subdirs:
+            subdirs = {"": 1, **subdirs}
+
+        subdirs_html = "".join([f"""
+        <button class='lg secondary gradio-button custom-button{" search-all" if subdir == "" else ""}' onclick='extraNetworksSearchButton("{tabname}", "{self.extra_networks_tabname}", event)'>
+        {html.escape(subdir if subdir != "" else "all")}
+        </button>
+        """ for subdir in subdirs])
+
+        return subdirs_html
+
     def create_card_view_html(self, tabname: str, *, none_message) -> str:
         """Generates HTML for the network Card View section for a tab.
 
@@ -534,132 +584,65 @@ class ExtraNetworksPage:
         Returns:
             HTML formatted string.
         """
-        res = ""
+        res = []
         for item in self.items.values():
-            res += self.create_item_html(tabname, item, self.card_tpl)
+            res.append(self.create_item_html(tabname, item, self.card_tpl))
 
-        if res == "":
+        if not res:
             dirs = "".join([f"<li>{x}</li>" for x in self.allowed_directories_for_previews()])
-            res = none_message or shared.html("extra-networks-no-cards.html").format(dirs=dirs)
+            res = [none_message or shared.html("extra-networks-no-cards.html").format(dirs=dirs)]
 
-        return res
+        return "".join(res)
 
-    def create_html(self, tabname, upload_button_id, button_id=None, return_callbacks=False):
-        assert shared.opts is not None, "shared.opts is not initialized"
-        items_html = ''
+    def create_html(self, tabname, *, empty=False):
+        """Generates an HTML string for the current pane.
 
-        subdirs = {}
-        for parentdir in [os.path.abspath(x) for x in self.allowed_directories_for_previews()]:
-            for root, dirs, _ in sorted(os.walk(parentdir, followlinks=True), key=lambda x: shared.natural_sort_key(x[0])):
-                for dirname in sorted(dirs, key=shared.natural_sort_key):
-                    x = os.path.join(root, dirname)
+        The generated HTML uses `extra-networks-pane.html` as a template.
 
-                    if not os.path.isdir(x):
-                        continue
+        Args:
+            tabname: The name of the active tab.
+            empty: create an empty HTML page with no items
 
-                    subdir = os.path.abspath(x)[len(parentdir):].replace("\\", "/")
+        Returns:
+            HTML formatted string.
+        """
+        self.lister.reset()
+        self.metadata = {}
 
-                    if shared.opts.extra_networks_dir_button_function:
-                        if not subdir.startswith("/"):
-                            subdir = "/" + subdir
-                    else:
-                        while subdir.startswith("/"):
-                            subdir = subdir[1:]
+        items_list = [] if empty else self.list_items()
+        self.items = {x["name"]: x for x in items_list}
 
-                    is_empty = len(os.listdir(x)) == 0
-                    if not is_empty and not subdir.endswith("/"):
-                        subdir = subdir + "/"
+        # Populate the instance metadata for each item.
+        for item in self.items.values():
+            metadata = item.get("metadata")
+            if metadata:
+                self.metadata[item["name"]] = metadata
 
-                    if ("/." in subdir or subdir.startswith(".")) and not shared.opts.extra_networks_show_hidden_directories:
-                        continue
+            if "user_metadata" not in item:
+                self.read_user_metadata(item)
 
-                    subdirs[subdir] = 1
+        show_tree = shared.opts.extra_networks_tree_view_default_enabled
 
-        if subdirs:
-            subdirs = {"": 1, **subdirs}
+        page_params = {
+            "tabname": tabname,
+            "extra_networks_tabname": self.extra_networks_tabname,
+            "data_sortdir": shared.opts.extra_networks_card_order,
+            "sort_path_active": ' extra-network-control--enabled' if shared.opts.extra_networks_card_order_field == 'Path' else '',
+            "sort_name_active": ' extra-network-control--enabled' if shared.opts.extra_networks_card_order_field == 'Name' else '',
+            "sort_date_created_active": ' extra-network-control--enabled' if shared.opts.extra_networks_card_order_field == 'Date Created' else '',
+            "sort_date_modified_active": ' extra-network-control--enabled' if shared.opts.extra_networks_card_order_field == 'Date Modified' else '',
+            "tree_view_btn_extra_class": "extra-network-control--enabled" if show_tree else "",
+            "items_html": self.create_card_view_html(tabname, none_message="Loading..." if empty else None),
+            "extra_networks_tree_view_default_width": shared.opts.extra_networks_tree_view_default_width,
+            "tree_view_div_default_display_class": "" if show_tree else "extra-network-dirs-hidden",
+        }
 
-        subdirs_html = "".join([f"""
-<button class='lg secondary gradio-button custom-button{" search-all" if subdir == "" else ""}' onclick='extraNetworksSearchButton("{tabname}_extra_tabs", event)'>
-{html.escape(subdir if subdir != "" else "all")}
-</button>
-""" for subdir in subdirs])
+        if shared.opts.extra_networks_tree_view_style == "Tree":
+            pane_content = self.pane_content_tree_tpl.format(**page_params, tree_html=self.create_tree_view_html(tabname))
+        else:
+            pane_content = self.pane_content_dirs_tpl.format(**page_params, dirs_html=self.create_dirs_view_html(tabname))
 
-        self_name_id = self.name.replace(" ", "_")
-
-        # Add a upload model button
-        plus_sign_elem_id = f"{tabname}_{self_name_id}-plus-sign"
-        loading_sign_elem_id = f"{tabname}_{self_name_id}-loading-sign"
-        if not button_id:
-            button_id = f"{upload_button_id}-card"
-        dashboard_title_hint = ""
-        model_size = ""
-        if self.min_model_size_mb:
-            model_size += f" min_model_size_mb='{self.min_model_size_mb}'"
-            dashboard_title_hint += f" ( > {self.min_model_size_mb} MB"
-        if self.max_model_size_mb:
-            model_size += f" max_model_size_mb='{self.max_model_size_mb}'"
-            if dashboard_title_hint:
-                dashboard_title_hint += f" and < {self.max_model_size_mb} MB"
-            else:
-                dashboard_title_hint += f" ( < {self.max_model_size_mb} MB"
-        if dashboard_title_hint:
-            dashboard_title_hint += ")"
-        height = f"height: {shared.opts.extra_networks_card_height}px;" if shared.opts.extra_networks_card_height else ''
-        width = f"width: {shared.opts.extra_networks_card_width}px;" if shared.opts.extra_networks_card_width else ''
-        items_html += shared.html("extra-networks-upload-button.html").format(
-            button_id=button_id,
-            style=f"{height}{width}",
-            model_type=self_name_id,
-            is_public="true",
-            tabname=tabname,
-            card_clicked=f'if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}',
-            dashboard_title=f'{self.title} files only.{dashboard_title_hint}',
-            model_size=model_size,
-            plus_sign_elem_id=plus_sign_elem_id,
-            loading_sign_elem_id=loading_sign_elem_id,
-            name=f'Upload {self.title} Models',
-            add_model_button_id=f"{tabname}_{self_name_id}_add_model-to-workspace",
-        )
-        items_html += shared.html("extra-networks-upload-button.html").format(
-            button_id=f"{button_id}-private",
-            style=f"{height}{width}",
-            model_type=self_name_id,
-            is_public="false",
-            tabname=tabname,
-            card_clicked=f'if (typeof register_button == "undefined") {{document.querySelector("#{upload_button_id}").click();}}',
-            dashboard_title=f'{self.title} files only.{dashboard_title_hint}',
-            model_size=model_size,
-            plus_sign_elem_id=plus_sign_elem_id,
-            loading_sign_elem_id=loading_sign_elem_id,
-            name=f'Upload {self.title} Models',
-            add_model_button_id=f"{tabname}_{self_name_id}_add_model-to-workspace-private",
-        )
-
-        res = f"""
-<div id='{tabname}_{self_name_id}_subdirs' class='extra-network-subdirs extra-network-subdirs-cards'>
-{subdirs_html}
-</div>
-<div id='{tabname}_{self_name_id}_cards' class='gallery-cards extra-network-pane'>
-<div id="total_count" style="display: none">{self.get_items_count()}</div>
-{items_html}
-</div>
-"""
-
-        if return_callbacks:
-            start_upload_callback = f"""
-                var plus_icon = document.querySelector("#{plus_sign_elem_id}");
-                plus_icon.style.display = "none";
-                var loading_icon = document.querySelector("#{loading_sign_elem_id}");
-                loading_icon.style.display = "inline-block";
-            """
-            finish_upload_callback = f"""
-                var plus_icon = document.querySelector("#{plus_sign_elem_id}");
-                plus_icon.style.display = "inline-block";
-                var loading_icon = document.querySelector("#{loading_sign_elem_id}");
-                loading_icon.style.display = "none";
-            """
-            return res, start_upload_callback, finish_upload_callback
-        return res
+        return self.pane_tpl.format(**page_params, pane_content=pane_content)
 
     def create_item(self, name, index=None):
         raise NotImplementedError()
@@ -699,6 +682,17 @@ class ExtraNetworksPage:
 
         return None
 
+    def find_embedded_preview(self, path, name, metadata):
+        """
+        Find if embedded preview exists in safetensors metadata and return endpoint for it.
+        """
+
+        file = f"{path}.safetensors"
+        if self.lister.exists(file) and 'ssmd_cover_images' in metadata and len(list(filter(None, json.loads(metadata['ssmd_cover_images'])))) > 0:
+            return f"./sd_extra_networks/cover-images?page={self.extra_networks_tabname}&item={name}"
+
+        return None
+
     def find_description(self, path):
         """
         Find and read a description file for a given path (without extension).
@@ -724,9 +718,11 @@ def initialize():
 
 def register_default_pages():
     from modules.ui_extra_networks_textual_inversion import ExtraNetworksPageTextualInversion
+    # from modules.ui_extra_networks_hypernets import ExtraNetworksPageHypernetworks
     from modules.ui_extra_networks_checkpoints import ExtraNetworksPageCheckpoints
-    register_page(ExtraNetworksPageCheckpoints())
     register_page(ExtraNetworksPageTextualInversion())
+    # register_page(ExtraNetworksPageHypernetworks())
+    register_page(ExtraNetworksPageCheckpoints())
 
 
 class ExtraNetworksUi:
@@ -761,7 +757,7 @@ def pages_in_preferred_order(pages):
     return sorted(pages, key=lambda x: tab_scores[x.name])
 
 
-def create_ui(container, button, tabname):
+def create_ui(interface: gr.Blocks, unrelated_tabs, tabname):
     ui = ExtraNetworksUi()
     ui.pages = []
     ui.pages_contents = []
@@ -770,80 +766,56 @@ def create_ui(container, button, tabname):
     ui.tabname = tabname
 
     related_tabs = []
-    with gr.Tabs(elem_id=tabname + "_extra_tabs") as tabs:
-        for page in ui.stored_extra_pages:
-            self_name_id = page.name.replace(" ", "_")
-            with gr.Tab(label=page.title, id=self_name_id, elem_id=self_name_id) as tab:
-                upload_button_id = f"{ui.tabname}_{self_name_id}_upload_button"
-                button_id = f"{upload_button_id}-card"
-                page_html_str, start_upload_callback, finish_upload_callback = page.create_html(
-                    ui.tabname, upload_button_id, button_id, return_callbacks=True)
-                page_elem = gr.HTML(page_html_str, elem_id=f"{ui.tabname}-{self_name_id}")
-                # TODO: Need to handle the case where there are multiple sub dirs
-                upload_destination = page.allowed_directories_for_previews()[0] \
-                    if page.allowed_directories_for_previews() else "./"
-                with gr.Row():
-                    create_upload_button(
-                        f"Upload {page.title}",
-                        upload_button_id,
-                        upload_destination,
-                        visible=False,
-                        start_uploading_call_back=start_upload_callback,
-                        finish_uploading_call_back=finish_upload_callback
-                    )
-                tab_click_params = gr.JSON(value={"tabname": ui.tabname, "model_type": self_name_id}, visible=False)
-                tab.select(fn=None, _js=f"modelTabClick", inputs=[tab_click_params], outputs=[])
-                ui.pages.append(page_elem)
-                editor = page.create_user_metadata_editor(ui, tabname)
-                editor.create_ui()
-                ui.user_metadata_editors.append(editor)
 
-                #related_tabs.append(tab)
+    for page in ui.stored_extra_pages:
+        with gr.Tab(page.title, elem_id=f"{tabname}_{page.extra_networks_tabname}", elem_classes=["extra-page"]) as tab:
+            with gr.Column(elem_id=f"{tabname}_{page.extra_networks_tabname}_prompts", elem_classes=["extra-page-prompts"]):
+                pass
 
-                with gr.Row(elem_id=f"{ui.tabname}_{self_name_id}_pagination", elem_classes="pagination"):
-                     with gr.Column(scale=7):
-                         gr.Button("hide", visible=False)
-                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_upload_btn", elem_classes="pagination_upload_btn", scale=2,  min_width=220):
-                        upload_btn = gr.Button(f"Add {page.title} to Workspace", variant="primary")
-                        upload_btn.click(
-                            fn=None,
-                            _js=f"() => {{openWorkSpaceDialog('{self_name_id}');}}"
-                        )
+            elem_id = f"{tabname}_{page.extra_networks_tabname}_cards_html"
+            page_elem = gr.HTML(page.create_html(tabname, empty=True), elem_id=elem_id)
+            ui.pages.append(page_elem)
 
-                     with gr.Column(elem_id=f"{ui.tabname}_{self_name_id}_pagination_row", elem_classes="pagination_row",  min_width=220):
-                        gr.HTML(
-                            value="<div class='pageniation-info'>"
-                                  f"<div class='page-prev' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'previous')\">< Prev </div>"
-                                  "<div class='page-total'><span class='current-page'>1</span><span class='separator'>/</span><span class='total-page'></span></div>"
-                                  f"<div class='page-next' onclick=\"updatePage('{ui.tabname}', '{self_name_id}', 'next')\">Next ></div></div>",
-                            show_label=False)
+            editor = page.create_user_metadata_editor(ui, tabname)
+            editor.create_ui()
+            ui.user_metadata_editors.append(editor)
 
-    filter = gr.Textbox('', show_label=False, elem_id=tabname + "_extra_search", placeholder="Search...", visible=False)
-    button_refresh = gr.Button('Refresh', elem_id=tabname + "_extra_refresh")
-    mature_level = gr.Dropdown(label="Mature level", elem_id=f"{tabname}_mature_level", choices=["None", "Soft", "Mature"], value="None", interactive=True)
+            related_tabs.append(tab)
 
-    # TODO: Sort function added by upstream and may not work
-    gr.Dropdown(choices=['Default Sort', 'Date Created', 'Date Modified', 'Name'], value='Default Sort', elem_id=tabname+"_extra_sort", multiselect=False, visible=False, show_label=False, interactive=True)
-    ToolButton(up_down_symbol, elem_id=tabname+"_extra_sortorder")
+    ui.button_save_preview = gr.Button('Save preview', elem_id=f"{tabname}_save_preview", visible=False)
+    ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=f"{tabname}_preview_filename", visible=False)
 
-    ui.button_save_preview = gr.Button('Save preview', elem_id=tabname + "_save_preview", visible=False)
-    ui.preview_target_filename = gr.Textbox('Preview save filename', elem_id=tabname + "_preview_filename",
-                                            visible=False)
-    ui.saved_preview_url = gr.Textbox('', elem_id=tabname + "_preview_url", visible=False, interactive=False)
-    ui.saved_preview_url.change(
-        None, ui.saved_preview_url, None, _js=f"(preview_url) => {{updateTabPrivatePreviews('{ui.tabname}');}}")
+    for tab in unrelated_tabs:
+        tab.select(fn=None, _js=f"function(){{extraNetworksUnrelatedTabSelected('{tabname}');}}", inputs=[], outputs=[], show_progress=False)
 
-    def toggle_visibility(is_visible):
-        is_visible = not is_visible
-        return is_visible, gr.update(visible=is_visible), gr.update(
-            variant=("secondary-down" if is_visible else "secondary"))
+    for page, tab in zip(ui.stored_extra_pages, related_tabs):
+        jscode = (
+            "function(){{"
+            f"extraNetworksTabSelected('{tabname}', '{tabname}_{page.extra_networks_tabname}_prompts', {str(page.allow_prompt).lower()}, {str(page.allow_negative_prompt).lower()}, '{tabname}_{page.extra_networks_tabname}');"
+            f"applyExtraNetworkFilter('{tabname}_{page.extra_networks_tabname}');"
+            "}}"
+        )
+        tab.select(fn=None, _js=jscode, inputs=[], outputs=[], show_progress=False)
 
-    state_visible = gr.State(value=False)
+        def refresh():
+            for pg in ui.stored_extra_pages:
+                pg.refresh()
+            create_html()
+            return ui.pages_contents
 
-    button.click(fn=toggle_visibility, inputs=[state_visible], outputs=[state_visible, container, button], show_progress=False)
-    refresh_params = gr.JSON(value={"tabname": ui.tabname}, visible=False)
-    button_refresh.click(fn=None, _js=f"refreshModelList", inputs=[refresh_params], outputs=[])
-    mature_level.change(fn=None, _js=f"changeHomeMatureLevel", inputs=[mature_level, refresh_params])
+        button_refresh = gr.Button("Refresh", elem_id=f"{tabname}_{page.extra_networks_tabname}_extra_refresh_internal", visible=False)
+        button_refresh.click(fn=refresh, inputs=[], outputs=ui.pages).then(fn=lambda: None, _js="function(){ " + f"applyExtraNetworkFilter('{tabname}_{page.extra_networks_tabname}');" + " }").then(fn=lambda: None, _js='setupAllResizeHandles')
+
+    def create_html():
+        ui.pages_contents = [pg.create_html(ui.tabname) for pg in ui.stored_extra_pages]
+
+    def pages_html():
+        if not ui.pages_contents:
+            create_html()
+        return ui.pages_contents
+
+    interface.load(fn=pages_html, inputs=[], outputs=ui.pages).then(fn=lambda: None, _js='setupAllResizeHandles')
+
     return ui
 
 def path_is_parent(parent_path, child_path):
@@ -854,13 +826,12 @@ def path_is_parent(parent_path, child_path):
 
 
 def setup_ui(ui, gallery):
-    def save_preview(index, images, filename, request: gr.Request):
+    def save_preview(index, images, filename):
         # this function is here for backwards compatibility and likely will be removed soon
 
-        paths = Paths(request)
         if len(images) == 0:
             print("There is no image in gallery to save as a preview.")
-            return ""
+            return [page.create_html(ui.tabname) for page in ui.stored_extra_pages]
 
         index = int(index)
         index = 0 if index < 0 else index
@@ -870,29 +841,24 @@ def setup_ui(ui, gallery):
         image = image_from_url_text(img_info)
         geninfo, items = read_info_from_image(image)
 
-        preview_path = os.path.join(paths.model_previews_dir(), filename)
-        preview_path_dir = os.path.dirname(preview_path)
-        if not os.path.exists(preview_path_dir):
-            os.makedirs(preview_path_dir, exist_ok=True)
+        is_allowed = False
+        for extra_page in ui.stored_extra_pages:
+            if any(path_is_parent(x, filename) for x in extra_page.allowed_directories_for_previews()):
+                is_allowed = True
+                break
 
-        if geninfo:
-            pnginfo_data = PngImagePlugin.PngInfo()
-            pnginfo_data.add_text('parameters', geninfo)
-            image.save(preview_path, pnginfo=pnginfo_data)
-        else:
-            image.save(preview_path)
-        file_mtime = os.path.getmtime(preview_path)
-        model_type = os.path.dirname(filename)
-        base_filename = os.path.basename(filename)
-        model_name = os.path.splitext(os.path.basename(filename))[0]
-        user = modules.user.User.current_user(request)
-        on_preview_created(user.uid, model_type, model_name, preview_path)
+        assert is_allowed, f'writing to {filename} is not allowed'
 
-        return f'url("/sd_extra_networks/thumb?filename={base_filename}&model_type={model_type}&mtime={file_mtime}")'
+        save_image_with_geninfo(image, geninfo, filename)
+
+        return [page.create_html(ui.tabname) for page in ui.stored_extra_pages]
 
     ui.button_save_preview.click(
         fn=save_preview,
         _js="function(x, y, z){return [selected_gallery_index(), y, z]}",
         inputs=[ui.preview_target_filename, gallery, ui.preview_target_filename],
-        outputs=ui.saved_preview_url
+        outputs=[*ui.pages]
     )
+
+    for editor in ui.user_metadata_editors:
+        editor.setup_ui(gallery)

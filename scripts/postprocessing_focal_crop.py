@@ -32,6 +32,8 @@ class ScriptPostprocessingFocalCrop(scripts_postprocessing.ScriptPostprocessing)
         if not pp.shared.target_width or not pp.shared.target_height:
             return
 
+        pp.image = pp.image.convert('RGB')
+
         dnn_model_path = None
         try:
             dnn_model_path = autocrop.download_and_cache_models()

@@ -27,12 +27,17 @@ function selected_gallery_index() {
     return all_gallery_buttons().findIndex(elem => elem.classList.contains('selected'));
 }
 
+function gallery_container_buttons(gallery_container) {
+    return gradioApp().querySelectorAll(`#${gallery_container} .thumbnail-item.thumbnail-small`);
+}
+
+function selected_gallery_index_id(gallery_container) {
+    return Array.from(gallery_container_buttons(gallery_container)).findIndex(elem => elem.classList.contains('selected'));
+}
+
 function extract_image_from_gallery(gallery) {
     if (gallery.length == 0) {
         return [null];
-    }
-    if (gallery.length == 1) {
-        return [gallery[0]];
     }
 
     var index = selected_gallery_index();
@@ -42,7 +47,7 @@ function extract_image_from_gallery(gallery) {
         index = 0;
     }
 
-    return [gallery[index]];
+    return [[gallery[index]]];
 }
 
 window.args_to_array = Array.from; // Compatibility with e.g. extensions that may expect this to be around
@@ -88,11 +93,6 @@ function switch_to_extras() {
     return Array.from(arguments);
 }
 
-function switch_to_svd() {
-    switchToTab("tab_svd");
-    return Array.from(arguments);
-}
-
 function get_tab_index(tabId) {
     let buttons = gradioApp().getElementById(tabId).querySelector('div').querySelectorAll('button');
     for (let i = 0; i < buttons.length; i++) {
@@ -123,9 +123,16 @@ function create_submit_args(args) {
     // As it is currently, txt2img and img2img send back the previous output args (txt2img_gallery, generation_info, html_info) whenever you generate a new image.
     // This can lead to uploading a huge gallery of previously generated images, which leads to an unnecessary delay between submitting and beginning to generate.
     // I don't know why gradio is sending outputs along with inputs, but we can prevent sending the image gallery here, which seems to be an issue for some.
+
     // If gradio at some point stops sending outputs, this may break something
     if (Array.isArray(res[res.length - 4])) {
-        res[res.length - 4] = null;
+        //res[res.length - 4] = null;
+        // simply drop output args
+        res = res.slice(0, res.length - 4);
+    } else if (Array.isArray(res[res.length - 3])) {
+        // for submit_extras()
+        //res[res.length - 3] = null;
+        res = res.slice(0, res.length - 3);
     }
 
     return res;
@@ -148,8 +155,7 @@ function showSubmitInterruptingPlaceholder(tabname) {
 function showRestoreProgressButton(tabname, show) {
     var button = gradioApp().getElementById(tabname + "_restore_progress");
     if (!button) return;
-
-    button.style.display = show ? "flex" : "none";
+    button.style.setProperty('display', show ? 'flex' : 'none', 'important');
 }
 
 function extractNumberFromGenerateButton(str) {
@@ -248,7 +254,6 @@ function submit_extras() {
 
     res[0] = id;
 
-    console.log(res);
     return res;
 }
 
@@ -269,6 +274,7 @@ function restoreProgressTxt2img() {
     var id = localGet("txt2img_task_id");
 
     if (id) {
+        showSubmitInterruptingPlaceholder('txt2img');
         requestProgress(id, gradioApp().getElementById('txt2img_gallery_container'), gradioApp().getElementById('txt2img_gallery'), function() {
             showSubmitButtons('txt2img', true);
         }, null, 0);
@@ -283,6 +289,7 @@ function restoreProgressImg2img() {
     var id = localGet("img2img_task_id");
 
     if (id) {
+        showSubmitInterruptingPlaceholder('img2img');
         requestProgress(id, gradioApp().getElementById('img2img_gallery_container'), gradioApp().getElementById('img2img_gallery'), function() {
             showSubmitButtons('img2img', true);
         }, null, 0);
@@ -443,6 +450,7 @@ onAfterUiUpdate(function() {
     var jsdata = textarea.value;
     opts = JSON.parse(jsdata);
 
+    executeCallbacks(optionsAvailableCallbacks); /*global optionsAvailableCallbacks*/
     executeCallbacks(optionsChangedCallbacks); /*global optionsChangedCallbacks*/
 
     Object.defineProperty(textarea, 'value', {
@@ -481,8 +489,8 @@ onOptionsChanged(function() {
 let txt2img_textarea, img2img_textarea = undefined;
 
 function restart_reload() {
+    document.body.style.backgroundColor = "var(--background-fill-primary)";
     document.body.innerHTML = '<h1 style="font-family:monospace;margin-top:20%;color:lightgray;text-align:center;">Reloading...</h1>';
-
     var requestPing = function() {
         requestGet("./internal/ping", {}, function(data) {
             location.reload();
@@ -510,9 +518,13 @@ function selectCheckpoint(name) {
     desiredCheckpointName = name;
     gradioApp().getElementById('change_checkpoint').click();
 }
+var desiredVAEName = 0;
+function selectVAE(vae) {
+    desiredVAEName = vae;
+}
 
 function currentImg2imgSourceResolution(w, h, scaleBy) {
-    var img = gradioApp().querySelector('#mode_img2img > div[style="display: block;"] img');
+    var img = gradioApp().querySelector('#mode_img2img > div[style="display: block;"] :is(img, canvas)');
     const img2imgScaleDom = gradioApp().querySelector("#img2img_scale");
     const sliderDom = img2imgScaleDom.querySelector("input[type='range']");
     const inputDom = img2imgScaleDom.querySelector("input[type='number']");
@@ -714,7 +726,7 @@ onUiLoaded(function(){
 
 var onEditTimers = {};
 
-// calls func after afterMs milliseconds has passed since the input elem has beed enited by user
+// calls func after afterMs milliseconds has passed since the input elem has been edited by user
 function onEdit(editId, elem, afterMs, func) {
     var edited = function() {
         var existingTimer = onEditTimers[editId];

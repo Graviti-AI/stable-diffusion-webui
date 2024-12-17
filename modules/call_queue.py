@@ -1,9 +1,16 @@
+import os.path
+from functools import wraps
 import html
+import time
+import traceback
+
+from modules_forge import main_thread
+from modules import shared, progress, errors, devices, fifo_lock, profiling
+
 import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-import traceback
-import time
+
 import functools
 import json
 from uuid import uuid4
@@ -265,7 +272,7 @@ def wrap_queued_call(func):
             res = func(*args, **kwargs)
 
 def wrap_gradio_gpu_call(func, func_name: str = '', extra_outputs=None, add_monitor_state=False):
-    @functools.wraps(func)
+    @wraps(func)
     def f(request: gradio.routes.Request, *args, **kwargs):
         assert shared.state, "shared.state is not initialized"
         predict_timeout = dict(request.headers).get('x-task-timeout', shared.cmd_opts.predict_timeout)
@@ -320,7 +327,23 @@ def _make_error_html(content: str) -> str:
 
 
 def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
-    @functools.wraps(func)
+    @wraps(func)
+    def f(*args, **kwargs):
+        try:
+            res = func(*args, **kwargs)
+        finally:
+            shared.state.skipped = False
+            shared.state.interrupted = False
+            shared.state.stopping_generation = False
+            shared.state.job_count = 0
+            shared.state.job = ""
+        return res
+
+    return wrap_gradio_call_no_job(f, extra_outputs, add_stats, add_monitor_state)
+
+
+def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monitor_state=False):
+    @wraps(func)
     def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
         assert shared.state, "shared.state is not initialized"
         task_id = None
@@ -403,6 +426,12 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             shared.state.job = ""
             shared.state.job_count = 0
 
+            # if main_thread.last_exception is not None:
+            #     e = main_thread.last_exception
+            # else:
+            #     traceback.print_exc()
+            #     print(e)
+
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '']
 
@@ -417,6 +446,7 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
 
         if isinstance(res[-1], str) and task_id:
             res[-1] = f"<p class='comments' style='user-select: text'>task({task_id})</p>" + res[-1]
+        devices.torch_gc()
 
         if not add_stats:
             task_end_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
@@ -444,8 +474,8 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
             sys_pct = sys_peak/max(sys_total, 1) * 100
 
             toltip_a = "Active: peak amount of video memory used during generation (excluding cached data)"
-            toltip_r = "Reserved: total amout of video memory allocated by the Torch library "
-            toltip_sys = "System: peak amout of video memory allocated by all running programs, out of total capacity"
+            toltip_r = "Reserved: total amount of video memory allocated by the Torch library "
+            toltip_sys = "System: peak amount of video memory allocated by all running programs, out of total capacity"
 
             text_a = f"<abbr title='{toltip_a}'>A</abbr>: <span class='measurement'>{active_peak/1024:.2f} GB</span>"
             text_r = f"<abbr title='{toltip_r}'>R</abbr>: <span class='measurement'>{reserved_peak/1024:.2f} GB</span>"
@@ -455,8 +485,13 @@ def wrap_gradio_call(func, extra_outputs=None, add_stats=False, add_monitor_stat
         else:
             vram_html = ''
 
+        if shared.opts.profiling_enable and os.path.exists(shared.opts.profiling_filename):
+            profiling_html = f"<p class='profile'> [ <a href='{profiling.webpath()}' download>Profile</a> ] </p>"
+        else:
+            profiling_html = ''
+
         # last item is always HTML
-        res[-1] += f"<div class='performance'><p class='time'>Time taken: <wbr><span class='measurement'>{elapsed_text}</span></p>{vram_html}</div>"
+        res[-1] += f"<div class='performance'><p class='time'>Time taken: <wbr><span class='measurement'>{elapsed_text}</span></p>{vram_html}{profiling_html}</div>"
 
         task_end_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
         logger.info(f"task({task_id}) end memory: {task_end_system_memory:.2f} GB")

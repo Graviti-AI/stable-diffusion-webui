@@ -14,7 +14,7 @@ from tempfile import _TemporaryFileWrapper
 def create_ui():
     dummy_component = gr.Label(visible=False)
     tab_index = gr.Number(value=0, visible=False)
-    upgrade_info = gr.JSON(value={}, interactive=False, visible=False)
+    upgrade_info = gr.JSON(value={}, visible=False)
 
     source_width = gr.Number(visible=False)
     source_height = gr.Number(visible=False)

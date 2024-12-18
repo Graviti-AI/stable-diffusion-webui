@@ -418,7 +418,7 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False, head=canvas_head) as txt2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=False, is_compact=shared.opts.compact_prompt_box)
-        upgrade_info = gr.JSON(value={}, interactive=False, visible=False)
+        upgrade_info = gr.JSON(value={}, visible=False)
         txt2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_signature")
         txt2img_upscale_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_upscale_signature")
         txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
@@ -1507,7 +1507,7 @@ def create_ui():
         demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections])
 
         demo.load(
-            fn=None, _js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
+            fn=None, js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])
@@ -1537,7 +1537,7 @@ def create_ui():
             interface_arg_start_index = len(interface_components)
             for component_index in script_callbacks.script_interfaces[interface_name][0].blocks:
                 interface_component = script_callbacks.script_interfaces[interface_name][0].blocks[component_index]
-                if isinstance(interface_component, gr.components.IOComponent):
+                if isinstance(interface_component, gr.components.Component):
                     interface_components.append(interface_component)
             interfce_arg_end_index = len(interface_components)
             interface_list.append(

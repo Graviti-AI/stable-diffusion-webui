@@ -279,7 +279,7 @@ class Api:
 
         self.embedding_db = modules.textual_inversion.textual_inversion.EmbeddingDatabase()
         self.embedding_db.add_embedding_dir(cmd_opts.embeddings_dir)
-        self.embedding_db.load_textual_inversion_embeddings(force_reload=True, sync_with_sd_model=False)
+        self.embedding_db.load_textual_inversion_embeddings({}, force_reload=True, sync_with_sd_model=False)
 
 
 

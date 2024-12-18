@@ -55,7 +55,7 @@ def parse_unit(text: str) -> external_code.ControlNetUnit:
 
 class Infotext(object):
     def __init__(self) -> None:
-        self.infotext_fields: List[Tuple[gr.components.IOComponent, str]] = []
+        self.infotext_fields: List[Tuple[gr.components.Component, str]] = []
         self.paste_field_names: List[str] = []
 
     @staticmethod
@@ -74,7 +74,7 @@ class Infotext(object):
         unit_prefix = Infotext.unit_prefix(unit_index)
         for field in external_code.ControlNetUnit.infotext_fields():
             # Every field in ControlNetUnit should have a corresponding
-            # IOComponent in ControlNetUiGroup.
+            # Component in ControlNetUiGroup.
             io_component = getattr(uigroup, field)
             component_locator = f"{unit_prefix} {field}"
             self.infotext_fields.append((io_component, component_locator))

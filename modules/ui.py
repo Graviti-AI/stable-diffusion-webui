@@ -1546,7 +1546,7 @@ def create_ui():
             interface_arg_start_index = len(interface_components)
             for component_index in script_callbacks.script_interfaces[interface_name][0].blocks:
                 interface_component = script_callbacks.script_interfaces[interface_name][0].blocks[component_index]
-                if isinstance(interface_component, gr.components.IOComponent):
+                if isinstance(interface_component, gr.components.Component):
                     interface_components.append(interface_component)
             interfce_arg_end_index = len(interface_components)
             interface_list.append(

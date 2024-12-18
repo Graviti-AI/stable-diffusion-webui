@@ -15,6 +15,9 @@ from modules.ui_components import ToolButton
 import modules.infotext_utils as parameters_copypaste
 
 from modules.paths import Paths
+from modules.paths_internal import script_path
+from fastapi import FastAPI, HTTPException
+from starlette.responses import FileResponse
 
 folder_symbol = '\U0001f4c2'  # 📂
 refresh_symbol = '\U0001f504'  # 🔄
@@ -342,3 +345,17 @@ def setup_dialog(button_show, dialog, *, button_close=None, type="common"):
 
     if button_close:
         button_close.click(fn=None, _js=f"() => closePopup('{type}')")
+
+
+def get_static_files(filepath: str):
+    full_path = os.path.join(script_path, "static", filepath)
+    # Make sure the path is in static folder
+    full_path = os.path.abspath(full_path)
+    if not os.path.exists(full_path) or os.path.abspath(os.path.join(script_path, "static")) not in full_path:
+        raise HTTPException(status_code=404, detail=f"{filepath} not found")
+
+    return FileResponse(full_path)
+
+
+def add_static_filedir_to_demo(app: FastAPI, route="public"):
+    app.add_api_route(f"/" + route + "/{filepath:path}", get_static_files, methods=["GET"])

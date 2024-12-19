@@ -18,7 +18,10 @@ async function listFavoriteCheckpoints() {
 
 async function listFavoriteCheckpointTitles() {
     const checkpoints = await listFavoriteCheckpoints();
-    return checkpoints.map((item) => `${item.filename} [${item.sha256.slice(0, 10)}]`);
+    return checkpoints.map((item) => {
+        const name = `${item.filename} [${item.sha256.slice(0, 10)}]`;
+        return [name, name];
+    });
 }
 
 async function updateCheckpointDropdown() {
@@ -29,12 +32,12 @@ async function updateCheckpointDropdown() {
 
 async function updateCheckpointDropdownWithHR() {
     const checkpoints_update = await updateCheckpointDropdown();
-    checkpoints_update.value = checkpoints_update.choices[0];
+    checkpoints_update.value = checkpoints_update.choices[0][0];
 
     const value = "Use same checkpoint";
     const hr_checkpoints_update = {
         value: value,
-        choices: [value, ...checkpoints_update.choices],
+        choices: [[value, value], ...checkpoints_update.choices],
         __type__: "update",
     };
 

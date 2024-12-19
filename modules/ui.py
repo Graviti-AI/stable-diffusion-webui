@@ -1512,7 +1512,7 @@ def create_ui():
         demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections])
 
         demo.load(
-            fn=None, _js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
+            fn=None, js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])

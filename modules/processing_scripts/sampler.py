@@ -24,12 +24,21 @@ class ScriptSampler(scripts.ScriptBuiltinUI):
             with FormRow(elem_id=f"sampler_selection_{self.tabname}"):
                 self.sampler_name = gr.Dropdown(label='Sampling method', elem_id=f"{self.tabname}_sampling", choices=sampler_names, value=sampler_names[0])
                 self.scheduler = gr.Dropdown(label='Schedule type', elem_id=f"{self.tabname}_scheduler", choices=scheduler_names, value=scheduler_names[0])
-                self.steps = gr.Slider(minimum=1, maximum=150, step=1, elem_id=f"{self.tabname}_steps", label="Sampling steps", value=20)
+                self.steps = gr.Slider(minimum=1, maximum=160, step=1, elem_id=f"{self.tabname}_steps", label="Sampling steps", value=20)
         else:
             with FormGroup(elem_id=f"sampler_selection_{self.tabname}"):
-                self.steps = gr.Slider(minimum=1, maximum=150, step=1, elem_id=f"{self.tabname}_steps", label="Sampling steps", value=20)
+                self.steps = gr.Slider(minimum=1, maximum=160, step=1, elem_id=f"{self.tabname}_steps", label="Sampling steps", value=20)
                 self.sampler_name = gr.Radio(label='Sampling method', elem_id=f"{self.tabname}_sampling", choices=sampler_names, value=sampler_names[0])
                 self.scheduler = gr.Dropdown(label='Schedule type', elem_id=f"{self.tabname}_scheduler", choices=scheduler_names, value=scheduler_names[0])
+
+        tab_name = "tab_img2img" if is_img2img else "tab_txt2img"
+        func_name = "modules.img2img.img2img" if is_img2img else "modules.txt2img.txt2img"
+
+        self.steps.change(
+            None,
+            inputs=[],
+            outputs=[self.steps],
+            _js=f"monitorThisParam('{tab_name}', '{func_name}', 'steps')")
 
         self.infotext_fields = [
             PasteField(self.steps, "Steps", api="steps"),

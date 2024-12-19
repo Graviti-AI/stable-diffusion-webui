@@ -703,9 +703,9 @@ function extraNetworksRequestMetadata(event, extraPage) {
         } else {
             showError();
         }
-    } catch (error) {
-        showError()
-  }
+    }, showError);
+
+    event.stopPropagation();
 }
 
 var extraPageUserMetadataEditors = {};

@@ -17,7 +17,6 @@ function _getControlNetArgNames() {
 let _upgradableTiers = ["Basic", "Plus", "Pro", "Api"];
 let _controlNetArgNames = _getControlNetArgNames();
 let _featurePermissions = null;
-let _samplingStepsArgName = "steps";
 
 const _AFFILIATE_PROGRAM =
     '<a href="/affiliate/everyone" target="_blank" style="text-wrap: nowrap">Affiliate Program</a>';
@@ -127,8 +126,9 @@ function _checkControlNetUnits(tabname, getArg, permissions, tier) {
     throw `The used controlnet units (${controlnet_units}) has exceeded the maximum limit (${max_controlnet_units}) for current tier.`;
 }
 
-function _checkSamplingSteps(getArg, permissions, tier) {
-    const steps = getArg(_samplingStepsArgName);
+function _checkSamplingSteps(tabname, getArg, permissions, tier) {
+    const argName = `Sampler:Sampling steps:${tabname}_steps`;
+    const steps = getArg(argName);
 
     const current_limit = permissions.limits[tier];
     if (!current_limit) {
@@ -247,7 +247,7 @@ async function tierCheckGenerate(tabname, args) {
         _tierCheckFailed(features);
     }
 
-    _checkSamplingSteps(getArg, permissions, tier);
+    _checkSamplingSteps(tabname, getArg, permissions, tier);
     _checkControlNetUnits(tabname, getArg, permissions, tier);
     await _checkSafetyAgreement(getArg, permissions, tier);
 }

@@ -151,7 +151,7 @@ def webui_worker(server_port: int = 0):
                 "redoc_url": "/redoc",
                 "exception_handlers": {Exception: _handle_exception},
             },
-            root_path=f"/{cmd_opts.subpath}" if cmd_opts.subpath else "",
+            root_path=f"{cmd_opts.subpath}" if cmd_opts.subpath else "",
         )
         if cmd_opts.add_stop_route:
             app.add_route("/_stop", stop_route, methods=["POST"])
@@ -192,10 +192,10 @@ def webui_worker(server_port: int = 0):
         def shutdown_event():
             gradio.close_all()
 
-        if cmd_opts.subpath:
-            redirector = FastAPI()
-            redirector.get("/")
-            gradio.mount_gradio_app(redirector, shared.demo, path=f"/{cmd_opts.subpath}")
+        # if cmd_opts.subpath:
+        #     redirector = FastAPI()
+        #     redirector.get("/")
+        #     gradio.mount_gradio_app(redirector, shared.demo, path=f"/{cmd_opts.subpath}")
 
         server_command = None
         try:

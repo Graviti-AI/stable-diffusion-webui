@@ -117,6 +117,8 @@ class EventWrapper:
         self.real_self = getattr(replaced_event, '__self__', None)
 
     def __call__(self, *args, **kwargs):
+        kwargs['queue'] = False
+
         if '_js' in kwargs:
             kwargs['js'] = kwargs['_js']
             del kwargs['_js']

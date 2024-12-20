@@ -157,10 +157,9 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 if model_info is None:
                     raise KeyError(model_title)
 
-                _check_sd_model(
-                    model_info=model_info,
-                    embedding_model_info=all_model_info.embedding_models,
-                )
+                from modules_forge.main_entry import refresh_model_parameters
+                refresh_model_parameters(model_info)
+
         timer.record('load_models')
 
         # do gpu task
@@ -504,21 +503,3 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
         return tuple(res)
 
     return f
-
-
-def _check_sd_model(model_info: ModelInfo, embedding_model_info: dict[str, ModelInfo]):
-    shared.opts.sd_model_checkpoint = model_info.title
-
-    if not shared.sd_model or shared.sd_model.sd_checkpoint_info.sha256 != model_info.sha256:
-        import modules.sd_models
-        # refresh model, unload it from memory to prevent OOM
-        modules.sd_models.unload_model_weights()
-        # checkpoint = modules.sd_models.get_closet_checkpoint_match(model_title)
-        modules.sd_models.reload_model_weights(
-            info=model_info, embedding_model_info=embedding_model_info
-        )
-
-    #if shared.sd_model:
-    #    vae_file, vae_source = sd_vae.resolve_vae(shared.sd_model.sd_checkpoint_info.filename, vae_title)
-    #    if sd_vae.loaded_vae_file != vae_file:
-    #        sd_vae.load_vae(shared.sd_model, vae_file, vae_source)

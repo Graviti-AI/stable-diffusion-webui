@@ -8,6 +8,8 @@ from backend import memory_management, stream
 from backend.args import dynamic_args
 from modules.shared import cmd_opts
 
+from modules.model_info import ModelInfo
+
 
 total_vram = int(memory_management.total_vram)
 
@@ -217,11 +219,20 @@ def refresh_memory_management_settings(async_loading=None, inference_memory=None
     processing.need_global_unload = True
     return
 
+def refresh_model_parameters(checkpoint_info: ModelInfo) -> None:
+    from modules.sd_models import model_data
+
+    if not model_data.forge_loading_parameters:
+        refresh_model_loading_parameters()
+
+    model_data.forge_loading_parameters["checkpoint_info"] = checkpoint_info
+
 
 def refresh_model_loading_parameters():
     from modules.sd_models import select_checkpoint, model_data
 
-    checkpoint_info = select_checkpoint()
+    # checkpoint_info = select_checkpoint()
+    checkpoint_info = model_data.forge_loading_parameters.get("checkpoint_info", None)
 
     unet_storage_dtype, lora_fp16 = forge_unet_storage_dtype_options.get(shared.opts.forge_unet_storage_dtype, (None, False))
 

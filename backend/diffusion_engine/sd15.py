@@ -9,6 +9,9 @@ from backend.text_processing.classic_engine import ClassicTextProcessingEngine
 from backend.args import dynamic_args
 from backend import memory_management
 
+from collections.abc import Mapping
+from modules.model_info import ModelInfo
+
 
 class StableDiffusion(ForgeDiffusionEngine):
     matched_guesses = [model_list.SD15]
@@ -53,6 +56,9 @@ class StableDiffusion(ForgeDiffusionEngine):
 
         # WebUI Legacy
         self.is_sd1 = True
+
+    def load_embeddings(self, embedding_model_info: Mapping[str, ModelInfo]) -> None:
+        self.text_processing_engine.embeddings.load_textual_inversion_embeddings(embedding_model_info)
 
     def set_clip_skip(self, clip_skip):
         self.text_processing_engine.clip_skip = clip_skip

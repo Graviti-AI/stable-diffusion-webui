@@ -11,6 +11,9 @@ from backend.args import dynamic_args
 from backend.modules.k_prediction import PredictionFlux
 from backend import memory_management
 
+from collections.abc import Mapping
+from modules.model_info import ModelInfo
+
 
 class Flux(ForgeDiffusionEngine):
     matched_guesses = [model_list.Flux, model_list.FluxSchnell]
@@ -76,6 +79,9 @@ class Flux(ForgeDiffusionEngine):
         self.forge_objects = ForgeObjects(unet=unet, clip=clip, vae=vae, clipvision=None)
         self.forge_objects_original = self.forge_objects.shallow_copy()
         self.forge_objects_after_applying_lora = self.forge_objects.shallow_copy()
+
+    def load_embeddings(self, embedding_model_info: Mapping[str, ModelInfo]) -> None:
+        self.text_processing_engine_l.embeddings.load_textual_inversion_embeddings(embedding_model_info)
 
     def set_clip_skip(self, clip_skip):
         self.text_processing_engine_l.clip_skip = clip_skip

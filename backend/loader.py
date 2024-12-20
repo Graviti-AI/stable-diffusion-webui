@@ -22,6 +22,8 @@ from backend.diffusion_engine.sd20 import StableDiffusion2
 from backend.diffusion_engine.sdxl import StableDiffusionXL
 from backend.diffusion_engine.flux import Flux
 
+from modules.model_info import ModelInfo
+
 
 possible_models = [StableDiffusion, StableDiffusion2, StableDiffusionXL, Flux]
 
@@ -234,8 +236,8 @@ def preprocess_state_dict(sd):
     return sd
 
 
-def split_state_dict(sd, additional_state_dicts: list = None):
-    sd = load_torch_file(sd)
+def split_state_dict(model_info: ModelInfo, additional_state_dicts: list = None):
+    sd = load_torch_file(model_info)
     sd = preprocess_state_dict(sd)
     guess = huggingface_guess.guess(sd)
 
@@ -269,9 +271,9 @@ def split_state_dict(sd, additional_state_dicts: list = None):
 
 
 @torch.inference_mode()
-def forge_loader(sd, additional_state_dicts=None):
+def forge_loader(model_info: ModelInfo, additional_state_dicts=None):
     try:
-        state_dicts, estimated_config = split_state_dict(sd, additional_state_dicts=additional_state_dicts)
+        state_dicts, estimated_config = split_state_dict(model_info, additional_state_dicts=additional_state_dicts)
     except:
         raise ValueError('Failed to recognize model type!')
     
@@ -296,8 +298,9 @@ def forge_loader(sd, additional_state_dicts=None):
     try:
         import yaml
         from pathlib import Path
-        config_filename = os.path.splitext(sd)[0] + '.yaml'
-        if Path(config_filename).is_file():
+        # config_filename = os.path.splitext(sd)[0] + '.yaml'
+        config_filename = model_info.config_filename
+        if config_filename and Path(config_filename).is_file():
             with open(config_filename, 'r') as stream:
                 yaml_config = yaml.safe_load(stream)
     except ImportError:

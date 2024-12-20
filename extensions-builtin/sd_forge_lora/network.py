@@ -22,6 +22,7 @@ class NetworkOnDisk:
         self.filename = filename
         self.metadata = {}
         self.is_safetensors = os.path.splitext(filename)[1].lower() == ".safetensors"
+        self.is_gguf = os.path.splitext(filename)[1].lower() == ".gguf"
 
         def read_metadata():
             metadata = sd_models.read_metadata_from_safetensors(filename)
@@ -60,6 +61,7 @@ class NetworkOnDisk:
         obj.filename = model_info.filename
         obj.metadata = {}
         obj.is_safetensors = model_info.is_safetensors
+        obj.is_gguf = model_info.is_gguf
 
         def read_metadata():
             metadata = sd_models.read_metadata_from_safetensors(model_info.filename)

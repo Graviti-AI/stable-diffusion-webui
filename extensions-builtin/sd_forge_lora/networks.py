@@ -118,7 +118,7 @@ def load_networks(
 
     compiled_lora_targets = []
     for a, b, c in zip(networks_on_disk, unet_multipliers, te_multipliers):
-        compiled_lora_targets.append([a.filename, b, c, online_mode])
+        compiled_lora_targets.append([a, b, c, online_mode])
 
     compiled_lora_targets_hash = str(compiled_lora_targets)
 
@@ -129,11 +129,11 @@ def load_networks(
     current_sd.forge_objects.unet = current_sd.forge_objects_original.unet
     current_sd.forge_objects.clip = current_sd.forge_objects_original.clip
 
-    for filename, strength_model, strength_clip, online_mode in compiled_lora_targets:
-        lora_sd = load_lora_state_dict(filename)
+    for net, strength_model, strength_clip, online_mode in compiled_lora_targets:
+        lora_sd = load_lora_state_dict(net)
         current_sd.forge_objects.unet, current_sd.forge_objects.clip = load_lora_for_models(
             current_sd.forge_objects.unet, current_sd.forge_objects.clip, lora_sd, strength_model, strength_clip,
-            filename=filename, online_mode=online_mode)
+            filename=net.name, online_mode=online_mode)
 
     current_sd.forge_objects_after_applying_lora = current_sd.forge_objects.shallow_copy()
     return

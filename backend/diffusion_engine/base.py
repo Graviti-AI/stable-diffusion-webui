@@ -3,6 +3,9 @@ import safetensors.torch as sf
 
 from backend import utils
 
+from collections.abc import Mapping
+from modules.model_info import ModelInfo
+
 
 class ForgeObjects:
     def __init__(self, unet, clip, vae, clipvision):
@@ -34,6 +37,9 @@ class ForgeDiffusionEngine:
         self.current_lora_hash = str([])
 
         self.fix_for_webui_backward_compatibility()
+
+    def load_embeddings(self, embedding_model_info: Mapping[str, ModelInfo]) -> None:
+        pass
 
     def set_clip_skip(self, clip_skip):
         pass

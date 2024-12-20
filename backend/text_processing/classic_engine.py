@@ -60,9 +60,9 @@ class ClassicTextProcessingEngine:
 
         self.embeddings = EmbeddingDatabase(tokenizer, embedding_expected_shape)
 
-        if isinstance(embedding_dir, str):
-            self.embeddings.add_embedding_dir(embedding_dir)
-            self.embeddings.load_textual_inversion_embeddings()
+        # if isinstance(embedding_dir, str):
+        #     self.embeddings.add_embedding_dir(embedding_dir)
+        #     self.embeddings.load_textual_inversion_embeddings()
 
         self.embedding_key = embedding_key
 

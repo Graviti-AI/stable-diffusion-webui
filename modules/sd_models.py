@@ -504,7 +504,10 @@ def forge_model_reload():
 
     print('Loading Model: ' + str(model_data.forge_loading_parameters))
 
-    timer = Timer()
+    checkpoint_info: ModelInfo | None = model_data.forge_loading_parameters['checkpoint_info']
+    assert checkpoint_info
+
+    timer = Timer('sd_models.load_model', checkpoint_info.title)
 
     if model_data.sd_model:
         model_data.sd_model = None
@@ -514,12 +517,12 @@ def forge_model_reload():
 
     timer.record("unload existing model")
 
-    checkpoint_info = model_data.forge_loading_parameters['checkpoint_info']
+    # checkpoint_info = model_data.forge_loading_parameters['checkpoint_info']
 
-    if checkpoint_info is None:
-        raise ValueError('You do not have any model! Please download at least one model in [models/Stable-diffusion].')
+    # if checkpoint_info is None:
+    #     raise ValueError('You do not have any model! Please download at least one model in [models/Stable-diffusion].')
 
-    state_dict = checkpoint_info.filename
+    # state_dict = checkpoint_info.filename
     additional_state_dicts = model_data.forge_loading_parameters.get('additional_modules', [])
 
     timer.record("cache state dict")
@@ -527,7 +530,7 @@ def forge_model_reload():
     dynamic_args['forge_unet_storage_dtype'] = model_data.forge_loading_parameters.get('unet_storage_dtype', None)
     dynamic_args['embedding_dir'] = cmd_opts.embeddings_dir
     dynamic_args['emphasis_name'] = opts.emphasis
-    sd_model = forge_loader(state_dict, additional_state_dicts=additional_state_dicts)
+    sd_model = forge_loader(checkpoint_info, additional_state_dicts=additional_state_dicts)
     timer.record("forge model load")
 
     sd_model.extra_generation_params = {}

@@ -157,10 +157,13 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 if model_info is None:
                     raise KeyError(model_title)
 
-                _check_sd_model(
-                    model_info=model_info,
-                    embedding_model_info=all_model_info.embedding_models,
-                )
+                from modules_forge.main_entry import refresh_model_parameters
+                refresh_model_parameters(model_info)
+
+                # _check_sd_model(
+                #     model_info=model_info,
+                #     embedding_model_info=all_model_info.embedding_models,
+                # )
         timer.record('load_models')
 
         # do gpu task

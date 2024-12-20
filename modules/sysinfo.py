@@ -239,10 +239,10 @@ def set_config(req: dict[str, Any], is_api=False, run_callbacks=True, save_confi
             if checkpoint is None:
                 raise KeyError(v)
 
-            sd_models.reload_model_weights(info=checkpoint)
-            checkpoint_changed = main_entry.checkpoint_change(v, save=False, refresh=False)
-            if checkpoint_changed:
-                should_refresh_model_loading_params = True
+            main_entry.refresh_model_parameters(checkpoint)
+            # checkpoint_changed = main_entry.checkpoint_change(v, save=False, refresh=False)
+            # if checkpoint_changed:
+            #     should_refresh_model_loading_params = True
 
         elif k == 'sd_vae':
             vae_file_path = os.path.join(sd_vae.vae_path, v)

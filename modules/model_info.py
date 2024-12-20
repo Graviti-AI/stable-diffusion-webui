@@ -38,7 +38,7 @@ class ModelInfoProtocal(Protocol):
         ...
 
     @property
-    def is_guff(self) -> bool:
+    def is_gguf(self) -> bool:
         ...
 
 
@@ -87,8 +87,8 @@ class ModelInfo(BaseModel):
         return os.path.splitext(self.name)[-1].lower() == ".safetensors"
 
     @property
-    def is_guff(self) -> bool:
-        return os.path.splitext(self.name)[-1].lower() == ".guff"
+    def is_gguf(self) -> bool:
+        return os.path.splitext(self.name)[-1].lower() == ".gguf"
 
     def calculate_shorthash(self) -> str:
         return self.shorthash

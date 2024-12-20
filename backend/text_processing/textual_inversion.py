@@ -8,6 +8,9 @@ import safetensors.torch
 
 from PIL import Image
 
+from collections.abc import Mapping
+from modules.model_info import ModelInfo
+
 
 class EmbeddingEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -201,14 +204,17 @@ class EmbeddingDatabase:
                     print(f"Error loading embedding {fn}")
                     continue
 
-    def load_textual_inversion_embeddings(self):
+    def load_textual_inversion_embeddings(self, embedding_model_info: Mapping[str, ModelInfo]):
         self.ids_lookup.clear()
         self.word_embeddings.clear()
         self.skipped_embeddings.clear()
 
-        for embdir in self.embedding_dirs.values():
-            self.load_from_dir(embdir)
-            embdir.update()
+        for model_info in embedding_model_info.values():
+            self.load_from_file(model_info.filename, model_info.name)
+
+        # for embdir in self.embedding_dirs.values():
+        #     self.load_from_dir(embdir)
+        #     embdir.update()
 
         return
 

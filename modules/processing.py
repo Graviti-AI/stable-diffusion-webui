@@ -981,7 +981,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         p.all_subseeds = [int(subseed) + x for x in range(len(p.all_prompts))]
 
     if not p.do_not_reload_embeddings:
-        model_hijack.embedding_db.load_textual_inversion_embeddings(p.get_all_model_info().embedding_models, False)
+        p.sd_model.load_embeddings(p.get_all_model_info().embedding_models)
 
     if p.scripts is not None:
         p.scripts.process(p)

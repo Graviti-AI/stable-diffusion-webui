@@ -10,6 +10,9 @@ from backend.args import dynamic_args
 from backend import memory_management
 from backend.nn.unet import Timestep
 
+from collections.abc import Mapping
+from modules.model_info import ModelInfo
+
 
 class StableDiffusionXL(ForgeDiffusionEngine):
     matched_guesses = [model_list.SDXL]
@@ -72,6 +75,10 @@ class StableDiffusionXL(ForgeDiffusionEngine):
 
         # WebUI Legacy
         self.is_sdxl = True
+
+    def load_embeddings(self, embedding_model_info: Mapping[str, ModelInfo]) -> None:
+        self.text_processing_engine_l.embeddings.load_textual_inversion_embeddings(embedding_model_info)
+        self.text_processing_engine_g.embeddings.load_textual_inversion_embeddings(embedding_model_info)
 
     def set_clip_skip(self, clip_skip):
         self.text_processing_engine_l.clip_skip = clip_skip

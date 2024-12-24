@@ -78,6 +78,10 @@ def confirm_samplers(p, xs):
             raise RuntimeError(f"Unknown sampler: {x}")
 
 
+def apply_checkpoint_diffus(p, x, xs) -> None:
+    p.override_settings['sd_model_checkpoint'] = x
+
+
 def apply_checkpoint(p, x, xs):
     info = modules.sd_models.get_closet_checkpoint_match(x)
     if info is None:
@@ -153,7 +157,7 @@ def find_vae(name: str):
 
 
 def apply_vae(p, x, xs):
-    p.override_settings['sd_vae'] = find_vae(x)
+    p.override_settings['forge_additional_modules'] = [x] if x != "None" else []
 
 
 def apply_styles(p: StableDiffusionProcessingTxt2Img, x: str, _):
@@ -290,7 +294,7 @@ axis_options = [
     AxisOptionTxt2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers if x.name not in opts.hide_samplers]),
     AxisOptionTxt2Img("Hires sampler", str, apply_field("hr_sampler_name"), confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
     AxisOptionImg2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
-    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_remove_path, confirm=None, cost=1.0, choices=lambda: []),
+    AxisOption("Checkpoint name", str, apply_checkpoint_diffus, format_value=format_remove_path, confirm=None, cost=1.0, choices=lambda: []),
     AxisOption("Negative Guidance minimum sigma", float, apply_field("s_min_uncond")),
     AxisOption("Sigma Churn", float, apply_field("s_churn")),
     AxisOption("Sigma min", float, apply_field("s_tmin")),
@@ -309,7 +313,7 @@ axis_options = [
     AxisOption("Extra noise", float, apply_override("img2img_extra_noise")),
     AxisOptionTxt2Img("Hires upscaler", str, apply_field("hr_upscaler"), choices=lambda: [*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]]),
     AxisOptionImg2Img("Cond. Image Mask Weight", float, apply_field("inpainting_mask_weight")),
-    AxisOption("VAE", str, apply_vae, cost=0.7, choices=lambda: ['Automatic', 'None'] + list(sd_vae.vae_dict)),
+    AxisOption("VAE", str, apply_vae, cost=0.7, choices=lambda: ['None'] + list(sd_vae.vae_dict)),
     AxisOption("Styles", str, apply_styles, choices=get_user_style_list),
     AxisOption("UniPC Order", int, apply_uni_pc_order, cost=0.5),
     AxisOption("Face restore", str, apply_face_restore, format_value=format_value),
@@ -889,7 +893,7 @@ class Script(scripts.Script):
             )
         
         # reset loading params to previous state
-        refresh_loading_params_for_xyz_grid()
+        # refresh_loading_params_for_xyz_grid()
 
         if not processed.images:
             # It broke, no further handling needed.

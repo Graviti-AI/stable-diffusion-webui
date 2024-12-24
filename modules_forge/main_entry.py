@@ -219,13 +219,85 @@ def refresh_memory_management_settings(async_loading=None, inference_memory=None
     processing.need_global_unload = True
     return
 
-def refresh_model_parameters(checkpoint_info: ModelInfo) -> None:
+
+def reset_forge_loading_parameters() -> None:
     from modules.sd_models import model_data
 
-    if not model_data.forge_loading_parameters:
-        refresh_model_loading_parameters()
+    shared.opts.set("sd_model_checkpoint", None)
+    shared.opts.set("forge_additional_modules", [])
+    shared.opts.set("forge_unet_storage_dtype", "Automatic")
+
+    model_data.forge_loading_parameters = {
+        "checkpoint_info": None,
+        "additional_modules": [],
+        "unet_storage_dtype": None,
+    }
+    dynamic_args["online_lora"] = False
+
+    processing.need_global_unload = True
+
+
+def get_forge_checkpoint_info() -> ModelInfo | None:
+    from modules.sd_models import model_data
+    return model_data.forge_loading_parameters["checkpoint_info"]
+
+
+def set_forge_checkpoint_info(checkpoint_info: ModelInfo | None) -> bool:
+    from modules.sd_models import model_data
+
+    if model_data.forge_loading_parameters["checkpoint_info"] == checkpoint_info:
+        return False
+
+    shared.opts.set("sd_model_checkpoint", checkpoint_info.title if checkpoint_info else None)
 
     model_data.forge_loading_parameters["checkpoint_info"] = checkpoint_info
+    processing.need_global_unload = True
+    return True
+
+
+def get_forge_additional_modules() -> list[str]:
+    from modules.sd_models import model_data
+    return model_data.forge_loading_parameters["additional_modules"]
+
+
+def set_forge_additional_modules(module_values: list[str]) -> bool:
+    from modules.sd_models import model_data
+
+    additional_modules = []
+    for value in module_values:
+        module_name = os.path.basename(value)
+        if module_name in module_list:
+            additional_modules.append(module_list[module_name])
+
+    if set(model_data.forge_loading_parameters["additional_modules"]) == set(additional_modules):
+        return False
+
+    shared.opts.set("forge_additional_modules", additional_modules)
+
+    model_data.forge_loading_parameters["additional_modules"] = additional_modules
+    processing.need_global_unload = True
+    return True
+
+
+def set_forge_unet_storge_dtype(unet_storage_dtype_key: str) -> bool:
+    from modules.sd_models import model_data
+
+    unet_storage_dtype, lora_fp16 = forge_unet_storage_dtype_options.get(
+        unet_storage_dtype_key, (None, False)
+    )
+
+    if (
+        model_data.forge_loading_parameters["unet_storage_dtype"] == unet_storage_dtype
+        and dynamic_args["online_lora"] == lora_fp16
+    ):
+        return False
+
+    shared.opts.set("forge_unet_storage_dtype", unet_storage_dtype_key)
+
+    model_data.forge_loading_parameters["unet_storage_dtype"] = unet_storage_dtype
+    dynamic_args["online_lora"] = lora_fp16
+    processing.need_global_unload = True
+    return True
 
 
 def refresh_model_loading_parameters():

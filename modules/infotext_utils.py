@@ -414,16 +414,19 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model
     if "Refiner switch by sampling steps" not in res:
         res["Refiner switch by sampling steps"] = False
 
+    if "Diffusion in Low Bits" not in res:
+        res["Diffusion in Low Bits"] = "Automatic"
+
     infotext_versions.backcompat(res)
 
     for key in skip_fields:
         res.pop(key, None)
 
     # basic check for same checkpoint using short name
-    checkpoint = res.get('Model', None)
-    if checkpoint is not None:
-        if checkpoint in shared.opts.sd_model_checkpoint:
-            res.pop('Model')
+    # checkpoint = res.get('Model', None)
+    # if checkpoint is not None:
+    #     if checkpoint in shared.opts.sd_model_checkpoint:
+    #         res.pop('Model')
 
     # VAE / TE
     modules = []
@@ -450,14 +453,16 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model
                         hr_modules.append(knownmodule)
                         break
 
-    if modules != []:
-        current_modules = shared.opts.forge_additional_modules
-        basename_modules = []
-        for m in current_modules:
-            basename_modules.append(os.path.basename(m))
+    res['VAE/TE'] = modules
 
-        if sorted(modules) != sorted(basename_modules):
-            res['VAE/TE'] = modules
+    # if modules != []:
+    #     current_modules = shared.opts.forge_additional_modules
+    #     basename_modules = []
+    #     for m in current_modules:
+    #         basename_modules.append(os.path.basename(m))
+    #
+    #     if sorted(modules) != sorted(basename_modules):
+    #         res['VAE/TE'] = modules
 
     # if 'Use same choices' was the selection for Hires VAE / Text Encoder, it will be the only Hires Module
     # if the selection was empty, it will be the only Hires Module, saved as 'Built-in'

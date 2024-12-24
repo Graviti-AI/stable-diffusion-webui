@@ -149,6 +149,9 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         time_consumption['in_queue'] = time.time() - task_info.get('added_at', time.time())
 
         # reload model if necessary
+        from modules_forge.main_entry import set_forge_checkpoint_info, reset_forge_loading_parameters
+        reset_forge_loading_parameters()
+        
         if all_model_info:
             progress.set_current_task_step('reload_model_weights')
             script_callbacks.state_updated_callback(shared.state)
@@ -157,8 +160,7 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
                 if model_info is None:
                     raise KeyError(model_title)
 
-                from modules_forge.main_entry import refresh_model_parameters
-                refresh_model_parameters(model_info)
+                set_forge_checkpoint_info(model_info)
 
         timer.record('load_models')
 

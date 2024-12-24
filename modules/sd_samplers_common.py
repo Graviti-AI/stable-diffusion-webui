@@ -191,14 +191,16 @@ def apply_refiner(cfg_denoiser, x):
     sampling_cleanup(sd_models.model_data.get_sd_model().forge_objects.unet)
     
     with sd_models.SkipWritingToConfig():
-        fp_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
-        checkpoint_changed = main_entry.checkpoint_change(refiner_checkpoint_info.short_title, save=False, refresh=False)
+        # fp_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
+        fp_checkpoint = main_entry.get_forge_checkpoint_info()
+
+        checkpoint_changed = main_entry.set_forge_checkpoint_info(refiner_checkpoint_info)
         if checkpoint_changed:
             try:
-                main_entry.refresh_model_loading_parameters()
+                # main_entry.refresh_model_loading_parameters()
                 sd_models.forge_model_reload()
             finally:
-                main_entry.checkpoint_change(fp_checkpoint, save=False, refresh=True)
+                main_entry.set_forge_checkpoint_info(fp_checkpoint)
     
     if not cfg_denoiser.p.disable_extra_networks:
         extra_networks.activate(cfg_denoiser.p, cfg_denoiser.p.extra_network_data)

@@ -239,22 +239,20 @@ def set_config(req: dict[str, Any], is_api=False, run_callbacks=True, save_confi
             if checkpoint is None:
                 raise KeyError(v)
 
-            main_entry.refresh_model_parameters(checkpoint)
+            main_entry.set_forge_checkpoint_info(checkpoint)
             # checkpoint_changed = main_entry.checkpoint_change(v, save=False, refresh=False)
             # if checkpoint_changed:
             #     should_refresh_model_loading_params = True
 
-        elif k == 'sd_vae':
-            vae_file_path = os.path.join(sd_vae.vae_path, v)
-            if os.path.exists(vae_file_path):
-                sd_vae.reload_vae_weights(vae_file=vae_file_path)
-            else:
-                sd_vae.reload_vae_weights()
-
         elif k == 'forge_additional_modules':
-            modules_changed = main_entry.modules_change(v, save=False, refresh=False)
-            if modules_changed:
-                should_refresh_model_loading_params = True
+            main_entry.set_forge_additional_modules(v)
+            # modules_changed = main_entry.modules_change(v, save=False, refresh=False)
+            # if modules_changed:
+            #     should_refresh_model_loading_params = True
+
+        elif k == 'forge_unet_storage_dtype':
+            main_entry.set_forge_unet_storge_dtype(v)
+
         elif k in memory_keys:
             mem_key = k[len('forge_'):] # remove 'forge_' prefix
             memory_changes[mem_key] = v
@@ -267,8 +265,8 @@ def set_config(req: dict[str, Any], is_api=False, run_callbacks=True, save_confi
         main_entry.refresh_memory_management_settings(**memory_changes)
         should_refresh_model_loading_params = True
 
-    if should_refresh_model_loading_params:
-        main_entry.refresh_model_loading_parameters()
+    # if should_refresh_model_loading_params:
+    #     main_entry.refresh_model_loading_parameters()
 
     if save_config:
         shared.opts.save(shared.config_filename)

@@ -836,15 +836,7 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
         "RNG": noise_source_type if noise_source_type != "GPU" else None,
         "Tiling": "True" if p.tiling else None,
         **p.extra_generation_params,
-        "Version": program_version() if opts.add_version_to_infotext else None,
-        "User": p.user if opts.add_user_name_to_info else None,
-        "Diffus task ID": p.task_id,
     })
-    if p.origin is not None:
-        share_url = util.get_share_url(p.origin, p.get_request())
-        short_url = util.get_short_url(share_url, p.get_request())
-        generation_params["Image created at"] = short_url
-
     if shared.opts.forge_unet_storage_dtype != 'Automatic':
         generation_params['Diffusion in Low Bits'] = shared.opts.forge_unet_storage_dtype
 
@@ -861,6 +853,16 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments=None, iter
         except Exception:
             errors.report(f'Error creating infotext for key "{key}"', exc_info=True)
             generation_params[key] = None
+
+    generation_params.update({
+        "Version": program_version() if opts.add_version_to_infotext else None,
+        "User": p.user if opts.add_user_name_to_info else None,
+        "Diffus task ID": p.task_id
+    })
+    if p.origin is not None:
+        share_url = util.get_share_url(p.origin, p.get_request())
+        short_url = util.get_short_url(share_url, p.get_request())
+        generation_params["Image created at"] = short_url
 
     generation_params_text = ", ".join([k if k == v else f'{k}: {infotext_utils.quote(v)}' for k, v in generation_params.items() if v is not None])
 
@@ -1488,29 +1490,32 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
                 decoded_samples = None
 
         with sd_models.SkipWritingToConfig():
-            fp_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
-            fp_additional_modules = getattr(shared.opts, 'forge_additional_modules')
+            # fp_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
+            # fp_additional_modules = getattr(shared.opts, 'forge_additional_modules')
+
+            fp_checkpoint_info = main_entry.get_forge_checkpoint_info()
+            fp_additional_modules = main_entry.get_forge_additional_modules()
 
             reload = False
             if hasattr(self, 'hr_additional_modules') and 'Use same choices' not in self.hr_additional_modules:
-                modules_changed = main_entry.modules_change(self.hr_additional_modules, save=False, refresh=False)
+                modules_changed = main_entry.set_forge_additional_modules(self.hr_additional_modules)
                 if modules_changed:
                     reload = True
 
-            if self.hr_checkpoint_name and self.hr_checkpoint_name != 'Use same checkpoint':
-                checkpoint_changed = main_entry.checkpoint_change(self.hr_checkpoint_name, save=False, refresh=False)
+            if self.hr_checkpoint_info and self.hr_checkpoint_name != 'Use same checkpoint':
+                checkpoint_changed = main_entry.set_forge_checkpoint_info(self.hr_checkpoint_info)
                 if checkpoint_changed:
                     self.firstpass_use_distilled_cfg_scale = self.sd_model.use_distilled_cfg_scale
                     reload = True
 
             if reload:
                 try:
-                    main_entry.refresh_model_loading_parameters()
+                    # main_entry.refresh_model_loading_parameters()
                     sd_models.forge_model_reload()
                 finally:
-                    main_entry.modules_change(fp_additional_modules, save=False, refresh=False)
-                    main_entry.checkpoint_change(fp_checkpoint, save=False, refresh=False)
-                    main_entry.refresh_model_loading_parameters()
+                    main_entry.set_forge_additional_modules(fp_additional_modules)
+                    main_entry.set_forge_checkpoint_info(fp_checkpoint_info)
+                    # main_entry.refresh_model_loading_parameters()
 
             if self.sd_model.use_distilled_cfg_scale:
                 self.extra_generation_params['Hires Distilled CFG Scale'] = self.hr_distilled_cfg

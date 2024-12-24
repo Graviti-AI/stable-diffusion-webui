@@ -37,6 +37,8 @@ def build_loaded(module, loader_name):
         try:
             result = original_loader(*args, **kwargs)
         except Exception as e:
+            raise
+
             result = None
             exp = str(e) + '\n'
             for path in list(args) + list(kwargs.values()):

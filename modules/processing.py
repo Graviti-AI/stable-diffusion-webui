@@ -520,19 +520,18 @@ class StableDiffusionProcessing:
             if old_schedules != new_schedules:
                 self.extra_generation_params["Old prompt editing timelines"] = True
 
-        # disable cache, because cache cannot record textural_inversion model updates
-        with devices.autocast():
-            return function(shared.sd_model, required_prompts, steps, hires_steps, shared.opts.use_old_scheduling)
+        # cached_params = self.cached_params(required_prompts, steps, extra_network_data, hires_steps, shared.opts.use_old_scheduling)
+        #
+        # for cache in caches:
+        #     if cache[0] is not None and cached_params == cache[0]:
+        #         if len(cache) > 2:
+        #             shared.sd_model.extra_generation_params.update(cache[2])
+        #         return cache[1]
+        #
+        # cache = caches[0]
 
-        cached_params = self.cached_params(required_prompts, steps, extra_network_data, hires_steps, shared.opts.use_old_scheduling)
-
-        for cache in caches:
-            if cache[0] is not None and cached_params == cache[0]:
-                if len(cache) > 2:
-                    shared.sd_model.extra_generation_params.update(cache[2])
-                return cache[1]
-
-        cache = caches[0]
+        cached_params = None
+        cache = [None, None]
 
         with devices.autocast():
             shared.sd_model.set_clip_skip(int(opts.CLIP_stop_at_last_layers))

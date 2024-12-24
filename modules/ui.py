@@ -1350,7 +1350,6 @@ def create_ui():
         with gr.Row(elem_id="topbar"):
             with gr.Column(scale=6, min_width=850):
                 with gr.Row(elem_id="quicksettings"):
-                    main_entry.make_checkpoint_manager_ui()
                     # Quicksetting is not used here, but keep it so the program will not throw any error
                     for i, k, item in sorted(settings.quicksettings_list, key=lambda x: settings.quicksettings_names.get(x[1], x[0])):
                         component = create_setting_component(k, is_quicksettings=True, visible=False, interactive=False)
@@ -1499,7 +1498,7 @@ def create_ui():
         #     upgrade_info=upgrade_info,
         # )
 
-        main_entry.forge_main_entry()
+        # main_entry.forge_main_entry()
 
         def load_styles(request: gr.Request):
             choices = {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}

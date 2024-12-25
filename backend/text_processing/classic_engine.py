@@ -279,12 +279,13 @@ class ClassicTextProcessingEngine:
 
             for name, embedding in used_embeddings.items():
                 print(f'[Textual Inversion] Used Embedding [{name}] in CLIP of [{self.embedding_key}]')
-                names.append(name.replace(":", "").replace(",", ""))
+                name = name.replace(":", "").replace(",", "")
+                names.append(f"{name}: {embedding.sha256[:12]}")
 
             if "TI" in last_extra_generation_params:
-                last_extra_generation_params["TI"] += ", " + ", ".join(names)
+                last_extra_generation_params["TI hashes"] += ", " + ", ".join(names)
             else:
-                last_extra_generation_params["TI"] = ", ".join(names)
+                last_extra_generation_params["TI hashes"] = ", ".join(names)
 
         if any(x for x in texts if "(" in x or "[" in x) and self.emphasis.name != "Original":
             last_extra_generation_params["Emphasis"] = self.emphasis.name

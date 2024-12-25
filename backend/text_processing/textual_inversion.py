@@ -90,6 +90,8 @@ class Embedding:
         self.sd_checkpoint = None
         self.sd_checkpoint_name = None
 
+        self.sha256 = None
+
 
 class DirWithTextualInversionEmbeddings:
     def __init__(self, path):
@@ -151,7 +153,7 @@ class EmbeddingDatabase:
         self.word_embeddings[name] = embedding
         return embedding
 
-    def load_from_file(self, path, filename):
+    def load_from_file(self, path, filename, sha256: str | None = None):
         name, ext = os.path.splitext(filename)
         ext = ext.upper()
 
@@ -179,6 +181,8 @@ class EmbeddingDatabase:
 
         if data is not None:
             embedding = create_embedding_from_data(data, name, filename=filename, filepath=path)
+            if sha256:
+                embedding.sha256 = sha256
 
             if self.expected_shape == -1 or self.expected_shape == embedding.shape:
                 self.register_embedding(embedding)
@@ -210,7 +214,7 @@ class EmbeddingDatabase:
         self.skipped_embeddings.clear()
 
         for model_info in embedding_model_info.values():
-            self.load_from_file(model_info.filename, model_info.name)
+            self.load_from_file(model_info.filename, model_info.name, model_info.sha256)
 
         # for embdir in self.embedding_dirs.values():
         #     self.load_from_dir(embdir)

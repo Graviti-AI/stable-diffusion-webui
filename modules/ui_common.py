@@ -201,9 +201,9 @@ def create_output_panel(tabname, outdir, toprow=None):
             with gr.Row(elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"):
                 # open_folder_button = ToolButton(folder_symbol, elem_id=f'{tabname}_open_folder', visible=not shared.cmd_opts.hide_ui_dir_config, tooltip="Open images output directory.")
 
-                if tabname != "extras":
-                    save = ToolButton('💾', elem_id=f'save_{tabname}', tooltip=f"Save the image to a dedicated directory ({shared.opts.outdir_save}).")
-                    save_zip = ToolButton('🗃️', elem_id=f'save_zip_{tabname}', tooltip=f"Save zip archive with images to a dedicated directory ({shared.opts.outdir_save})")
+                # if tabname != "extras":
+                #     save = ToolButton('💾', elem_id=f'save_{tabname}', tooltip=f"Save the image to a dedicated directory ({shared.opts.outdir_save}).")
+                #     save_zip = ToolButton('🗃️', elem_id=f'save_zip_{tabname}', tooltip=f"Save zip archive with images to a dedicated directory ({shared.opts.outdir_save})")
 
                 buttons = {
                     'img2img': ToolButton('🖼️', elem_id=f'{tabname}_send_to_img2img', tooltip="Send image and generation parameters to img2img tab."),
@@ -225,7 +225,7 @@ def create_output_panel(tabname, outdir, toprow=None):
             # )
 
             if tabname != "extras":
-                download_files = gr.File(None, file_count="multiple", interactive=False, show_label=False, visible=False, elem_id=f'download_files_{tabname}')
+                # download_files = gr.File(None, file_count="multiple", interactive=False, show_label=False, visible=False, elem_id=f'download_files_{tabname}')
 
                 with gr.Group():
                     res.infotext = gr.HTML(elem_id=f'html_info_{tabname}', elem_classes="infotext")
@@ -242,36 +242,36 @@ def create_output_panel(tabname, outdir, toprow=None):
                             show_progress=False,
                         )
 
-                    save.click(
-                        fn=call_queue.wrap_gradio_call_no_job(save_files),
-                        _js="(x, y, z, w) => [x, y, false, selected_gallery_index()]",
-                        inputs=[
-                            res.generation_info,
-                            res.gallery,
-                            res.infotext,
-                            res.infotext,
-                        ],
-                        outputs=[
-                            download_files,
-                            res.html_log,
-                        ],
-                        show_progress=False,
-                    )
-
-                    save_zip.click(
-                        fn=call_queue.wrap_gradio_call_no_job(save_files),
-                        _js="(x, y, z, w) => [x, y, true, selected_gallery_index()]",
-                        inputs=[
-                            res.generation_info,
-                            res.gallery,
-                            res.infotext,
-                            res.infotext,
-                        ],
-                        outputs=[
-                            download_files,
-                            res.html_log,
-                        ]
-                    )
+                    # save.click(
+                    #     fn=call_queue.wrap_gradio_call_no_job(save_files),
+                    #     _js="(x, y, z, w) => [x, y, false, selected_gallery_index()]",
+                    #     inputs=[
+                    #         res.generation_info,
+                    #         res.gallery,
+                    #         res.infotext,
+                    #         res.infotext,
+                    #     ],
+                    #     outputs=[
+                    #         download_files,
+                    #         res.html_log,
+                    #     ],
+                    #     show_progress=False,
+                    # )
+                    #
+                    # save_zip.click(
+                    #     fn=call_queue.wrap_gradio_call_no_job(save_files),
+                    #     _js="(x, y, z, w) => [x, y, true, selected_gallery_index()]",
+                    #     inputs=[
+                    #         res.generation_info,
+                    #         res.gallery,
+                    #         res.infotext,
+                    #         res.infotext,
+                    #     ],
+                    #     outputs=[
+                    #         download_files,
+                    #         res.html_log,
+                    #     ]
+                    # )
 
             else:
                 res.generation_info = gr.Textbox(visible=False, elem_id=f'generation_info_{tabname}')

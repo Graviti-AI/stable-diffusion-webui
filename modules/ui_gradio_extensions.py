@@ -68,6 +68,8 @@ def css_html():
     head += '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">\n'
     head += '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">\n'
+    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/themes/introjs-modern.css">\n'
+
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@v3.0.0/dist/cookieconsent.css">\n'
 
     def stylesheet(fn):

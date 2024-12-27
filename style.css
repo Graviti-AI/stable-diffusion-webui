@@ -2454,4 +2454,9 @@ body.resizing .resize-handle {
   color: black;
 }
 
+.introjs-tooltip {
+  background-color: rgb(0, 0, 0, 0.75);
+  border-radius: 12px;
+}
+
 /* Banner Notification Section Ends */

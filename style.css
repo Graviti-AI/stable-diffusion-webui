@@ -2450,4 +2450,8 @@ body.resizing .resize-handle {
   height: 100%;
 }
 
+.awn-popup-body {
+  color: black;
+}
+
 /* Banner Notification Section Ends */

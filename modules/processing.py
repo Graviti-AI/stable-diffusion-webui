@@ -905,11 +905,12 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
         set_config(p.override_settings, is_api=True, run_callbacks=False, save_config=False, all_model_info=all_model_info)
 
         # load/reload model and manage prompt cache as needed
-        if getattr(p, 'txt2img_upscale', False):
+        # if getattr(p, 'txt2img_upscale', False):
             # avoid model load from hiresfix quickbutton, as it could be redundant
-            pass
-        else:
-            manage_model_and_prompt_cache(p)
+            # pass
+        # else:
+            # manage_model_and_prompt_cache(p)
+        manage_model_and_prompt_cache(p)
 
         # backwards compatibility, fix sampler and scheduler if invalid
         sd_samplers.fix_p_invalid_sampler_and_scheduler(p)

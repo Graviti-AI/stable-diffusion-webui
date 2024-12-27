@@ -266,15 +266,6 @@ class AxisOptionTxt2Img(AxisOption):
         self.is_img2img = False
 
 
-def get_user_sd_model_list(request: gr.Request):
-    sd_checkpoint_options = shared.opts.data_labels["sd_model_checkpoint"]
-    sd_checkpoint_component_args = sd_checkpoint_options.component_args(request)
-    result = []
-    if "choices" in sd_checkpoint_component_args:
-        result = sd_checkpoint_component_args["choices"]
-    return sorted(result, key=str.casefold)
-
-
 def get_user_style_list(request: gr.Request):
     return list(shared.prompt_styles(request).styles)
 

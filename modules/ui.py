@@ -120,7 +120,7 @@ def calc_resolution_hires(request: gr.Request, enable, width, height, hr_scale, 
 
 
 def resize_from_to_html(width, height, scale_by):
-    if width * scale_by > 4096 or height * scale_by > 4096:
+    if int(width) * scale_by > 4096 or int(height) * scale_by > 4096:
         target_width = 4096
         target_height = 4096
         return f"<span class='resolution' style='color: red'>Maximum Size {target_width}x{target_height}</span>"

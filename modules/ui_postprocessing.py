@@ -12,7 +12,7 @@ from tempfile import _TemporaryFileWrapper
 
 
 def create_ui():
-    dummy_component = gr.Label(visible=False)
+    dummy_component = gr.Textbox(visible=False)
     tab_index = gr.Number(value=0, visible=False)
     upgrade_info = gr.JSON(value={}, visible=False)
 
@@ -29,9 +29,9 @@ def create_ui():
 
                 with gr.TabItem('Batch Process', id="batch_process", elem_id="extras_batch_process_tab") as tab_batch:
                     image_batch = gr.Files(label="Batch Process", interactive=True, elem_id="extras_image_batch")
-                    extras_batch_input_dir = gr.Label(visible=False)
-                    extras_batch_output_dir = gr.Label(visible=False)
-                    show_extras_results = gr.Label(visible=False)
+                    extras_batch_input_dir = gr.Textbox(visible=False)
+                    extras_batch_output_dir = gr.Textbox(visible=False)
+                    show_extras_results = gr.Textbox(visible=False)
 
                 # with gr.TabItem('Batch from Directory', id="batch_from_directory", elem_id="extras_batch_directory_tab") as tab_batch_dir:
                 #     extras_batch_input_dir = gr.Textbox(label="Input directory", **shared.hide_dirs, placeholder="A directory on the same machine where the server is running.", elem_id="extras_batch_input_dir")

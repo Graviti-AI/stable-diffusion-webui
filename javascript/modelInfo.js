@@ -25,43 +25,32 @@ function _get_checkpoint_keys() {
                 flag: (getArg) => getArg(`Refiner:Refiner:${mode}_enable-checkbox`),
                 values: (getArg) => [getArg(`Refiner:Checkpoint:${mode}_checkpoint`)],
             },
-            {
-                source: "adetailer",
-                flag: (getArg) =>
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
-                    ) &&
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ADetailer model:script_${mode}_adetailer_ad_model`,
-                    ) != "None" &&
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):Use separate checkpoint:script_${mode}_adetailer_ad_use_checkpoint`,
-                    ),
-                values: (getArg) => [
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ADetailer checkpoint:script_${mode}_adetailer_ad_checkpoint`,
-                    ),
-                ],
-            },
-            {
-                source: "adetailer",
-                flag: (getArg) =>
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
-                    ) &&
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ADetailer model 2nd:script_${mode}_adetailer_ad_model_2nd`,
-                    ) != "None" &&
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):Use separate checkpoint 2nd:script_${mode}_adetailer_ad_use_checkpoint_2nd`,
-                    ),
-                values: (getArg) => [
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ADetailer checkpoint 2nd:script_${mode}_adetailer_ad_checkpoint_2nd`,
-                    ),
-                ],
-            },
         ];
+
+        for (const index of ["", "2nd", "3rd", "4th"]) {
+            const index_1 = index ? ` ${index}` : "";
+            const index_2 = index ? `_${index}` : "";
+
+            keys.push({
+                source: "adetailer",
+                flag: (getArg) =>
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
+                    ) &&
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):ADetailer model${index_1}:script_${mode}_adetailer_ad_model${index_2}`,
+                    ) != "None" &&
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):Use separate checkpoint${index_1}:script_${mode}_adetailer_ad_use_checkpoint${index_2}`,
+                    ),
+                values: (getArg) => [
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):ADetailer checkpoint${index_1}:script_${mode}_adetailer_ad_checkpoint${index_2}`,
+                    ),
+                ],
+            });
+        }
+
         for (let axis of ["Z", "Y", "X"]) {
             keys.push({
                 source: "xyz_plot",
@@ -88,42 +77,6 @@ function _get_promot_keys() {
                 values: (getArg) => [getArg("prompt"), getArg("negative_prompt")],
             },
             {
-                source: "adetailer",
-                flag: (getArg) =>
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
-                    ) &&
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ADetailer model:script_${mode}_adetailer_ad_model`,
-                    ) != "None",
-                values: (getArg) => [
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ad_prompt:script_${mode}_adetailer_ad_prompt`,
-                    ),
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ad_negative_prompt:script_${mode}_adetailer_ad_negative_prompt`,
-                    ),
-                ],
-            },
-            {
-                source: "adetailer",
-                flag: (getArg) =>
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
-                    ) &&
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ADetailer model 2nd:script_${mode}_adetailer_ad_model_2nd`,
-                    ) != "None",
-                values: (getArg) => [
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ad_prompt 2nd:script_${mode}_adetailer_ad_prompt_2nd`,
-                    ),
-                    getArg(
-                        `Detection and Inpainting Tool (ADetailer):ad_negative_prompt 2nd:script_${mode}_adetailer_ad_negative_prompt_2nd`,
-                    ),
-                ],
-            },
-            {
                 source: "prompts_from_file_or_textbox",
                 flag: (getArg) => getArg("Script:script_list:") === "Prompts from file or textbox",
                 values: (getArg) =>
@@ -132,6 +85,31 @@ function _get_promot_keys() {
                     ).split("\n"),
             },
         ];
+
+        for (const index of ["", "2nd", "3rd", "4th"]) {
+            const index_1 = index ? ` ${index}` : "";
+            const index_2 = index ? `_${index}` : "";
+
+            keys.push({
+                source: "adetailer",
+                flag: (getArg) =>
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
+                    ) &&
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):ADetailer model${index_1}:script_${mode}_adetailer_ad_model${index_2}`,
+                    ) != "None",
+                values: (getArg) => [
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):ad_prompt${index_1}:script_${mode}_adetailer_ad_prompt${index_2}`,
+                    ),
+                    getArg(
+                        `Detection and Inpainting Tool (ADetailer):ad_negative_prompt${index_1}:script_${mode}_adetailer_ad_negative_prompt${index_2}`,
+                    ),
+                ],
+            });
+        }
+
         for (let axis of ["Z", "Y", "X"]) {
             keys.push({
                 source: "xyz_plot",

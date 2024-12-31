@@ -228,6 +228,7 @@ class StableDiffusionProcessing:
     diffus_origin: Optional[str] = None
     diffus_all_style_info = None
     diffus_all_model_info = None
+    diffus_comments = None
 
     def clear_prompt_cache(self):
         self.cached_c = [None, None, None]
@@ -265,6 +266,8 @@ class StableDiffusionProcessing:
         self.latents_after_sampling = []
         self.pixels_after_sampling = []
         self.modified_noise = None
+
+        self.diffus_comments = []
 
     def set_request(self, request):
         self.diffus_request = request
@@ -1040,6 +1043,9 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                 p.scripts.process_batch(p, batch_number=n, prompts=p.prompts, seeds=p.seeds, subseeds=p.subseeds)
 
             p.setup_conds()
+
+            for comment in p.diffus_comments:
+                p.comment(comment)
 
             p.extra_generation_params.update(p.sd_model.extra_generation_params)
 

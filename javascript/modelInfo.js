@@ -35,7 +35,7 @@ function _get_checkpoint_keys() {
                 source: "adetailer",
                 flag: (getArg) =>
                     getArg(
-                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
+                        `Detection and Inpainting Tool (ADetailer):Detection and Inpainting Tool (ADetailer):script_${mode}_adetailer_ad_main_accordion-checkbox`,
                     ) &&
                     getArg(
                         `Detection and Inpainting Tool (ADetailer):ADetailer model${index_1}:script_${mode}_adetailer_ad_model${index_2}`,
@@ -94,7 +94,7 @@ function _get_promot_keys() {
                 source: "adetailer",
                 flag: (getArg) =>
                     getArg(
-                        `Detection and Inpainting Tool (ADetailer):Enable ADetailer:script_${mode}_adetailer_ad_enable`,
+                        `Detection and Inpainting Tool (ADetailer):Detection and Inpainting Tool (ADetailer):script_${mode}_adetailer_ad_main_accordion-checkbox`,
                     ) &&
                     getArg(
                         `Detection and Inpainting Tool (ADetailer):ADetailer model${index_1}:script_${mode}_adetailer_ad_model${index_2}`,

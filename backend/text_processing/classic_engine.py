@@ -8,6 +8,8 @@ from backend import memory_management
 
 from modules.shared import opts
 
+from modules.model_info import add_extra_networks_to_pnginfo
+
 
 PromptChunkFix = namedtuple('PromptChunkFix', ['offset', 'embedding'])
 last_extra_generation_params = {}
@@ -282,10 +284,7 @@ class ClassicTextProcessingEngine:
                 name = name.replace(":", "").replace(",", "")
                 names.append(f"{name}: {embedding.sha256[:12]}")
 
-            if "TI" in last_extra_generation_params:
-                last_extra_generation_params["TI hashes"] += ", " + ", ".join(names)
-            else:
-                last_extra_generation_params["TI hashes"] = ", ".join(names)
+            add_extra_networks_to_pnginfo(last_extra_generation_params, "TI hashes", names)
 
         if any(x for x in texts if "(" in x or "[" in x) and self.emphasis.name != "Original":
             last_extra_generation_params["Emphasis"] = self.emphasis.name

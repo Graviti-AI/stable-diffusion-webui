@@ -28,6 +28,19 @@ def register_used_model_checkpoint_key(key: str, is_short: bool) -> None:
     _USED_MODEL_CONFIG["CHECKPOINT"].append((key, is_short))
 
 
+def add_extra_networks_to_pnginfo(
+    extra_generation_params: dict[str, Any], key: str, names: list[str]
+) -> None:
+    existing_names = extra_generation_params.get(key)
+    if existing_names:
+        all_names = existing_names.split(", ")
+        all_names.extend(names)
+    else:
+        all_names = names
+
+    extra_generation_params[key] = ", ".join(list(dict.fromkeys(all_names)))
+
+
 class ModelInfoProtocal(Protocol):
     @property
     def filename(self) -> str:

@@ -1,6 +1,8 @@
 from modules import extra_networks, shared
 import networks
 
+from modules.model_info import add_extra_networks_to_pnginfo
+
 
 class ExtraNetworkLora(extra_networks.ExtraNetwork):
     def __init__(self):
@@ -54,7 +56,11 @@ class ExtraNetworkLora(extra_networks.ExtraNetwork):
                     p.lora_hashes[item.mentioned_name.translate(self.remove_symbols)] = item.network_on_disk.shorthash
 
             if p.lora_hashes:
-                p.extra_generation_params["Lora hashes"] = ', '.join(f'{k}: {v}' for k, v in p.lora_hashes.items())
+                add_extra_networks_to_pnginfo(
+                    p.extra_generation_params,
+                    "Lora hashes",
+                    [f"{k}: {v}" for k, v in p.lora_hashes.items()],
+                )
 
     def deactivate(self, p):
         if self.errors:

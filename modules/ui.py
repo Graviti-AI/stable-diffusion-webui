@@ -1323,6 +1323,7 @@ def create_ui():
     shared.tab_names = []
     for _interface, label, _ifid in interfaces:
         shared.tab_names.append(label)
+        _interface.title = "Diffus"
 
     with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, head=canvas_head) as demo:
         with gr.Row():

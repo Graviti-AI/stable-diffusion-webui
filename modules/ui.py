@@ -1376,6 +1376,8 @@ def create_ui():
                         _js="updateCheckpointDropdown"
                     )
 
+                    main_entry.forge_main_entry()
+
                     gr.HTML(elem_id="gallery")
                     gr.Button(elem_id="gallery_change_checkpoint", visible=False).click(
                         fn=None,

@@ -153,6 +153,7 @@ function showSubmitInterruptingPlaceholder(tabname) {
 }
 
 function showRestoreProgressButton(tabname, show) {
+    return;
     var button = gradioApp().getElementById(tabname + "_restore_progress");
     if (!button) return;
     button.style.setProperty('display', show ? 'flex' : 'none', 'important');

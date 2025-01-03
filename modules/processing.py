@@ -228,6 +228,7 @@ class StableDiffusionProcessing:
     diffus_origin: Optional[str] = None
     diffus_all_style_info = None
     diffus_all_model_info = None
+    diffus_is_flux = False
     diffus_comments = None
 
     def clear_prompt_cache(self):
@@ -292,6 +293,7 @@ class StableDiffusionProcessing:
 
     def set_all_model_info(self, all_model_info: AllModelInfo):
         self.diffus_all_model_info = all_model_info
+        self.diffus_is_flux = all_model_info.has_flux()
 
     def get_all_model_info(self) -> AllModelInfo:
         if self.diffus_all_model_info is None:

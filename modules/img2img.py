@@ -275,10 +275,12 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
                 processed = Processed(p, [], p.seed, "")
         else:
             with monitor_call_context(
-                    request,
-                    generate_function_name(img2img),
-                    generate_function_name(img2img),
-                    decoded_params=build_decoded_params_from_processing(p)):
+                request,
+                generate_function_name(img2img),
+                generate_function_name(img2img),
+                decoded_params=build_decoded_params_from_processing(p),
+                is_flux=p.diffus_is_flux,
+            ):
                 processed = modules.scripts.scripts_img2img.run(p, *args)
                 if processed is None:
                     processed = process_images(p)

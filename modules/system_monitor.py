@@ -518,6 +518,7 @@ def monitor_call_context(
     only_available_for: Optional[list[str]] = None,
     feature_type: Literal["generate", "buttons", None] = None,
     feature_name: str | None = None,
+    is_flux: bool = False,
 ):
     status = 'unknown'
     message = ''
@@ -531,8 +532,20 @@ def monitor_call_context(
         except Exception as e:
             logger.error(f'{task_id}: Json encode result failed {str(e)}.')
     try:
+        only_available_for = None
         if feature_type is not None:
             only_available_for = get_feature_permissions()[feature_type][feature_name]["allowed_tiers"]
+
+        if is_flux:
+            if decoded_params:
+                decoded_params["ratio"] = 2
+
+            flux_allowed_tiers = get_feature_permissions()["buttons"]["Flux"]["allowed_tiers"]
+            if only_available_for is None:
+                only_available_for = flux_allowed_tiers
+            else:
+                only_available_for = [item for item in only_available_for if item in flux_allowed_tiers]
+                
 
         task_id = before_task_started(
             request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)

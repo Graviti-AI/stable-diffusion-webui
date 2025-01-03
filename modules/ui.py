@@ -18,7 +18,6 @@ from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_grad
 from modules import gradio_extensions, sd_schedulers  # noqa: F401
 from modules import sd_hijack, sd_models, script_callbacks, ui_extensions, deepbooru, extra_networks, ui_common, ui_postprocessing, progress, ui_loadsave, shared_items, ui_settings, timer, sysinfo, ui_checkpoint_merger, scripts, sd_samplers, processing, ui_extra_networks, ui_toprow, launch_utils
 from modules import localization, ui_prompt_styles
-from modules.model_info import AllModelInfo, MODEL_INFO_KEY
 from modules.ui_components import FormRow, FormGroup, ToolButton, FormHTML, InputAccordion, ResizeHandleRow
 from modules.paths import script_path, Paths
 from modules.ui_common import create_refresh_button
@@ -40,6 +39,13 @@ import modules.processing_scripts.comments as comments
 from modules.call_queue import submit_to_gpu_worker_with_request
 from modules.system_monitor import monitor_call_context
 from modules_forge.utils import prepare_free_memory
+from modules.model_info import (
+    MODEL_INFO_KEY,
+    AllModelInfo,
+    get_favorite_checkpoints,
+    register_favorite_checkpoints_refresh,
+    register_favorite_checkpoints_dropdown,
+)
 
 create_setting_component = ui_settings.create_setting_component
 
@@ -540,7 +546,9 @@ def create_ui():
                                 with FormRow(elem_id="txt2img_hires_fix_row3", variant="compact", visible=shared.opts.hires_fix_show_sampler) as hr_checkpoint_container:
                                     hr_checkpoint_name = gr.Dropdown(label='Hires Checkpoint', elem_id="hr_checkpoint", choices=["Use same checkpoint"], value="Use same checkpoint", scale=2, multiselect=False)
 
-                                    hr_checkpoint_refresh = ToolButton(value=refresh_symbol)
+                                    register_favorite_checkpoints_dropdown(hr_checkpoint_name, "Use same checkpoint")
+
+                                    # hr_checkpoint_refresh = ToolButton(value=refresh_symbol)
 
                                     def get_additional_modules():
                                         modules_list = ['Use same choices']
@@ -559,7 +567,7 @@ def create_ui():
 
                                     hr_additional_modules = gr.Dropdown(label='Hires VAE / Text Encoder', elem_id="hr_vae_te", choices=modules_list, value=["Use same choices"], multiselect=True, scale=3)
 
-                                    hr_checkpoint_refresh.click(fn=refresh_model_and_modules, outputs=[hr_checkpoint_name, hr_additional_modules], show_progress=False)
+                                    # hr_checkpoint_refresh.click(fn=refresh_model_and_modules, outputs=[hr_checkpoint_name, hr_additional_modules], show_progress=False)
 
                                 with FormRow(elem_id="txt2img_hires_fix_row3b", variant="compact", visible=shared.opts.hires_fix_show_sampler) as hr_sampler_container:
                                     hr_sampler_name = gr.Dropdown(label='Hires sampling method', elem_id="hr_sampler", choices=["Use same sampler"] + sd_samplers.visible_sampler_names(), value="Use same sampler")
@@ -1369,15 +1377,17 @@ def create_ui():
                         choices=[],
                         value=None,
                     )
-                    create_refresh_button(
-                        sd_model_selection,
-                        None,
-                        None,
-                        #sd_checkpoint_options.component_args,
-                        # filter_outrefiners,
-                        "refresh_sd_model_checkpoint_dropdown",
-                        _js="updateCheckpointDropdown"
-                    )
+                    # create_refresh_button(
+                    #     sd_model_selection,
+                    #     None,
+                    #     None,
+                    #     #sd_checkpoint_options.component_args,
+                    #     # filter_outrefiners,
+                    #     "refresh_sd_model_checkpoint_dropdown",
+                    #     _js="updateFavoriteCheckpoints"
+                    # )
+                    register_favorite_checkpoints_refresh("refresh_sd_model_checkpoint_dropdown")
+                    register_favorite_checkpoints_dropdown(sd_model_selection)
 
                     main_entry.forge_main_entry()
 
@@ -1511,7 +1521,7 @@ def create_ui():
         demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections])
 
         demo.load(
-            fn=None, js="updateCheckpointDropdownWithHR", inputs=None, outputs=[sd_model_selection, hr_checkpoint_name])
+            fn=None, js="updateFavoriteCheckpoints", inputs=None, outputs=[get_favorite_checkpoints()])
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])

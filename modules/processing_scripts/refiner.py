@@ -5,7 +5,12 @@ from modules.infotext_utils import PasteField
 from modules.ui_common import create_refresh_button
 from modules.ui_components import InputAccordion
 
-from modules.model_info import AllModelInfo, MODEL_INFO_KEY
+from modules.model_info import (
+    MODEL_INFO_KEY,
+    AllModelInfo,
+    register_favorite_checkpoints_refresh,
+    register_favorite_checkpoints_dropdown,
+)
 
 
 class ScriptRefiner(scripts.ScriptBuiltinUI):
@@ -31,16 +36,11 @@ class ScriptRefiner(scripts.ScriptBuiltinUI):
                     choices=[],
                     value=None,
                     tooltip="switch to another model in the middle of generation")
-                create_refresh_button(refiner_checkpoint, None, None, self.elem_id("checkpoint_refresh"), _js="updateCheckpointDropdown")
+                # create_refresh_button(refiner_checkpoint, None, None, self.elem_id("checkpoint_refresh"), _js="updateCheckpointDropdown")
+                register_favorite_checkpoints_refresh(self.elem_id("checkpoint_refresh"))
+                register_favorite_checkpoints_dropdown(refiner_checkpoint)
 
                 refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01, elem_id=self.elem_id("switch_at"), tooltip="fraction of sampling steps when the switch to refiner model should happen; 1=never, 0.5=switch in the middle of generation")
-
-            enable_refiner.change(
-                fn=None,
-                _js="async (enabled) => enabled ? await updateCheckpointDropdown() : {__type__: 'update'}",
-                inputs=[enable_refiner],
-                outputs=[refiner_checkpoint],
-            )
 
         def lookup_checkpoint(title):
             info = sd_models.get_closet_checkpoint_match(title)

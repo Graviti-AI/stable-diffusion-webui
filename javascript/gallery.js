@@ -24,29 +24,40 @@ async function listFavoriteCheckpointTitles() {
     });
 }
 
-async function updateCheckpointDropdown() {
-    const titles = await listFavoriteCheckpointTitles();
+async function updateFavoriteCheckpoints() {
+    const checkpoints = await listFavoriteCheckpoints();
 
-    return { choices: titles, __type__: "update" };
+    return { value: checkpoints, __type__: "update" };
 }
 
-async function updateCheckpointDropdownWithHR() {
-    const checkpoints_update = await updateCheckpointDropdown();
-    checkpoints_update.value = checkpoints_update.choices[0][0];
+function updateFavoriteCheckpointsDowndownWrapper(default_value) {
+    function inner(value, checkpoints) {
+        const choices = checkpoints.map((item) => {
+            const name = `${item.filename} [${item.sha256.slice(0, 10)}]`;
+            return [name, name];
+        });
 
-    const value = "Use same checkpoint";
-    const hr_checkpoints_update = {
-        value: value,
-        choices: [[value, value], ...checkpoints_update.choices],
-        __type__: "update",
-    };
+        const result = {
+            choices: choices,
+            __type__: "update",
+        };
 
-    return [checkpoints_update, hr_checkpoints_update];
+        if (default_value) {
+            result.choices.unshift([default_value, default_value]);
+        }
+        if (!value) {
+            result.value = result.choices[0][0];
+        }
+        return result;
+    }
+    return inner;
 }
 
 function _XYZGridHelper(index, flag) {
-    async function inner(...args) {
-        args[index] = flag(args) ? await listFavoriteCheckpointTitles() : null;
+    function inner(...args) {
+        args[index] = flag(args)
+            ? args[index].map((item) => `${item.filename} [${item.sha256.slice(0, 10)}]`)
+            : null;
         return args;
     }
     return inner;

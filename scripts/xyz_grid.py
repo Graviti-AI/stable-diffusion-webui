@@ -26,6 +26,7 @@ from modules.system_monitor import monitor_call_context, MonitorTierMismatchedEx
 
 import modules.call_utils
 from modules.processing import build_decoded_params_from_processing, get_function_name_from_processing
+from modules.model_info import get_favorite_checkpoints
 
 fill_values_symbol = "\U0001f4d2"  # 📒
 
@@ -454,7 +455,8 @@ class Script(scripts.Script):
 
     def ui(self, is_img2img):
         self.current_axis_options = [x for x in axis_options if type(x) == AxisOption or x.is_img2img == is_img2img]
-        dummy_component = gr.JSON(visible=False)
+
+        favorite_checkpoints = get_favorite_checkpoints()
 
         with gr.Row():
             with gr.Column(scale=19):
@@ -563,9 +565,9 @@ class Script(scripts.Script):
             else:
                 return gr.update(), gr.update()
 
-        fill_x_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[x_type, csv_mode, dummy_component], outputs=[x_values, x_values_dropdown])
-        fill_y_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[y_type, csv_mode, dummy_component], outputs=[y_values, y_values_dropdown])
-        fill_z_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[z_type, csv_mode, dummy_component], outputs=[z_values, z_values_dropdown])
+        fill_x_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[x_type, csv_mode, favorite_checkpoints], outputs=[x_values, x_values_dropdown])
+        fill_y_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[y_type, csv_mode, favorite_checkpoints], outputs=[y_values, y_values_dropdown])
+        fill_z_button.click(fn=fill, _js="XYZGridHelpers.fill", inputs=[z_type, csv_mode, favorite_checkpoints], outputs=[z_values, z_values_dropdown])
 
         def select_axis(request: gr.Request, axis_type, axis_values, axis_values_dropdown, csv_mode, checkpoint_titles):
             axis_type = axis_type or 0  # if axle type is None set to 0
@@ -593,9 +595,9 @@ class Script(scripts.Script):
             return (gr.Button.update(visible=has_choices), gr.Textbox.update(visible=not has_choices or csv_mode, value=axis_values),
                     gr.update(choices=choices if has_choices else None, visible=has_choices and not csv_mode, value=axis_values_dropdown))
 
-        x_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[x_type, x_values, x_values_dropdown, csv_mode, dummy_component], outputs=[fill_x_button, x_values, x_values_dropdown])
-        y_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[y_type, y_values, y_values_dropdown, csv_mode, dummy_component], outputs=[fill_y_button, y_values, y_values_dropdown])
-        z_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[z_type, z_values, z_values_dropdown, csv_mode, dummy_component], outputs=[fill_z_button, z_values, z_values_dropdown])
+        x_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[x_type, x_values, x_values_dropdown, csv_mode, favorite_checkpoints], outputs=[fill_x_button, x_values, x_values_dropdown])
+        y_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[y_type, y_values, y_values_dropdown, csv_mode, favorite_checkpoints], outputs=[fill_y_button, y_values, y_values_dropdown])
+        z_type.change(fn=select_axis, _js="XYZGridHelpers.select_axis", inputs=[z_type, z_values, z_values_dropdown, csv_mode, favorite_checkpoints], outputs=[fill_z_button, z_values, z_values_dropdown])
 
         def change_choice_mode(request: gr.Request, csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, checkpoint_titles):
             _fill_x_button, _x_values, _x_values_dropdown = select_axis(request, x_type, x_values, x_values_dropdown, csv_mode, checkpoint_titles)
@@ -603,7 +605,7 @@ class Script(scripts.Script):
             _fill_z_button, _z_values, _z_values_dropdown = select_axis(request, z_type, z_values, z_values_dropdown, csv_mode, checkpoint_titles)
             return _fill_x_button, _x_values, _x_values_dropdown, _fill_y_button, _y_values, _y_values_dropdown, _fill_z_button, _z_values, _z_values_dropdown
 
-        csv_mode.change(fn=change_choice_mode, _js="XYZGridHelpers.change_choice_mode", inputs=[csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, dummy_component], outputs=[fill_x_button, x_values, x_values_dropdown, fill_y_button, y_values, y_values_dropdown, fill_z_button, z_values, z_values_dropdown])
+        csv_mode.change(fn=change_choice_mode, _js="XYZGridHelpers.change_choice_mode", inputs=[csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, favorite_checkpoints], outputs=[fill_x_button, x_values, x_values_dropdown, fill_y_button, y_values, y_values_dropdown, fill_z_button, z_values, z_values_dropdown])
 
         def get_dropdown_update_from_params(axis, params):
             val_key = f"{axis} Values"

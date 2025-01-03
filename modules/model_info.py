@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 MODEL_INFO_KEY = "_AllModelInfo"
 
+_FAVORITE_MODELS: gr.JSON | None = None
+
 
 _USED_MODEL_CONFIG: dict[str, Any] = {
     "CHECKPOINT": [("Refiner", True)],
@@ -26,6 +28,42 @@ _USED_MODEL_CONFIG: dict[str, Any] = {
 
 def register_used_model_checkpoint_key(key: str, is_short: bool) -> None:
     _USED_MODEL_CONFIG["CHECKPOINT"].append((key, is_short))
+
+
+def get_favorite_checkpoints() -> gr.JSON:
+    global _FAVORITE_MODELS
+    if _FAVORITE_MODELS is None:
+        _FAVORITE_MODELS = gr.JSON(
+            elem_id="gallery_favorite_checkpoints", visible=False
+        )
+
+    return _FAVORITE_MODELS
+
+
+def register_favorite_checkpoints_refresh(elem_id) -> None:
+    from modules.ui_common import create_refresh_button
+
+    create_refresh_button(
+        get_favorite_checkpoints(),
+        None,
+        None,
+        elem_id,
+        _js="updateFavoriteCheckpoints",
+    )
+
+
+def register_favorite_checkpoints_dropdown(
+    dropdown: gr.Dropdown, default: str | None = None
+) -> None:
+    input = f"'{default}'" if default else "undefined"
+
+    favorite_checkpoints = get_favorite_checkpoints()
+    favorite_checkpoints.change(
+        fn=None,
+        _js=f"updateFavoriteCheckpointsDowndownWrapper({input})",
+        inputs=[dropdown, favorite_checkpoints],
+        outputs=[dropdown],
+    )
 
 
 def add_extra_networks_to_pnginfo(
@@ -43,16 +81,13 @@ def add_extra_networks_to_pnginfo(
 
 class ModelInfoProtocal(Protocol):
     @property
-    def filename(self) -> str:
-        ...
+    def filename(self) -> str: ...
 
     @property
-    def is_safetensors(self) -> bool:
-        ...
+    def is_safetensors(self) -> bool: ...
 
     @property
-    def is_gguf(self) -> bool:
-        ...
+    def is_gguf(self) -> bool: ...
 
 
 class ModelInfo(BaseModel):
@@ -227,7 +262,9 @@ class FilesExistenceResponse(BaseModel):
     configs: list[bool]
 
 
-def check_files_existence_by_sha256(body: FilesExistenceRequest) -> FilesExistenceResponse:
+def check_files_existence_by_sha256(
+    body: FilesExistenceRequest,
+) -> FilesExistenceResponse:
     return FilesExistenceResponse(
         models=[get_binary_path(sha256.lower()).exists() for sha256 in body.models],
         configs=[get_config_path(sha256.lower()).exists() for sha256 in body.configs],

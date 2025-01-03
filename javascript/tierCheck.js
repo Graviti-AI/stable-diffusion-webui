@@ -202,6 +202,38 @@ function _tierCheckFailed(features) {
     throw `${features_message} is not available for current tier.`;
 }
 
+async function tierCheckFlux(all_model_info) {
+    if (all_model_info.every((item) => item.base !== "FLUX")) {
+        return;
+    }
+
+    const permissions = await getFeaturePermissions();
+    const tier = realtimeData.orderInfo.tier;
+
+    const allowed_tiers = permissions.buttons.Flux.allowed_tiers;
+    if (allowed_tiers.includes(tier)) {
+        return;
+    }
+
+    const allowed_tiers_message = _joinTiers(allowed_tiers);
+
+    addPopupGtagEvent(SUBSCRIPTION_URL, "flux_tier_checker");
+    notifier.confirm(
+        `"Flux" is not available in the current plan. Please upgrade to ${allowed_tiers_message} to use it.`,
+        () => {
+            window.open(SUBSCRIPTION_URL, "_blank");
+        },
+        () => {},
+        {
+            labels: {
+                confirm: "Upgrade Now",
+                confirmOk: "Upgrade",
+            },
+        },
+    );
+    throw `"Flux" is not available for current tier.`;
+}
+
 async function tierCheckGenerate(tabname, args) {
     const features = [];
 

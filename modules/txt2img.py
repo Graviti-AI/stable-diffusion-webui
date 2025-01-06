@@ -130,7 +130,7 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery, gallery_index, g
             generate_function_name(txt2img_upscale),
             generate_function_name(txt2img_upscale),
             decoded_params=processing.build_decoded_params_from_processing(p),
-            is_flux=p.diffus_is_flux,
+            is_flux=p.is_flux,
         ):
             processed = modules.scripts.scripts_txt2img.run(p, *p.script_args)
 
@@ -168,7 +168,7 @@ def txt2img(request: gr.Request, id_task: str, *args):
             generate_function_name(txt2img),
             generate_function_name(txt2img),
             decoded_params=processing.build_decoded_params_from_processing(p),
-            is_flux=p.diffus_is_flux,
+            is_flux=p.is_flux,
         ):
             processed = modules.scripts.scripts_txt2img.run(p, *p.script_args)
 

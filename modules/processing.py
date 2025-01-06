@@ -228,7 +228,6 @@ class StableDiffusionProcessing:
     diffus_origin: Optional[str] = None
     diffus_all_style_info = None
     diffus_all_model_info = None
-    diffus_is_flux = False
     diffus_comments = None
 
     def clear_prompt_cache(self):
@@ -293,7 +292,6 @@ class StableDiffusionProcessing:
 
     def set_all_model_info(self, all_model_info: AllModelInfo):
         self.diffus_all_model_info = all_model_info
-        self.diffus_is_flux = all_model_info.has_flux()
 
     def get_all_model_info(self) -> AllModelInfo:
         if self.diffus_all_model_info is None:
@@ -301,12 +299,21 @@ class StableDiffusionProcessing:
 
         return self.diffus_all_model_info
 
-    def get_base(self) -> str:
-        return (
-            self.get_all_model_info()
-            .get_checkpoint_by_short_title(f"{self.sd_model_name} [{self.sd_model_hash}]")
-            .base
-        )
+    def get_base(self) -> str | None:
+        all_model_info = self.get_all_model_info()
+        title = self.override_settings.get("sd_model_checkpoint", None)
+        if title:
+            model_info = all_model_info.get_checkpoint_by_title(title)
+            if model_info is None:
+                raise KeyError(title)
+        else:
+            model_info = main_entry.get_forge_checkpoint_info()
+
+        return model_info.base
+
+    @property
+    def is_flux(self) -> bool:
+        return self.get_base() == "FLUX"
 
     def get_used_model_ids(self) -> list[int]:
         return self.get_all_model_info().get_used_model_ids(self)

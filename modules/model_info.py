@@ -192,9 +192,6 @@ class AllModelInfo:
     def is_xyz_plot_enabled(self) -> bool:
         return any(item.source == "xyz_plot" for item in self._models)
 
-    def has_flux(self) -> bool:
-        return any(item.base == "FLUX" for item in self._checkpoint_models)
-
     def check_file_existence(self) -> None:
         for model in self._models:
             model.check_file_existence()

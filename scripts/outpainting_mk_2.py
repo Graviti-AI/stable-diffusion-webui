@@ -264,7 +264,7 @@ class Script(scripts.Script):
                 decoded_params=build_decoded_params_from_processing(p),
                 feature_type="generate",
                 feature_name="Script",
-                is_flux=p.diffus_is_flux,
+                is_flux=p.is_flux,
             ):
                 proc = process_images(p)
 

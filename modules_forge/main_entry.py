@@ -415,6 +415,9 @@ def forge_main_entry():
     Context.root_block.load(on_preset_change, inputs=None, outputs=output_targets, queue=False, show_progress=False)
 
     # refresh_model_loading_parameters()
+    refresh_memory_management_settings(
+        async_loading="Queue", pin_shared_memory="CPU", model_memory=total_vram - 1024
+    )
     return
 
 

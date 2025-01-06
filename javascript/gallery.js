@@ -53,6 +53,22 @@ function updateFavoriteCheckpointsDowndownWrapper(default_value) {
     return inner;
 }
 
+function monitorFlux(title, favoriteCheckpoints) {
+    const selection = favoriteCheckpoints.find(
+        (item) => title === `${item.filename} [${item.sha256.slice(0, 10)}]`,
+    );
+    if (!selection) {
+        return;
+    }
+
+    const txt2imgRatioMonitor = monitorThisParam("tab_txt2img", "modules.txt2img.txt2img", "ratio");
+    const img2imgRatioMonitor = monitorThisParam("tab_img2img", "modules.img2img.img2img", "ratio");
+
+    const ratio = selection.base === "FLUX" ? 2 : 1;
+    txt2imgRatioMonitor(ratio);
+    img2imgRatioMonitor(ratio);
+}
+
 function _XYZGridHelper(index, flag) {
     function inner(...args) {
         args[index] = flag(args)

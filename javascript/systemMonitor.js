@@ -16,6 +16,7 @@ var systemMonitorState = {
           'hr_second_pass_steps': 20,
           'hr_resize_x': 0,
           'hr_resize_y': 0,
+          'ratio': 1,
         },
         link_params: {}, // tab_name: function_name
         mutipliers: {}, // multipler_name: value
@@ -35,6 +36,7 @@ var systemMonitorState = {
           'batch_size': 4,
           "width": 512,
           "height": 512,
+          'ratio': 1,
         },
         link_params: {}, // tab_name: function_name
         mutipliers: {}, // multipler_name: value

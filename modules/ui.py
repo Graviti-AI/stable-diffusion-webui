@@ -1187,7 +1187,7 @@ def create_ui():
 
             toprow.prompt.submit(**img2img_args)
             toprow.submit.click(**img2img_args)
-            img2img_gradio_function_index = max(txt2img_interface.fns)
+            img2img_gradio_function_index = max(img2img_interface.fns)
             img2img_gradio_function = img2img_interface.fns[img2img_gradio_function_index]
 
             res_switch_btn.click(lambda w, h: (h, w), inputs=[width, height], outputs=[width, height], show_progress=False)

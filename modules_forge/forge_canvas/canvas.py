@@ -135,7 +135,8 @@ class ForgeCanvas:
             elem_id=None,
             elem_classes=None
     ):
-        self.uuid = 'uuid_' + uuid.uuid4().hex
+        # self.uuid = 'uuid_' + uuid.uuid4().hex
+        self.uuid = elem_id
         self.block = gr.HTML(canvas_html.replace('forge_mixin', self.uuid), visible=visible, elem_id=elem_id, elem_classes=elem_classes)
         self.foreground = LogicalImage(visible=DEBUG_MODE, label='foreground', numpy=numpy, elem_id=self.uuid, elem_classes=['logical_image_foreground'])
         self.background = LogicalImage(visible=DEBUG_MODE, label='background', numpy=numpy, value=initial_image, elem_id=self.uuid, elem_classes=['logical_image_background'])

@@ -64,8 +64,12 @@ def image_to_base64(image_array, numpy=True):
 
 
 def base64_to_image(base64_str, numpy=True):
-    if base64_str.startswith("data:image/png;base64,"):
-        base64_str = base64_str.replace("data:image/png;base64,", "")
+    # if base64_str.startswith("data:image/png;base64,"):
+    #     base64_str = base64_str.replace("data:image/png;base64,", "")
+
+    if "base64," in base64_str:
+        base64_str = base64_str.split("base64,", 1)[1]
+
     image_data = base64.b64decode(base64_str)
     image = Image.open(BytesIO(image_data))
     image = image.convert("RGBA")
@@ -92,7 +96,10 @@ class LogicalImage(gr.Textbox):
         if not isinstance(payload, str):
             return None
 
-        if not payload.startswith("data:image/png;base64,"):
+        # if not payload.startswith("data:image/png;base64,"):
+        #     return None
+
+        if not payload.startswith("data:image/") or "base64," not in payload:
             return None
 
         image = base64_to_image(payload, numpy=self.numpy)

@@ -814,7 +814,7 @@ def create_ui(interface: gr.Blocks, unrelated_tabs, tabname):
             create_html()
         return ui.pages_contents
 
-    interface.load(fn=pages_html, inputs=[], outputs=ui.pages).then(fn=lambda: None, _js='setupAllResizeHandles')
+    interface.load(fn=pages_html, inputs=[], outputs=ui.pages, queue=False).then(fn=lambda: None, _js='setupAllResizeHandles', queue=False)
 
     return ui
 

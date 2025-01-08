@@ -247,7 +247,7 @@ class UiSettings:
 
                 self.search_input = gr.Textbox(value="", elem_id="settings_search", max_lines=1, placeholder="Search...", show_label=False, interactive=self.interactive)
 
-                self.text_settings = gr.Textbox(elem_id="settings_json", value=lambda: opts.dumpjson(), visible=False, interactive=self.interactive)
+                self.text_settings = gr.Textbox(elem_id="settings_json", value=opts.dumpjson(), visible=False, interactive=self.interactive)
 
             def call_func_and_return_text(func, text):
                 def handler():

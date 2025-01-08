@@ -1520,7 +1520,7 @@ def create_ui():
 
         update_image_cfg_scale_visibility = lambda: gr.update(visible=False)
         settings.text_settings.change(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
-        demo.load(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale])
+        demo.load(fn=update_image_cfg_scale_visibility, inputs=[], outputs=[image_cfg_scale], queue=False)
 
         # modelmerger_ui.setup_ui(
         #     dummy_component=dummy_component,
@@ -1533,17 +1533,17 @@ def create_ui():
         def load_styles(request: gr.Request):
             choices = {"choices": [x for x in shared.prompt_styles(request).styles.keys()]}
             return gr.update(**choices), gr.update(**choices), gr.update(**choices), gr.update(**choices)
-        demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections])
+        demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections], queue=False)
 
         demo.load(
-            fn=None, js="updateFavoriteCheckpoints", inputs=None, outputs=[get_favorite_checkpoints()])
+            fn=None, js="updateFavoriteCheckpoints", inputs=None, outputs=[get_favorite_checkpoints()], queue=False)
 
         demo.load(
-            fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature])
+            fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature], queue=False)
         demo.load(
-            fn=lambda: return_signature_str_from_list(txt2img_upscale_signature_args), inputs=None, outputs=[txt2img_upscale_signature])
+            fn=lambda: return_signature_str_from_list(txt2img_upscale_signature_args), inputs=None, outputs=[txt2img_upscale_signature], queue=False)
         demo.load(
-            fn=lambda: return_signature_str_from_list(img2img_signature_args), inputs=None, outputs=[img2img_signature])
+            fn=lambda: return_signature_str_from_list(img2img_signature_args), inputs=None, outputs=[img2img_signature], queue=False)
 
         global txt2img_function_index
         global img2img_function_index
@@ -1554,9 +1554,9 @@ def create_ui():
                 img2img_function_index = demo_block_function_idx
 
         demo.load(
-            fn=lambda: txt2img_function_index, inputs=None, outputs=[txt2img_fn_index_component])
+            fn=lambda: txt2img_function_index, inputs=None, outputs=[txt2img_fn_index_component], queue=False)
         demo.load(
-            fn=lambda: img2img_function_index, inputs=None, outputs=[img2img_fn_index_component])
+            fn=lambda: img2img_function_index, inputs=None, outputs=[img2img_fn_index_component], queue=False)
 
         # build elements for script page load callbback
         interface_list = []
@@ -1586,7 +1586,7 @@ def create_ui():
                         break
 
         demo.load(
-            fn=script_callbacks.page_load_callback_factory(interface_list), inputs=interface_components, outputs=interface_components)
+            fn=script_callbacks.page_load_callback_factory(interface_list), inputs=interface_components, outputs=interface_components, queue=False)
 
     if ui_settings_from_file != loadsave.ui_settings:
         loadsave.dump_defaults()

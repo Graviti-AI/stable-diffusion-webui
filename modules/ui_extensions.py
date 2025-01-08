@@ -582,7 +582,7 @@ def create_ui():
                 with gr.Row(elem_classes="progress-container"):
                     extensions_table = gr.HTML('Loading...', elem_id="extensions_installed_html")
 
-                ui.load(fn=extension_table, inputs=[], outputs=[extensions_table], show_progress=False)
+                ui.load(fn=extension_table, inputs=[], outputs=[extensions_table], show_progress=False, queue=False)
                 refresh.click(fn=extension_table, inputs=[], outputs=[extensions_table], show_progress=False)
 
                 apply.click(
@@ -688,7 +688,7 @@ def create_ui():
 
                 config_states_info = gr.HTML("")
                 config_states_table = gr.HTML("Loading...")
-                ui.load(fn=update_config_states_table, inputs=[config_states_list], outputs=[config_states_table])
+                ui.load(fn=update_config_states_table, inputs=[config_states_list], outputs=[config_states_table], queue=False)
 
                 config_save_button.click(fn=save_config_state, inputs=[config_save_name], outputs=[config_states_list, config_states_info])
 

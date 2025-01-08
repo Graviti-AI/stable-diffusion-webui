@@ -1372,7 +1372,7 @@ def create_ui():
                     sd_model_selection = sd_checkpoint_options.component(
                         label=sd_checkpoint_options.label,
                         elem_id="sd_model_checkpoint_dropdown",
-                        elem_classes=["quicksettings"],
+                        elem_classes=[],
                         visible=True,
                         choices=[],
                         value=None,

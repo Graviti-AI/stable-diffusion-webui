@@ -1193,9 +1193,8 @@ def create_ui():
             res_switch_btn.click(lambda w, h: (h, w), inputs=[width, height], outputs=[width, height], show_progress=False)
 
             detect_image_size_btn.click(
-                fn=lambda w, h: (w or gr.update(), h or gr.update()),
-                _js="currentImg2imgSourceResolution",
-                inputs=[dummy_component, dummy_component],
+                fn=None,
+                _js="detectImageSize",  
                 outputs=[width, height],
                 show_progress=False,
             )

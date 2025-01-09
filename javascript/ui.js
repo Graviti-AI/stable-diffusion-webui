@@ -544,7 +544,14 @@ function currentImg2imgSourceResolution(w, h, scaleBy) {
     }
 
     return [0, 0, scaleBy];
+}
 
+function detectImageSize() {
+    const [width, height, _] = currentImg2imgSourceResolution(0, 0, 0);
+    return [
+        { value: width, __type__: "update" },
+        { value: height, __type__: "update" },
+    ];
 }
 
 function updateImg2imgResizeToTextAfterChangingImage() {

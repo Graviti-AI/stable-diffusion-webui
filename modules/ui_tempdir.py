@@ -10,6 +10,8 @@ from PIL import PngImagePlugin
 
 from modules import shared
 
+from modules.paths import workdir
+
 
 Savedfile = namedtuple("Savedfile", ["name"])
 
@@ -25,6 +27,11 @@ def register_tmp_file(gradio_app, filename):
 
     if hasattr(gradio_app, 'temp_dirs'):  # gradio 3.9
         gradio_app.temp_dirs = gradio_app.temp_dirs | {os.path.abspath(os.path.dirname(filename))}
+
+
+def check_output_file(filename) -> bool:
+    path = Path(filename)
+    return "outputs" in path.parts and path.is_relative_to(workdir)
 
 
 def check_tmp_file(gradio_app, filename):
@@ -106,7 +113,7 @@ async def async_move_files_to_cache(data, block, postprocess=False, check_in_upl
             pass
         elif not block.proxy_url:
             # EDITED
-            if check_tmp_file(shared.demo, payload.path):
+            if check_output_file(payload.path) or check_tmp_file(shared.demo, payload.path):
                 temp_file_path = payload.path
             else:
                 # If the file is on a remote server, do not move it to cache.

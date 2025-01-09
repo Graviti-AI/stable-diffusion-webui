@@ -44,4 +44,4 @@ pydantic==2.8.2
 huggingface-hub==0.26.2
 
 timm==0.9.16
-insightface=0.7.3
+insightface==0.7.3

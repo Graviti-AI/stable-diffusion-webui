@@ -10,7 +10,7 @@
     height: calc(100% - 6px);
     position: relative;
     overflow: hidden;
-    background-color: #cccccc;
+    background-color: var(--panel-background-fill);
     background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee),
     linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
     background-size: 20px 20px;
@@ -55,8 +55,19 @@
     z-index: 10;
     background: rgba(47, 47, 47, 0.8);
     padding: 6px 10px;
-    opacity: 0;
     transition: opacity 0.3s ease;
+}
+
+@media (hover: hover) {
+    .forge-toolbar {
+        opacity: 0;
+    }
+}
+
+@media (hover: none) {
+    .forge-toolbar {
+        opacity: 1 !important;
+    }
 }
 
 .forge-toolbar .forge-btn {

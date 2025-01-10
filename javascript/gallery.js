@@ -1,3 +1,24 @@
+function initMobileCanvas(canvas) {
+    if (!("ontouchstart" in window)) {
+        return;
+    }
+
+    const uuid = canvas.uuid;
+
+    const container = document.getElementById(`imageContainer_${uuid}`);
+    const uploadButton = document.getElementById(`uploadButton_${uuid}`);
+    const toolbar = document.getElementById(`toolbar_${uuid}`);
+
+    container.addEventListener("click", (_) => {
+        if (!canvas.img) {
+            uploadButton.click();
+        }
+    });
+    toolbar.addEventListener("click", (event) => {
+        event.stopPropagation();
+    });
+}
+
 async function listFavoriteCheckpoints() {
     const params = new URLSearchParams({
         is_favorite: true,

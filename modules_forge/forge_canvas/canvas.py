@@ -144,9 +144,11 @@ class ForgeCanvas:
     ):
         # self.uuid = 'uuid_' + uuid.uuid4().hex
         self.uuid = elem_id
+        key = elem_id.replace("-", "_")
         self.block = gr.HTML(canvas_html.replace('forge_mixin', self.uuid), visible=visible, elem_id=elem_id, elem_classes=elem_classes)
         self.foreground = LogicalImage(visible=DEBUG_MODE, label='foreground', numpy=numpy, elem_id=self.uuid, elem_classes=['logical_image_foreground'])
         self.background = LogicalImage(visible=DEBUG_MODE, label='background', numpy=numpy, value=initial_image, elem_id=self.uuid, elem_classes=['logical_image_background'])
-        Context.root_block.load(None, js=f'async ()=>{{new ForgeCanvas("{self.uuid}", {no_upload}, {no_scribbles}, {contrast_scribbles}, {height}, '
+        Context.root_block.load(None, js=f'async ()=>{{const forgeCanvas = new ForgeCanvas("{self.uuid}", {no_upload}, {no_scribbles}, {contrast_scribbles}, {height}, '
                                          f"'{scribble_color}', {scribble_color_fixed}, {scribble_width}, {scribble_width_fixed}, "
-                                         f'{scribble_alpha}, {scribble_alpha_fixed}, {scribble_softness}, {scribble_softness_fixed});}}', queue=False)
+                                         f'{scribble_alpha}, {scribble_alpha_fixed}, {scribble_softness}, {scribble_softness_fixed}); '
+                                         f'initMobileCanvas(forgeCanvas)}}', queue=False)

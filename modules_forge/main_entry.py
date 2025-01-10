@@ -412,7 +412,7 @@ def forge_main_entry():
     ui_forge_preset = gr.Radio(label="UI", value=shared.opts.forge_preset, choices=['sd', 'xl', 'flux', 'all'], elem_id="forge_ui_preset")
     ui_forge_preset.change(on_preset_change, inputs=[ui_forge_preset], outputs=output_targets, queue=False, show_progress=False)
     # ui_forge_preset.change(js="clickLoraRefresh", fn=None, queue=False, show_progress=False)
-    Context.root_block.load(on_preset_change, inputs=None, outputs=output_targets, queue=False, show_progress=False)
+    Context.root_block.load(on_preset_change, inputs=[ui_forge_preset], outputs=output_targets, queue=False, show_progress=False)
 
     # refresh_model_loading_parameters()
     refresh_memory_management_settings(
@@ -421,12 +421,13 @@ def forge_main_entry():
     return
 
 
-def on_preset_change(preset=None):
+def on_preset_change(preset):
+    assert preset is not None
     if preset is not None:
         shared.opts.set('forge_preset', preset)
         shared.opts.save(shared.config_filename)
 
-    if shared.opts.forge_preset == 'sd':
+    if preset == 'sd':
         return [
             # gr.update(visible=True),                                                    # ui_vae
             # gr.update(visible=True, value=1),                                           # ui_clip_skip
@@ -450,7 +451,7 @@ def on_preset_change(preset=None):
             gr.update(visible=False, value=3.5),                                        # ui_txt2img_hr_distilled_cfg
         ]
 
-    if shared.opts.forge_preset == 'xl':
+    if preset == 'xl':
         # model_mem = getattr(shared.opts, "xl_GPU_MB", total_vram - 1024)
         # if model_mem < 0 or model_mem > total_vram:
         #     model_mem = total_vram - 1024
@@ -477,7 +478,7 @@ def on_preset_change(preset=None):
             gr.update(visible=False, value=3.5),                                        # ui_txt2img_hr_distilled_cfg
         ]
 
-    if shared.opts.forge_preset == 'flux':
+    if preset == 'flux':
         # model_mem = getattr(shared.opts, "flux_GPU_MB", total_vram - 1024)
         # if model_mem < 0 or model_mem > total_vram:
         #     model_mem = total_vram - 1024

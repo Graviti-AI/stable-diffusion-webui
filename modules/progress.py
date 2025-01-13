@@ -34,9 +34,24 @@ _queued_tasks = Queue()
 
 logger = logging.getLogger(__name__)
 
+# info to calculation GPU utilization
+_service_begin_time = time.time()
+_busy_time = 0
+_tasks_start_at = {} # id_task -> time in second
+
+
+def _make_gpu_utilization():
+    curr = time.time()
+    busy_time = _busy_time
+
+    # in case of current task is not finished yet
+    if current_task:
+        busy_time += (curr - _tasks_start_at.get(current_task, curr))
+
+    return busy_time/(curr - _service_begin_time)
 
 def get_task_queue_info():
-    return current_task, pending_tasks, finished_tasks, finished_task_count, failed_task_count, consecutive_failed_task_count, last_error_message
+    return current_task, pending_tasks, finished_tasks, finished_task_count, failed_task_count, consecutive_failed_task_count, last_error_message, _make_gpu_utilization()
 
 
 def start_task(id_task):
@@ -49,6 +64,7 @@ def start_task(id_task):
 
     task_info = _pop_task_from_queue(id_task)
     task_info['started_at'] = time.time()
+    _tasks_start_at[id_task] = time.time()
 
     return task_info
 
@@ -68,8 +84,15 @@ def finish_task(id_task, task_failed=False, error_message=''):
     global finished_tasks
     global failed_tasks
     global last_error_message
+    global _busy_time
+
     logger.info(
         f'finish_task, id_task: {id_task}, current_task: {current_task}, current_task_step: {current_task_step}')
+
+    # record gpu busy time
+    curr = time.time()
+    task_started_at = _tasks_start_at.pop(id_task, curr)
+    _busy_time += (curr - task_started_at)
 
     # if a task was finished before start, we need pop it out from pending queue
     _pop_task_from_queue(id_task)

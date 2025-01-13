@@ -44,6 +44,9 @@ def javascript_html(request: gr.Request):
     head += '<script src=" https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
     head += f'<script type="text/javascript" src="/public/js/analytics/turn.js?version={time.time()}"></script>\n'
 
+    from modules_forge.forge_canvas.canvas import web_js
+    head += web_js('canvas.min.js')
+
     for script in scripts.list_scripts("javascript", ".js"):
         head += f'<script type="text/javascript" src="{webpath(script.path)}"></script>\n'
 

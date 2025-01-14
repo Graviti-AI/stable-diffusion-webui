@@ -1392,7 +1392,8 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
                 if self.hr_additional_modules == []:
                     self.extra_generation_params['Hires Module 1'] = 'Built-in'
                 elif 'Use same choices' in self.hr_additional_modules:
-                    self.extra_generation_params['Hires Module 1'] = 'Use same choices'
+                    pass
+                    # self.extra_generation_params['Hires Module 1'] = 'Use same choices'
                 else:
                     for i, m in enumerate(self.hr_additional_modules):
                         self.extra_generation_params[f'Hires Module {i+1}'] = os.path.splitext(os.path.basename(m))[0]

@@ -489,6 +489,25 @@ def create_ui():
                             cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.1, label='CFG Scale', value=7.0, elem_id="txt2img_cfg_scale")
                             cfg_scale.change(lambda x: gr.update(interactive=(x != 1)), inputs=[cfg_scale], outputs=[toprow.negative_prompt], queue=False, show_progress=False)
 
+                            hr_use_different_cfg.change(
+                                fn=None,
+                                _js="toggleUseDifferentHRCFGScale",
+                                inputs=[hr_use_different_cfg, distilled_cfg_scale, cfg_scale],
+                                outputs=[hr_distilled_cfg, hr_cfg],
+                            )
+                            distilled_cfg_scale.change(
+                                fn=None,
+                                _js="syncHRCFGScale",
+                                inputs=[hr_use_different_cfg, distilled_cfg_scale],
+                                outputs=[hr_distilled_cfg],
+                            )
+                            cfg_scale.change(
+                                fn=None,
+                                _js="syncHRCFGScale",
+                                inputs=[hr_use_different_cfg, cfg_scale],
+                                outputs=[hr_cfg],
+                            )
+
                     elif category == "checkboxes":
                         with FormRow(elem_classes="checkboxes-row", variant="compact"):
                             restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(shared.face_restorers) > 1, elem_id="txt2img_restore_faces")
@@ -540,8 +559,9 @@ def create_ui():
                                         _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'hr_resize_y')")
 
                                 with FormRow(elem_id="txt2img_hires_fix_row_cfg", variant="compact"):
-                                    hr_distilled_cfg = gr.Slider(minimum=0.0, maximum=30.0, step=0.1, label="Hires Distilled CFG Scale", value=3.5, elem_id="txt2img_hr_distilled_cfg")
-                                    hr_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.1, label="Hires CFG Scale", value=7.0, elem_id="txt2img_hr_cfg")
+                                    hr_distilled_cfg = gr.Slider(minimum=0.0, maximum=30.0, step=0.1, label="Hires Distilled CFG Scale", value=3.5, elem_id="txt2img_hr_distilled_cfg", interactive=False)
+                                    hr_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.1, label="Hires CFG Scale", value=7.0, elem_id="txt2img_hr_cfg", interactive=False)
+                                    hr_use_different_cfg = gr.Checkbox(label="Use different CFG scale", value=False, elem_id="txt2img_hr_use_different_cfg")
    
                                 with FormRow(elem_id="txt2img_hires_fix_row3", variant="compact", visible=shared.opts.hires_fix_show_sampler) as hr_checkpoint_container:
                                     hr_checkpoint_name = gr.Dropdown(label='Hires Checkpoint', elem_id="hr_checkpoint", choices=["Use same checkpoint"], value="Use same checkpoint", scale=2, multiselect=False)

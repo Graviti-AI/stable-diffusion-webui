@@ -16,3 +16,25 @@ function onCalcResolutionHires(enable, width, height, hr_scale, hr_resize_x, hr_
 
     return [enable, width, height, hr_scale, hr_resize_x, hr_resize_y];
 }
+
+function toggleUseDifferentHRCFGScale(enabled, ditilled_cfg_scale, cfg_scale) {
+    if (enabled) {
+        return [
+            { interactive: enabled, __type__: "update" },
+            { interactive: enabled, __type__: "update" },
+        ];
+    }
+
+    return [
+        { interactive: enabled, value: ditilled_cfg_scale, __type__: "update" },
+        { interactive: enabled, value: cfg_scale, __type__: "update" },
+    ];
+}
+
+function syncHRCFGScale(enabled, value) {
+    if (enabled) {
+        return { __type__: "update" };
+    }
+
+    return { value: value, __type__: "update" };
+}

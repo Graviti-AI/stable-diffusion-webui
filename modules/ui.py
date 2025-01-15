@@ -1598,8 +1598,8 @@ def create_ui():
                 "interface_name": script_callbacks.script_interfaces[interface_name][2],
                 "interface_fn_indicies": [],
             }
-            for script_fn in script_callbacks.script_interfaces[interface_name][0].fns:
-                for demo_block_function_idx, demo_block_function in enumerate(demo.fns):
+            for script_fn in script_callbacks.script_interfaces[interface_name][0].fns.values():
+                for demo_block_function_idx, demo_block_function in demo.fns.items():
                     if demo_block_function == script_fn:
                         interface_function_indicies[interface_name]["interface_fn_indicies"].append(demo_block_function_idx)
                         break

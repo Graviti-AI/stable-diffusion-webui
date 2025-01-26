@@ -507,7 +507,8 @@ class ControlNetUiGroup(object):
         self.timestep_range.change(
             lambda x: (x[0], x[1]),
             inputs=[self.timestep_range],
-            outputs=[self.guidance_start, self.guidance_end]
+            outputs=[self.guidance_start, self.guidance_end],
+            queue=False,
         )
 
         # advanced options

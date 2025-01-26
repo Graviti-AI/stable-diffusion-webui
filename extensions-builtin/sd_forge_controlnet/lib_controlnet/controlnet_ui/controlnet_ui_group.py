@@ -491,8 +491,18 @@ class ControlNetUiGroup(object):
             )
             # self.guidance_start = gr.State(self.default_unit.guidance_start)
             # self.guidance_end = gr.State(self.default_unit.guidance_end)
-            self.guidance_start = gr.Number(self.default_unit.guidance_start, visible=False)
-            self.guidance_end = gr.Number(self.default_unit.guidance_end, visible=False)
+            self.guidance_start = gr.Number(
+                label="Guidance Start",
+                value=self.default_unit.guidance_start,
+                visible=False,
+                elem_id=f"{elem_id_tabname}_{tabname}_controlnet_guidance_start_slider",
+            )
+            self.guidance_end = gr.Number(
+                label="Guidance End",
+                value=self.default_unit.guidance_end,
+                visible=False,
+                elem_id=f"{elem_id_tabname}_{tabname}_controlnet_guidance_end_slider",
+            )
 
         self.timestep_range.change(
             lambda x: (x[0], x[1]),

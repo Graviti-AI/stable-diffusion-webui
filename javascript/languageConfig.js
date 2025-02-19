@@ -3,6 +3,7 @@ const localization_name_mapper = {
   de_DE: 'Deutsch',
   es_ES: 'Español',
   fi_FI: 'Suomi',
+  fr_FR: 'Français',
   it_IT: 'Italiano',
   ja_JP: '日本語',
   ko_KR: '한국어',

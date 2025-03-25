@@ -262,6 +262,13 @@ function submit_extras() {
     return res;
 }
 
+function submit_run_annotator() {
+    const res = Array.from(arguments);
+    res[0] = randomId();
+
+    return res;
+}
+
 function updateExtraResults() {
     const inputs = Array.from(arguments);
     const all_results = JSON.parse(inputs[0]);

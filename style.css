@@ -2458,5 +2458,12 @@ body.resizing .resize-handle {
   background-color: rgb(0, 0, 0, 0.75);
   border-radius: 12px;
 }
+.introjs-help{
+  margin-left: auto !important;
+  width: 30px !important;
+  display: grid;
+  align-items: center;
+}
+
 
 /* Banner Notification Section Ends */

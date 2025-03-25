@@ -21,7 +21,7 @@ function txt2imgIntroJS() {
                 intro: "Generated image appears here.",
             },
             {
-                element: gradioApp().getElementById("introjs_button"),
+                element: gradioApp().getElementById("txt2img_introjs_button"),
                 title: "Enjoy the Webui",
                 intro: "Click here to view guide again. <p> Join our <a href='https://discord.gg/e4UVBNuHyB'>Discord</a> for futher support.</p><br><p>Enjoy!</p>",
             },
@@ -56,7 +56,7 @@ function img2imgIntroJS() {
                 intro: "Generated image appears here.",
             },
             {
-                element: gradioApp().getElementById("introjs_button"),
+                element: gradioApp().getElementById("img2img_introjs_button"),
                 title: "Enjoy the Webui",
                 intro: "Click here to view guide again. <p> Join our <a href='https://discord.gg/e4UVBNuHyB'>Discord</a> for futher support.</p><br><p>Enjoy!</p>",
             },
@@ -64,33 +64,24 @@ function img2imgIntroJS() {
     });
 }
 
-const _registered_tabs = {};
+function registerIntroJS(tabname, introjs) {
+    const tab_id = `tab_${tabname}`;
+    const button_id = `${tabname}_introjs_button`;
 
-function registerTabIntroJS(tab_id, introjs) {
     const tab = gradioApp().getElementById(tab_id);
-    const introjs_button = gradioApp().getElementById("introjs_button");
+    const introjs_button = gradioApp().getElementById(button_id);
+
     const cookie_key = `_${tab_id}_introjs_showed`;
 
     introjs.onexit(() => window.Cookies.set(cookie_key, true, { expires: 360 }));
 
-    _registered_tabs[tab_id] = { tab: tab, cookie_key: cookie_key, introjs: introjs };
+    introjs_button.addEventListener("click", () => introjs.start());
 
     const observer = new MutationObserver((mutations) => {
         const mutation = mutations[0];
-        if (mutation.attributeName !== "style") {
+        if (mutation.attributeName !== "style" || tab.style.display === "none") {
             return;
         }
-        if (tab.style.display === "none") {
-            if (
-                Object.values(_registered_tabs).every((value) => value.tab.style.display === "none")
-            ) {
-                introjs_button.disabled = true;
-                introjs_button.style.color = "#404040";
-            }
-            return;
-        }
-        introjs_button.disabled = false;
-        introjs_button.style.color = null;
 
         if (!window.Cookies.get(cookie_key)) {
             introjs.start();
@@ -100,29 +91,9 @@ function registerTabIntroJS(tab_id, introjs) {
     observer.observe(tab, { attributes: true, attributeFilter: ["style"] });
 }
 
-function startIntroJS() {
-    for (let value of Object.values(_registered_tabs)) {
-        if (value.tab.style.display === "block") {
-            value.introjs.start();
-            return;
-        }
-    }
-}
-
-async function loadIntroJS() {
-    registerTabIntroJS("tab_txt2img", txt2imgIntroJS());
-    registerTabIntroJS("tab_img2img", img2imgIntroJS());
-
-    const introjs_button = gradioApp().getElementById("introjs_button");
-    introjs_button.addEventListener("click", startIntroJS);
-    introjs_button.disabled = true;
-    introjs_button.style.color = "#404040";
-
-    // const tab = _registered_tabs["tab_txt2img"];
-
-    // if (!window.Cookies.get(tab.cookie_key)) {
-    //     tab.introjs.start();
-    // }
+function loadIntroJS() {
+    registerIntroJS("txt2img", txt2imgIntroJS());
+    registerIntroJS("img2img", img2imgIntroJS());
 }
 
 onNotificationComplete(loadIntroJS);

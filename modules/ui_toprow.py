@@ -35,6 +35,8 @@ class Toprow:
 
     submit_box = None
 
+    introjs_button = None
+
     def __init__(self, is_img2img, is_compact=False, id_part=None):
         if id_part is None:
             id_part = "img2img" if is_img2img else "txt2img"
@@ -171,6 +173,11 @@ class Toprow:
                 _js="confirm_clear_prompt",
                 inputs=[self.prompt, self.negative_prompt],
                 outputs=[self.prompt, self.negative_prompt],
+            )
+
+            self.introjs_button = gr.HTML(
+                f'<button id="{self.id_part}_introjs_button" class="mdi mdi-help-circle-outline" style="font-size: 1.4rem;"></button>',
+                elem_classes=["introjs-help"]
             )
 
     def create_styles_ui(self):

@@ -157,8 +157,6 @@ function initGallery() {
     content.id = "gallery-inner";
 
     content.innerHTML = `
-        <button id="introjs_button" class="mdi mdi-help-circle-outline" style="font-size: 1.4rem;"></button>
-
         <v-btn class="gallery-btn" large @click="openModelPage">
             <v-icon left> mdi-view-grid-outline </v-icon>
             Model Gallery

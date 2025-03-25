@@ -1353,7 +1353,7 @@ def create_ui():
         _interface.title = "Diffus"
 
     with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, head=canvas_head) as demo:
-        with gr.Row():
+        with gr.Row(visible=False):
              with gr.Column(elem_id="user-setting", min_width=500, scale=2):
                 gr.HTML(
                     value="<div class='user-content'>"
@@ -1377,9 +1377,9 @@ def create_ui():
                           "</div>"
                           "<div style='display: none;justify-content: flex-end;' id='user_info'></div>",
                     show_label=False)
-        with gr.Row(elem_id="topbar"):
-            with gr.Column(scale=6, min_width=850):
-                with gr.Row(elem_id="quicksettings"):
+        with gr.Row(elem_id="topbar", visible=False):
+            with gr.Column(scale=6, min_width=850, visible=False):
+                with gr.Row(elem_id="quicksettings", visible=False):
                     # Quicksetting is not used here, but keep it so the program will not throw any error
                     for i, k, item in sorted(settings.quicksettings_list, key=lambda x: settings.quicksettings_names.get(x[1], x[0])):
                         component = create_setting_component(k, is_quicksettings=True, visible=False, interactive=False)

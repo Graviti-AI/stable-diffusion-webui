@@ -434,10 +434,11 @@ def create_ui():
 
         dummy_component = gr.Textbox(visible=False)
 
-        extra_tabs = gr.Tabs(elem_id="txt2img_extra_tabs", elem_classes=["extra-networks"])
-        extra_tabs.__enter__()
+        # extra_tabs = gr.Tabs(elem_id="txt2img_extra_tabs", elem_classes=["extra-networks"])
+        # extra_tabs.__enter__()
 
-        with gr.Tab("Generation", id="txt2img_generation") as txt2img_generation_tab, ResizeHandleRow(equal_height=False):
+        # with gr.Tab("Generation", id="txt2img_generation") as txt2img_generation_tab, ResizeHandleRow(equal_height=False):
+        with ResizeHandleRow(equal_height=False, elem_classes=["generation-block"]):
             with ExitStack() as stack:
                 if shared.opts.txt2img_settings_accordion:
                     stack.enter_context(gr.Accordion("Open for Settings", open=False))
@@ -814,7 +815,7 @@ def create_ui():
                 outputs=[toprow.negative_token_counter]
             )
 
-        extra_tabs.__exit__()
+        # extra_tabs.__exit__()
 
     scripts.scripts_current = scripts.scripts_img2img
     scripts.scripts_img2img.initialize_scripts(is_img2img=True)
@@ -828,10 +829,11 @@ def create_ui():
         img2img_prompt_selections = toprow.ui_styles.selection
 
 
-        extra_tabs = gr.Tabs(elem_id="img2img_extra_tabs", elem_classes=["extra-networks"])
-        extra_tabs.__enter__()
+        # extra_tabs = gr.Tabs(elem_id="img2img_extra_tabs", elem_classes=["extra-networks"])
+        # extra_tabs.__enter__()
 
-        with gr.Tab("Generation", id="img2img_generation") as img2img_generation_tab, ResizeHandleRow(equal_height=False):
+        # with gr.Tab("Generation", id="img2img_generation") as img2img_generation_tab, ResizeHandleRow(equal_height=False):
+        with ResizeHandleRow(equal_height=False, elem_classes=["generation-block"]):
             with ExitStack() as stack:
                 if shared.opts.img2img_settings_accordion:
                     stack.enter_context(gr.Accordion("Open for Settings", open=False))
@@ -1292,7 +1294,7 @@ def create_ui():
                 paste_button=toprow.paste, tabname="img2img", source_text_component=toprow.prompt, source_image_component=None,
             ))
 
-        extra_tabs.__exit__()
+        # extra_tabs.__exit__()
 
     # with gr.Blocks(analytics_enabled=False, head=canvas_head) as space_interface:
     #     forge_space.main_entry()

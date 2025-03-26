@@ -2458,11 +2458,17 @@ body.resizing .resize-handle {
   background-color: rgb(0, 0, 0, 0.75);
   border-radius: 12px;
 }
-.introjs-help{
+.introjs-help {
   margin-left: auto !important;
   width: 30px !important;
   display: grid;
   align-items: center;
+}
+
+.generation-block {
+  border: 1px solid var(--border-color-primary);
+  border-radius: var(--container-radius);
+  padding: var(--block-padding);
 }
 
 

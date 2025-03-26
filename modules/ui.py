@@ -434,6 +434,9 @@ def create_ui():
 
         dummy_component = gr.Textbox(visible=False)
 
+        with gr.Row():
+            txt2img_preset = main_entry.Txt2imgForgePreset()
+
         # extra_tabs = gr.Tabs(elem_id="txt2img_extra_tabs", elem_classes=["extra-networks"])
         # extra_tabs.__enter__()
 
@@ -828,6 +831,8 @@ def create_ui():
         img2img_prompt_styles = toprow.ui_styles.dropdown
         img2img_prompt_selections = toprow.ui_styles.selection
 
+        with gr.Row():
+            img2img_preset = main_entry.Img2imgForgePreset()
 
         # extra_tabs = gr.Tabs(elem_id="img2img_extra_tabs", elem_classes=["extra-networks"])
         # extra_tabs.__enter__()
@@ -1426,6 +1431,8 @@ def create_ui():
                     register_favorite_checkpoints_dropdown(sd_model_selection)
 
                     main_entry.forge_main_entry()
+                    txt2img_preset.enable()
+                    img2img_preset.enable()
 
                     gr.HTML(elem_id="gallery")
                     gr.Button(elem_id="gallery_change_checkpoint", visible=False).click(

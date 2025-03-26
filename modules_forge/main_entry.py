@@ -368,6 +368,11 @@ def get_a1111_ui_component(tab, label):
 
 
 def forge_main_entry():
+    refresh_memory_management_settings(
+        async_loading="Queue", pin_shared_memory="CPU", model_memory=total_vram - 1024
+    )
+    return
+
     ui_txt2img_width = get_a1111_ui_component('txt2img', 'Size-1')
     ui_txt2img_height = get_a1111_ui_component('txt2img', 'Size-2')
     ui_txt2img_cfg = get_a1111_ui_component('txt2img', 'CFG scale')
@@ -563,3 +568,193 @@ shared.options_templates.update(shared.options_section(('ui_flux', "UI defaults 
     "flux_i2i_d_cfg":    shared.OptionInfo(3.5,  "img2img Distilled CFG",        gr.Slider, {"minimum": 0,  "maximum": 30,   "step": 0.1}),
     "flux_GPU_MB":       shared.OptionInfo(total_vram - 1024, "GPU Weights (MB)",gr.Slider, {"minimum": 0,  "maximum": total_vram,   "step": 1}),
 }))
+
+
+class Txt2imgForgePreset:
+    def __init__(self) -> None:
+        self._radio = gr.Radio(
+            show_label=False,
+            value=shared.opts.forge_preset,
+            choices=['sd', 'xl', 'flux', 'all'],
+            elem_id="forge_ui_txt2img_preset",
+        )
+
+    def enable(self) -> None:
+        ui_txt2img_width = get_a1111_ui_component('txt2img', 'Size-1')
+        ui_txt2img_height = get_a1111_ui_component('txt2img', 'Size-2')
+        ui_txt2img_cfg = get_a1111_ui_component('txt2img', 'CFG scale')
+        ui_txt2img_distilled_cfg = get_a1111_ui_component('txt2img', 'Distilled CFG Scale')
+        ui_txt2img_sampler = get_a1111_ui_component('txt2img', 'sampler_name')
+        ui_txt2img_scheduler = get_a1111_ui_component('txt2img', 'scheduler')
+
+        ui_txt2img_hr_cfg = get_a1111_ui_component('txt2img', 'Hires CFG Scale')
+        ui_txt2img_hr_distilled_cfg = get_a1111_ui_component('txt2img', 'Hires Distilled CFG Scale')
+
+        output_targets = [
+            ui_txt2img_width,
+            ui_txt2img_height,
+            ui_txt2img_cfg,
+            ui_txt2img_distilled_cfg,
+            ui_txt2img_sampler,
+            ui_txt2img_scheduler,
+            ui_txt2img_hr_cfg,
+            ui_txt2img_hr_distilled_cfg,
+        ]
+
+        self._radio.change(
+            self.on_change,
+            inputs=[self._radio],
+            outputs=output_targets,
+            queue=False,
+            show_progress=False,
+        )
+        Context.root_block.load(
+            self.on_change,
+            inputs=[self._radio],
+            outputs=output_targets,
+            queue=False,
+            show_progress=False,
+        )
+
+    @staticmethod
+    def on_change(preset):
+        assert preset is not None
+
+        if preset == 'sd':
+            return [
+                gr.update(value=getattr(shared.opts, "sd_t2i_width", 512)),                 # ui_txt2img_width
+                gr.update(value=getattr(shared.opts, "sd_t2i_height", 640)),                # ui_txt2img_height
+                gr.update(value=getattr(shared.opts, "sd_t2i_cfg", 7)),                     # ui_txt2img_cfg
+                gr.update(visible=False, value=3.5),                                        # ui_txt2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "sd_t2i_sampler", 'Euler a')),         # ui_txt2img_sampler
+                gr.update(value=getattr(shared.opts, "sd_t2i_scheduler", 'Automatic')),     # ui_txt2img_scheduler
+                gr.update(visible=True, value=getattr(shared.opts, "sd_t2i_hr_cfg", 7.0)),  # ui_txt2img_hr_cfg
+                gr.update(visible=False, value=3.5),                                        # ui_txt2img_hr_distilled_cfg
+            ]
+
+        if preset == 'xl':
+            return [
+                gr.update(value=getattr(shared.opts, "xl_t2i_width", 896)),                 # ui_txt2img_width
+                gr.update(value=getattr(shared.opts, "xl_t2i_height", 1152)),               # ui_txt2img_height
+                gr.update(value=getattr(shared.opts, "xl_t2i_cfg", 5)),                     # ui_txt2img_cfg
+                gr.update(visible=False, value=3.5),                                        # ui_txt2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "xl_t2i_sampler", 'Euler a')),         # ui_txt2img_sampler
+                gr.update(value=getattr(shared.opts, "xl_t2i_scheduler", 'Automatic')),     # ui_txt2img_scheduler
+                gr.update(visible=True, value=getattr(shared.opts, "xl_t2i_hr_cfg", 5.0)),  # ui_txt2img_hr_cfg
+                gr.update(visible=False, value=3.5),                                        # ui_txt2img_hr_distilled_cfg
+            ]
+
+        if preset == 'flux':
+            return [
+                gr.update(value=getattr(shared.opts, "flux_t2i_width", 896)),               # ui_txt2img_width
+                gr.update(value=getattr(shared.opts, "flux_t2i_height", 1152)),             # ui_txt2img_height
+                gr.update(value=getattr(shared.opts, "flux_t2i_cfg", 1)),                   # ui_txt2img_cfg
+                gr.update(visible=True, value=getattr(shared.opts, "flux_t2i_d_cfg", 3.5)), # ui_txt2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "flux_t2i_sampler", 'Euler')),         # ui_txt2img_sampler
+                gr.update(value=getattr(shared.opts, "flux_t2i_scheduler", 'Simple')),      # ui_txt2img_scheduler
+                gr.update(visible=True, value=getattr(shared.opts, "flux_t2i_hr_cfg", 1.0)),    # ui_txt2img_hr_cfg
+                gr.update(visible=True, value=getattr(shared.opts, "flux_t2i_hr_d_cfg", 3.5)),  # ui_txt2img_hr_distilled_cfg
+            ]
+
+        loadsave = ui_loadsave.UiLoadsave(cmd_opts.ui_config_file)
+        ui_settings_from_file = loadsave.ui_settings.copy()
+
+        return [
+            gr.update(value=ui_settings_from_file['txt2img/Width/value']),  # ui_txt2img_width
+            gr.update(value=ui_settings_from_file['txt2img/Height/value']),  # ui_txt2img_height
+            gr.update(value=ui_settings_from_file['txt2img/CFG Scale/value']),  # ui_txt2img_cfg
+            gr.update(visible=True, value=ui_settings_from_file['txt2img/Distilled CFG Scale/value']),  # ui_txt2img_distilled_cfg
+            gr.update(value=ui_settings_from_file['customscript/sampler.py/txt2img/Sampling method/value']),  # ui_txt2img_sampler
+            gr.update(value=ui_settings_from_file['customscript/sampler.py/txt2img/Schedule type/value']),  # ui_txt2img_scheduler
+            gr.update(visible=True, value=ui_settings_from_file['txt2img/Hires CFG Scale/value']), # ui_txt2img_hr_cfg
+            gr.update(visible=True, value=ui_settings_from_file['txt2img/Hires Distilled CFG Scale/value']), # ui_txt2img_hr_distilled_cfg
+        ]
+
+
+
+class Img2imgForgePreset:
+    def __init__(self) -> None:
+        self._radio = gr.Radio(
+            show_label=False,
+            value=shared.opts.forge_preset,
+            choices=['sd', 'xl', 'flux', 'all'],
+            elem_id="forge_ui_img2img_preset",
+        )
+
+    def enable(self) -> None:
+        ui_img2img_width = get_a1111_ui_component('img2img', 'Size-1')
+        ui_img2img_height = get_a1111_ui_component('img2img', 'Size-2')
+        ui_img2img_cfg = get_a1111_ui_component('img2img', 'CFG scale')
+        ui_img2img_distilled_cfg = get_a1111_ui_component('img2img', 'Distilled CFG Scale')
+        ui_img2img_sampler = get_a1111_ui_component('img2img', 'sampler_name')
+        ui_img2img_scheduler = get_a1111_ui_component('img2img', 'scheduler')
+
+        output_targets = [
+            ui_img2img_width,
+            ui_img2img_height,
+            ui_img2img_cfg,
+            ui_img2img_distilled_cfg,
+            ui_img2img_sampler,
+            ui_img2img_scheduler,
+        ]
+
+        self._radio.change(
+            self.on_change,
+            inputs=[self._radio],
+            outputs=output_targets,
+            queue=False,
+            show_progress=False,
+        )
+        Context.root_block.load(
+            self.on_change,
+            inputs=[self._radio],
+            outputs=output_targets,
+            queue=False,
+            show_progress=False,
+        )
+
+    @staticmethod
+    def on_change(preset):
+        assert preset is not None
+
+        if preset == 'sd':
+            return [
+                gr.update(value=getattr(shared.opts, "sd_i2i_width", 512)),                 # ui_img2img_width
+                gr.update(value=getattr(shared.opts, "sd_i2i_height", 512)),                # ui_img2img_height
+                gr.update(value=getattr(shared.opts, "sd_i2i_cfg", 7)),                     # ui_img2img_cfg
+                gr.update(visible=False, value=3.5),                                        # ui_img2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "sd_i2i_sampler", 'Euler a')),         # ui_img2img_sampler
+                gr.update(value=getattr(shared.opts, "sd_i2i_scheduler", 'Automatic')),     # ui_img2img_scheduler
+            ]
+
+        if preset == 'xl':
+            return [
+                gr.update(value=getattr(shared.opts, "xl_i2i_width", 1024)),                # ui_img2img_width
+                gr.update(value=getattr(shared.opts, "xl_i2i_height", 1024)),               # ui_img2img_height
+                gr.update(value=getattr(shared.opts, "xl_i2i_cfg", 5)),                     # ui_img2img_cfg
+                gr.update(visible=False, value=3.5),                                        # ui_img2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "xl_i2i_sampler", 'Euler a')),         # ui_img2img_sampler
+                gr.update(value=getattr(shared.opts, "xl_i2i_scheduler", 'Automatic')),     # ui_img2img_scheduler
+            ]
+
+        if preset == 'flux':
+            return [
+                gr.update(value=getattr(shared.opts, "flux_i2i_width", 1024)),              # ui_img2img_width
+                gr.update(value=getattr(shared.opts, "flux_i2i_height", 1024)),             # ui_img2img_height
+                gr.update(value=getattr(shared.opts, "flux_i2i_cfg", 1)),                   # ui_img2img_cfg
+                gr.update(visible=True, value=getattr(shared.opts, "flux_i2i_d_cfg", 3.5)), # ui_img2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "flux_i2i_sampler", 'Euler')),         # ui_img2img_sampler
+                gr.update(value=getattr(shared.opts, "flux_i2i_scheduler", 'Simple')),      # ui_img2img_scheduler
+            ]
+
+        loadsave = ui_loadsave.UiLoadsave(cmd_opts.ui_config_file)
+        ui_settings_from_file = loadsave.ui_settings.copy()
+
+        return [
+            gr.update(value=ui_settings_from_file['img2img/Width/value']),  # ui_img2img_width
+            gr.update(value=ui_settings_from_file['img2img/Height/value']),  # ui_img2img_height
+            gr.update(value=ui_settings_from_file['img2img/CFG Scale/value']),  # ui_img2img_cfg
+            gr.update(visible=True, value=ui_settings_from_file['img2img/Distilled CFG Scale/value']),  # ui_img2img_distilled_cfg
+            gr.update(value=ui_settings_from_file['customscript/sampler.py/img2img/Sampling method/value']),  # ui_img2img_sampler
+            gr.update(value=ui_settings_from_file['customscript/sampler.py/img2img/Schedule type/value']),  # ui_img2img_scheduler
+        ]

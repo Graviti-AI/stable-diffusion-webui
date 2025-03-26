@@ -177,7 +177,8 @@ class ControlNetUiGroup(object):
         # dummy_gradio_update_trigger is useful when a field with no event subscriber available changes.
         # e.g. gr.Gallery, gr.State, etc. After an update to gr.State / gr.Gallery, please increment
         # this counter to trigger a sync update of UiControlNetUnit.
-        self.dummy_component = None
+        self.task_id = None
+        self.task_type = None
         self.dummy_gradio_update_trigger = None
         self.enabled = None
         self.upload_tab = None
@@ -244,7 +245,8 @@ class ControlNetUiGroup(object):
         Returns:
             None
         """
-        self.dummy_component = gr.Textbox(visible=False)
+        self.task_id = gr.Textbox(visible=False)
+        self.task_type = gr.Textbox("task_type(CONTROLNET-PREPROCESSOR)", visible=False)
 
         self.dummy_gradio_update_trigger = gr.Number(value=0, visible=False)
         self.openpose_editor = OpenposeEditor()
@@ -759,7 +761,7 @@ class ControlNetUiGroup(object):
         )
 
     def register_run_annotator(self):
-        def run_annotator(_, image, mask, module, pres, pthr_a, pthr_b, t2i_w, t2i_h, pp, rm):
+        def run_annotator(_, __, image, mask, module, pres, pthr_a, pthr_b, t2i_w, t2i_h, pp, rm):
             if image is None:
                 return (
                     gr.update(visible=True),
@@ -838,7 +840,8 @@ class ControlNetUiGroup(object):
             fn=run_annotator,
             _js="submit_run_annotator",
             inputs=[
-                self.dummy_component,
+                self.task_id,
+                self.task_type,
                 self.image.background,
                 self.image.foreground,
                 self.module,

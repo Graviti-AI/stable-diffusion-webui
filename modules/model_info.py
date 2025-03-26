@@ -40,7 +40,7 @@ def get_favorite_checkpoints() -> gr.JSON:
     return _FAVORITE_MODELS
 
 
-def register_favorite_checkpoints_refresh(elem_id) -> None:
+def register_favorite_checkpoints_refresh(elem_id, need_refresh: bool = True) -> None:
     from modules.ui_common import create_refresh_button
 
     create_refresh_button(
@@ -48,7 +48,7 @@ def register_favorite_checkpoints_refresh(elem_id) -> None:
         None,
         None,
         elem_id,
-        _js="updateFavoriteCheckpoints",
+        _js="refreshFavoriteCheckpoints" if need_refresh else "updateFavoriteCheckpoints",
     )
 
 

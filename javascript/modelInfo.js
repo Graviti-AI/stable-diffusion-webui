@@ -357,8 +357,8 @@ function _getAllModelInfo(checkpoint_titles, prompts, network_keys, model_tree) 
     return all_model_info;
 }
 
-async function getAllModelInfo(mode, args, all_style_info) {
-    const signature = getSignatureFromArgs(args);
+async function getAllModelInfo(mode, args, signature, all_style_info) {
+    // const signature = getSignatureFromArgs(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
         _alert('"all_model_info" not found in signature');

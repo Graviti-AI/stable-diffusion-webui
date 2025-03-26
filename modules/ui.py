@@ -428,7 +428,6 @@ def create_ui():
         txt2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_signature")
         txt2img_upscale_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_upscale_signature")
         txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
-        txt2img_model_title = toprow.model_title
         txt2img_prompt_styles = toprow.ui_styles.dropdown
         txt2img_prompt_selections = toprow.ui_styles.selection
 
@@ -684,7 +683,7 @@ def create_ui():
                 restore_faces,
                 override_settings,
             ] + custom_inputs + [
-                txt2img_model_title,
+                dummy_component,
                 toprow.vae_model_title,
                 dummy_component,
                 dummy_component,
@@ -827,7 +826,6 @@ def create_ui():
         toprow = ui_toprow.Toprow(is_img2img=True, is_compact=shared.opts.compact_prompt_box)
         img2img_signature = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_signature")
         img2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_function_index")
-        img2img_model_title = toprow.model_title
         img2img_prompt_styles = toprow.ui_styles.dropdown
         img2img_prompt_selections = toprow.ui_styles.selection
 
@@ -1170,7 +1168,7 @@ def create_ui():
                 img2img_batch_source_type,
                 img2img_batch_upload,
             ] + custom_inputs + [
-                img2img_model_title,
+                dummy_component,
                 toprow.vae_model_title,
                 dummy_component,
                 dummy_component,
@@ -1427,7 +1425,7 @@ def create_ui():
                     #     "refresh_sd_model_checkpoint_dropdown",
                     #     _js="updateFavoriteCheckpoints"
                     # )
-                    register_favorite_checkpoints_refresh("refresh_sd_model_checkpoint_dropdown")
+                    register_favorite_checkpoints_refresh("refresh_sd_model_checkpoint_dropdown", False)
                     register_favorite_checkpoints_dropdown(sd_model_selection)
 
                     main_entry.forge_main_entry()
@@ -1479,19 +1477,6 @@ def create_ui():
                     txt2img_paste_fields.append((sd_model_selection, _get_gallery_model_from_params))
                     img2img_paste_fields.append((sd_model_selection, _get_gallery_model_from_params))
 
-                    sd_model_selection.change(
-                        _js='on_sd_model_selection_updated',
-                        fn=None,
-                        inputs=sd_model_selection,
-                        outputs=[txt2img_model_title, img2img_model_title]
-                    )
-
-                    sd_model_selection.select(
-                        _js='on_sd_model_selection_updated',
-                        fn=None,
-                        inputs=sd_model_selection,
-                        outputs=[txt2img_model_title, img2img_model_title]
-                    )
                     # extra_networks_button = create_browse_model_button(
                     #     'Show workspace models',
                     #     'browse_models_in_workspace',

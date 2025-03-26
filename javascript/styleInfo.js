@@ -38,8 +38,8 @@ function _getAllStyleInfo(style_names, candidate_styles) {
     return all_style_info;
 }
 
-async function getAllStyleInfo(args) {
-    const signature = getSignatureFromArgs(args);
+async function getAllStyleInfo(args, signature) {
+    // const signature = getSignatureFromArgs(args);
     const index = signature.indexOf("all_style_info");
     if (index === -1) {
         _alert('"all_style_info" not found in signature');

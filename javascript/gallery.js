@@ -19,34 +19,24 @@ function initMobileCanvas(canvas) {
     });
 }
 
-async function listFavoriteCheckpoints() {
-    const params = new URLSearchParams({
-        is_favorite: true,
-        type: "CHECKPOINT",
-        sort: "NAME",
-        limit: 10000,
-    });
-    const url = `/gallery-api/v1/models?${params.toString()}`;
-
-    const response = await fetchGet(url);
-    if (!response.ok) {
-        throw `Get favorite checkpoints failed: ${response.statusText}`;
+function getDiffusApp() {
+    if ((!"diffusApp") in window.parent) {
+        throw "diffusApp not found in the parent window.";
     }
-    const content = await response.json();
 
-    return content.items;
+    return window.parent.diffusApp;
 }
 
-async function listFavoriteCheckpointTitles() {
-    const checkpoints = await listFavoriteCheckpoints();
-    return checkpoints.map((item) => {
-        const name = `${item.filename} [${item.sha256.slice(0, 10)}]`;
-        return [name, name];
-    });
+function updateFavoriteCheckpoints() {
+    const checkpoints = getDiffusApp().listFavoriteCheckpoints();
+
+    return { value: checkpoints, __type__: "update" };
 }
 
-async function updateFavoriteCheckpoints() {
-    const checkpoints = await listFavoriteCheckpoints();
+async function refreshFavoriteCheckpoints() {
+    const diffusApp = getDiffusApp();
+    await diffusApp.refreshFavoriteCheckpoints();
+    const checkpoints = diffusApp.listFavoriteCheckpoints();
 
     return { value: checkpoints, __type__: "update" };
 }

@@ -625,21 +625,21 @@ function imgExists(url, imgNode, name){
 }
 
 function requestRefreshPage(timeoutId) {
-    let onRefresh = () => {location.reload();};
-    if (timeoutId)
-    {
+    if (timeoutId) {
         clearTimeout(timeoutId);
     }
-    notifier.confirm(
-        'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
-        onRefresh,
-        false,
+
+    const diffusApp = getDiffusApp();
+    diffusApp.openConfirmDialog(
         {
-            labels: {
-            confirm: 'Page Need Refresh'
-            }
+            title: "Page Need Refresh",
+            description: "We have just updated the service with new features. Click the button to refresh to enjoy the new features.",
+            icon: "mdi-refresh",
+            persistent: true,
+            onConfirm: () => {location.reload()},
+            confirmText: "OK",
         }
-    );
+    )
 }
 
 async function checkSignatureCompatibility(timeoutId = null)
@@ -695,22 +695,8 @@ async function checkSignatureCompatibility(timeoutId = null)
         if (img2imgSignature && img2imgSignature.signature && img2imgSignature.fn_index) {
             if ((img2imgSignature.signature != currentImg2imgSignature || img2imgSignature.fn_index != currentImg2imgFnIndex) && !needRefresh)
             {
-                let onRefresh = () => {location.reload();};
                 needRefresh = true;
-                if (timeoutId)
-                {
-                    clearTimeout(timeoutId);
-                }
-               notifier.confirm(
-                   'We have just updated the service with new features. Click the button to refresh to enjoy the new features.',
-                   onRefresh,
-                   false,
-                   {
-                       labels: {
-                       confirm: 'Page Need Refresh'
-                       }
-                   }
-               );
+                requestRefreshPage(timeoutId);
             }
         }
     })

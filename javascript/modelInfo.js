@@ -1,5 +1,5 @@
 function _alert(message) {
-    notifier.alert(message);
+    getDiffusApp().toast.error({ title: message });
     throw message;
 }
 
@@ -571,6 +571,7 @@ async function _listCandidateModelsByHash(hashes) {
 
 function _filterModelWithStatus(models, from_gallery) {
     const results = [];
+    const toast = getDiffusApp().toast;
 
     for (const model of models) {
         const prefix = from_gallery
@@ -579,20 +580,20 @@ function _filterModelWithStatus(models, from_gallery) {
 
         switch (model.status) {
             case "NOTFOUND":
-                notifier.alert(`${prefix} not found in the Gallery`);
+                toast.error({ title: `${prefix} not found in the Gallery` });
                 continue;
 
             case "DELETED":
-                notifier.alert(`${prefix} is a deleted model`);
+                toast.error({ title: `${prefix} is a deleted model` });
                 continue;
 
             case "UNPUBLISHED":
-                notifier.alert(`${prefix} is a unpublished model`);
+                toast.error({ title: `${prefix} is a unpublished model` });
                 continue;
 
             case "OK":
                 if (model.info.favorited_at === null) {
-                    notifier.warning(`${prefix} not found in your favorites`);
+                    toast.warning({ title: `${prefix} not found in your favorites` });
                 } else {
                     results.push(model.info);
                 }

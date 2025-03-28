@@ -291,12 +291,6 @@ function initGallery() {
                 gradioApp().getElementById(`${tabname}_paste`).click();
                 this.galleryOpen = false;
             },
-            async isPrivateModelAllowed() {
-                const permissions = await getFeaturePermissions();
-                const tier = realtimeData.orderInfo.tier;
-
-                return permissions.features.PrivateModel.allowed_tiers.includes(tier);
-            },
         },
     });
 }

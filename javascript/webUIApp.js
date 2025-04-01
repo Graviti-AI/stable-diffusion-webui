@@ -31,12 +31,10 @@ const webUIApp = {
     setExtraNetwork(model_type, filename) {
         const toast = getDiffusApp().toast;
 
-        const tab_id = get_uiCurrentTabContent().id.trim();
+        let tab_id = get_uiCurrentTabContent().id.trim();
         if (!["tab_txt2img", "tab_img2img"].includes(tab_id)) {
-            toast.error({
-                title: `Please switch your tab to <b>txt2img</b> or <b>img2img</b>.`,
-            });
-            return;
+            tab_id = "tab_txt2img";
+            switchToTab(tab_id);
         }
 
         const tabname = _TAB_ID_TO_NAME[tab_id];

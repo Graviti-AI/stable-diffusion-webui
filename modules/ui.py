@@ -1432,14 +1432,6 @@ def create_ui():
                     txt2img_preset.enable()
                     img2img_preset.enable()
 
-                    gr.HTML(elem_id="gallery")
-                    gr.Button(elem_id="gallery_change_checkpoint", visible=False).click(
-                        fn=None,
-                        _js="updateCheckpoint",
-                        inputs=[],
-                        outputs=[sd_model_selection],
-                    )
-
                     def get_model_title_from_params(request: gr.Request, params):
                         # sd_models.checkpoint_tiles() is guaranteed to return at least one model title
                         checkpoint_tiles = sd_models.checkpoint_tiles(request)

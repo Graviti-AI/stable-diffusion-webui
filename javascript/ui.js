@@ -179,7 +179,7 @@ async function _submit() {
     var res = create_submit_args(arguments);
     const signature = getSignatureFromArgs(res);
     const index = signature.indexOf("model_title");
-    res[index] = getDiffusApp().getSelectedCheckpointTitle();
+    res[index] = getDiffusApp().checkpoints.getTitle();
 
     const [all_style_info_index, all_style_info] = await getAllStyleInfo(res, signature);
     const [all_model_info_index, all_model_info] = await getAllModelInfo("txt2img", res, signature, all_style_info);
@@ -228,7 +228,7 @@ async function submit_img2img() {
     var res = create_submit_args(arguments);
     const signature = getSignatureFromArgs(res);
     const index = signature.indexOf("model_title");
-    res[index] = getDiffusApp().getSelectedCheckpointTitle();
+    res[index] = getDiffusApp().checkpoints.getTitle();
 
     const [all_style_info_index, all_style_info] = await getAllStyleInfo(res, signature);
     const [all_model_info_index, all_model_info] = await getAllModelInfo("img2img", res, signature, all_style_info);

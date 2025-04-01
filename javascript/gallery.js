@@ -28,15 +28,15 @@ function getDiffusApp() {
 }
 
 function updateFavoriteCheckpoints() {
-    const checkpoints = getDiffusApp().listFavoriteCheckpoints();
+    const checkpoints = getDiffusApp().checkpoints.listInfo(); 
 
     return { value: checkpoints, __type__: "update" };
 }
 
 async function refreshFavoriteCheckpoints() {
-    const diffusApp = getDiffusApp();
-    await diffusApp.refreshFavoriteCheckpoints();
-    const checkpoints = diffusApp.listFavoriteCheckpoints();
+    const checkpointsApp = getDiffusApp().checkpoints;
+    await checkpointsApp.refesh();
+    const checkpoints = checkpointsApp.listInfo();
 
     return { value: checkpoints, __type__: "update" };
 }

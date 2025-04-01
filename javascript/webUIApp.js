@@ -29,11 +29,11 @@ const webUIApp = {
         }
     },
     setExtraNetwork(model_type, filename) {
-        const diffusApp = getDiffusApp();
+        const toast = getDiffusApp().toast;
 
         const tab_id = get_uiCurrentTabContent().id.trim();
         if (!["tab_txt2img", "tab_img2img"].includes(tab_id)) {
-            diffusApp.toast.error({
+            toast.error({
                 title: `Please switch your tab to <b>txt2img</b> or <b>img2img</b>.`,
             });
             return;
@@ -70,9 +70,9 @@ const webUIApp = {
             description: subject,
         };
         if (added) {
-            diffusApp.toast.success(options);
+            toast.success(options);
         } else {
-            diffusApp.toast.warning(options);
+            toast.warning(options);
         }
     },
     runImage(pnginfo, models, tabname) {

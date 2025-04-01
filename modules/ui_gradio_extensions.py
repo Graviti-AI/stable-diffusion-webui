@@ -20,6 +20,7 @@ def javascript_html(request: gr.Request):
 
     script_js = os.path.join(script_path, "script.js")
     head += f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
+    head += f'<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.6/dist/perfect-scrollbar.min.js"></script>'
     head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue@2.7.14"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/npm/js-base64@3.7.5/base64.min.js"></script>\n'
     head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js"></script>\n'
@@ -66,6 +67,7 @@ def css_html():
     head += '<link href="/components/style/share/shareon.min.css" rel="stylesheet" />\n'
     head += '<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/css/tabby-ui.min.css">\n'
 
+    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.6/css/perfect-scrollbar.min.css">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.min.css">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">\n'
     head += '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">\n'

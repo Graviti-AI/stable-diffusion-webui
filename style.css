@@ -270,9 +270,9 @@ a{
 }
 
 /* gradio 3.39 puts a lot of overflow: hidden all over the place for an unknown reason. */
-div.gradio-container, .block.gradio-textbox, div.gradio-group, div.gradio-dropdown{
-    overflow: visible !important;
-}
+/* div.gradio-container, .block.gradio-textbox, div.gradio-group, div.gradio-dropdown{ */
+/*     overflow: visible !important; */
+/* } */
 
 /* align-items isn't enough and elements may overflow in Safari. */
 .unequal-height {
@@ -2472,5 +2472,12 @@ body.resizing .resize-handle {
   padding: var(--block-padding);
 }
 
+.ps {
+    height: 100vh !important;
+}
+
+html {
+    overflow-y: hidden;
+}
 
 /* Banner Notification Section Ends */

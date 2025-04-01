@@ -714,9 +714,15 @@ function on_sd_model_selection_updated(model_title){
     return [model_title, model_title]
 }
 
+function initPerfectScrollbar() {
+    const ps = new PerfectScrollbar(gradioApp().getElementsByClassName("app")[0])
+}
+
 // get user info
 onUiLoaded(function(){
     setUiPageSize();
+    initPerfectScrollbar();
+
     // update generate button text
     updateGenerateBtn_txt2img();
     updateGenerateBtn_img2img();

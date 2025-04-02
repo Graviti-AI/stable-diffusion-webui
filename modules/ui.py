@@ -1410,20 +1410,6 @@ def create_ui():
                         _js="setDiffusCheckpoint"
                     )
 
-                    favorite_checkpoints = get_favorite_checkpoints()
-                    sd_model_selection.change(
-                        None,
-                        inputs=[sd_model_selection, favorite_checkpoints],
-                        outputs=[],
-                        _js="monitorFlux",
-                    )
-                    favorite_checkpoints.change(
-                        None,
-                        inputs=[sd_model_selection, favorite_checkpoints],
-                        outputs=[],
-                        _js="monitorFlux",
-                    )
-
                     # create_refresh_button(
                     #     sd_model_selection,
                     #     None,

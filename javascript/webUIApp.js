@@ -22,6 +22,14 @@ function _updateExtraNetwork(tabname, text) {
 }
 
 const webUIApp = {
+    updateFluxMonitor(isFlux) {
+        const txt2imgRatioMonitor = monitorThisParam("tab_txt2img", "modules.txt2img.txt2img", "ratio");
+        const img2imgRatioMonitor = monitorThisParam("tab_img2img", "modules.img2img.img2img", "ratio");
+
+        const ratio = isFlux ? 2 : 1;
+        txt2imgRatioMonitor(ratio);
+        img2imgRatioMonitor(ratio);
+    },
     updateFavoriteCheckpoints() {
         const refreshButton = gradioApp().getElementById("refresh_sd_model_checkpoint_dropdown");
         if (refreshButton) {

@@ -2475,6 +2475,12 @@ body.resizing .resize-handle {
 .ps {
     height: 100vh !important;
 }
+.ps__rail-y.ps--clicking {
+    background-color: #252527 !important;
+}
+.ps__rail-y:hover {
+    background-color: #252527 !important;
+}
 
 html {
     overflow-y: hidden;

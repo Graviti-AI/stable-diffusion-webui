@@ -1535,7 +1535,7 @@ def create_ui():
         demo.load(fn=load_styles, inputs=None, outputs=[txt2img_prompt_styles, txt2img_prompt_selections, img2img_prompt_styles, img2img_prompt_selections], queue=False)
 
         demo.load(
-            fn=None, js="updateFavoriteCheckpoints", inputs=None, outputs=[get_favorite_checkpoints()], queue=False)
+            fn=None, js="initFavoriteCheckpoints", inputs=None, outputs=[get_favorite_checkpoints()], queue=False)
 
         demo.load(
             fn=lambda: return_signature_str_from_list(txt2img_signature_args), inputs=None, outputs=[txt2img_signature], queue=False)

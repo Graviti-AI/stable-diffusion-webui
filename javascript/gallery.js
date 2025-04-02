@@ -32,6 +32,17 @@ function setDiffusCheckpoint(title) {
     diffusApp.checkpoints.setTitle(title);
 }
 
+function initFavoriteCheckpoints() {
+    const checkpointsApp = getDiffusApp().checkpoints;
+    const checkpoints = checkpointsApp.listInfo();
+    const selection = checkpointsApp.getInfo();
+    if (selection && selection.base === "FLUX") {
+        webUIApp.updateFluxMonitor(true);
+    }
+
+    return { value: checkpoints, __type__: "update" };
+}
+
 function updateFavoriteCheckpoints() {
     const checkpoints = getDiffusApp().checkpoints.listInfo();
 

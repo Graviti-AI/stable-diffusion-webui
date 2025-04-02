@@ -12,7 +12,8 @@ from contextlib import ExitStack
 import gradio as gr
 import gradio.utils
 from gradio.components.image_editor import Brush
-from PIL import Image, PngImagePlugin  # noqa: F401
+from PIL import Image, PngImagePlugin
+from numpy import outer  # noqa: F401
 from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call, wrap_gradio_call_no_job # noqa: F401
 
 from modules import gradio_extensions, sd_schedulers  # noqa: F401
@@ -1400,6 +1401,13 @@ def create_ui():
                         visible=True,
                         choices=[],
                         value=None,
+                    )
+
+                    sd_model_selection.change(
+                        None,
+                        inputs=[sd_model_selection],
+                        outputs=[],
+                        _js="setDiffusCheckpoint"
                     )
 
                     favorite_checkpoints = get_favorite_checkpoints()

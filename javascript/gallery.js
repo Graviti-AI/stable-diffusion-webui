@@ -27,8 +27,13 @@ function getDiffusApp() {
     return window.parent.diffusApp;
 }
 
+function setDiffusCheckpoint(title) {
+    const diffusApp = getDiffusApp();
+    diffusApp.checkpoints.setTitle(title);
+}
+
 function updateFavoriteCheckpoints() {
-    const checkpoints = getDiffusApp().checkpoints.listInfo(); 
+    const checkpoints = getDiffusApp().checkpoints.listInfo();
 
     return { value: checkpoints, __type__: "update" };
 }

@@ -57,6 +57,7 @@ def css_html():
     head = "<title>Diffus - Stable Diffusion Made Easy</title>"
 
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.6/css/perfect-scrollbar.min.css">\n'
+    head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.min.css">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">\n'
     head += '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">\n'
     head += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">\n'

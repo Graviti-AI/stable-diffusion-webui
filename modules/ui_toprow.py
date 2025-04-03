@@ -176,7 +176,7 @@ class Toprow:
             )
 
             self.introjs_button = gr.HTML(
-                f'<button id="{self.id_part}_introjs_button" class="mdi mdi-help-circle-outline" style="font-size: 1.4rem;"></button>',
+                f'<button id="{self.id_part}_introjs_button" style="font-size: 1.6rem;">?⃝ </button>',
                 elem_classes=["introjs-help"]
             )
 

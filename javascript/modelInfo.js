@@ -1,6 +1,6 @@
-function _alert(message) {
-    getDiffusApp().toast.error({ title: message });
-    throw message;
+function _alert(options) {
+    getDiffusApp().toast.error(options);
+    throw new Error(JSON.stringify(options));
 }
 
 function _get_checkpoint_keys() {
@@ -272,7 +272,10 @@ function _buildModelTree(models) {
 function _getModel(model_tree, model_type, key) {
     const model = model_tree[model_type][key.value];
     if (!model) {
-        _alert(`${model_type} model "${key.value}" not found in your workspace`);
+        _alert({
+            title: `<b>${model_type}<\b> model not found in your favorites`,
+            description: key.value,
+        });
     }
     return _convertModelInfo(model, key.source);
 }
@@ -290,7 +293,9 @@ function _findExtraNetworkModelKeys(prompts) {
             let type = result[1];
             const keys = network_keys[type];
             if (!keys) {
-                _alert(`Unknown network type "${type}"`);
+                _alert({
+                    title: `Unknown network type <b>${type}<\b>`,
+                });
             }
 
             const key = result[2].split(":")[0];
@@ -332,7 +337,9 @@ function getSignatureFromArgs(args) {
             item.endsWith(_SIGNATURE.end),
     );
     if (!arg) {
-        _alert("signature not found in the arguments");
+        _alert({
+            title: '"signature" not found in the arguments',
+        });
     }
     return JSON.parse(arg.slice(_SIGNATURE.start.length, -_SIGNATURE.end.length));
 }
@@ -361,7 +368,9 @@ async function getAllModelInfo(mode, args, signature, all_style_info) {
     // const signature = getSignatureFromArgs(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
-        _alert('"all_model_info" not found in signature');
+        _alert({
+            title: '"all_model_info" not found in signature',
+        });
     }
 
     const getArg = (key) => args[signature.indexOf(key)];

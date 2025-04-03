@@ -1359,30 +1359,6 @@ def create_ui():
         _interface.title = "Diffus"
 
     with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, head=canvas_head) as demo:
-        with gr.Row(visible=False):
-             with gr.Column(elem_id="user-setting", min_width=500, scale=2):
-                gr.HTML(
-                    value="<div class='user-content'>"
-                            "<div class='right-content'>"
-                            "<div id='one_click_boost_button' class='one_click_boost_button_area' style='display: none'></div>"
-                            "<div id='discord' class='discord-icon'>"
-                              "<a class='discord-link' style='height: 100%; align-items: center; display: flex;' title='Join Discord' href='https://discord.gg/QfBbBYqQ7z'>"
-                                "<img src='/public/image/discord.png' />"
-                              "</a>"
-                            "</div>"
-                            "<div style='gap: 5px; display: flex; flex-direction: column; padding-bottom: 10px;'>"
-                              "<div style='display: flex;'>"
-                                "<div id='sign' title='' class='upgrade-content' style='display: none'><a><img /><span></span></a></div>"
-                                "<div id='package' title='Credits Package' class='upgrade-content' style='display: none'><a><img src='/public/image/package.png' /><span></span></a></div>"
-                                "<div id='upgrade' title='Unlock more credits' class='upgrade-content' style='display: none'><a href='/app/pricing-table'><img src='/public/image/lightning.png'/><span>Upgrade</span></a></div>"
-                                "<div id='affiliate' title='Affiliate' class='upgrade-content' style='display: flex'><a href='/affiliate/everyone' target='_blank'><span class='mdi mdi-currency-usd' style='font-size=20px'></span><span>Affiliate</span></a></div>"
-                              "</div>"
-                              "<a id='user-credits-app' href='/app/account/'>"
-                              "</a>"
-                            "</div>"
-                          "</div>"
-                          "<div style='display: none;justify-content: flex-end;' id='user_info'></div>",
-                    show_label=False)
         with gr.Row(elem_id="topbar", visible=False):
             with gr.Column(scale=6, min_width=850, visible=False):
                 with gr.Row(elem_id="quicksettings", visible=False):

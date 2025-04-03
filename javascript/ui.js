@@ -611,19 +611,6 @@ function setUiPageSize() {
     uiPageSize = Math.floor(contentWidth / 238) * 2;
 }
 
-function imgExists(url, imgNode, name){
-    const img = new Image();
-    img.src= url;
-    img.onerror = () => {
-        imgNode.src = `https://ui-avatars.com/api/?name=${name}&background=random&format=svg`
-        joinShareGroup(name, imgNode.src);
-    }
-    img.onload = () => {
-        imgNode.src = url;
-        joinShareGroup(name, url);
-    }
-}
-
 function requestRefreshPage(timeoutId) {
     if (timeoutId) {
         clearTimeout(timeoutId);
@@ -727,18 +714,9 @@ onUiLoaded(function(){
     updateGenerateBtn_txt2img();
     updateGenerateBtn_img2img();
 
-    checkModelURLFromCivitai();
-
     const {search} = location;
     const isDarkTheme = /theme=dark/g.test(search);
     Cookies.set('theme', isDarkTheme ? 'dark' : 'light');
-    if (isDarkTheme) {
-        const rightContent = gradioApp().querySelector(".right-content");
-        const imgNodes = rightContent.querySelectorAll("a > img");
-        imgNodes.forEach(item => {
-            item.style.filter = 'invert(100%)';
-        })
-    }
 
     setTimeout(monitorSignatureChange, 30000);
 });

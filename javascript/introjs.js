@@ -96,4 +96,4 @@ function loadIntroJS() {
     registerIntroJS("img2img", img2imgIntroJS());
 }
 
-onNotificationComplete(loadIntroJS);
+onUiLoaded(loadIntroJS);

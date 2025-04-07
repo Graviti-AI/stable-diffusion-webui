@@ -3,7 +3,7 @@ let channelResult = null;
 class ChannelInfo {
   async getChannelInfo() {
     try {
-      const res = await fetchGet('api/user_channel');
+      const res = await fetchGet('/api/user_channel');
       const channelInfo = await res.json();
       if (channelInfo) {
         document.title = channelInfo.title || 'Diffus - Stable Diffusion Made Easy';

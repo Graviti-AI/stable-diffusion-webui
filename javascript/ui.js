@@ -1,10 +1,11 @@
 // various functions for interaction with ui.py not large enough to warrant putting them in separate files
 
 function set_theme(theme) {
-    var gradioURL = window.location.href;
-    const searchParam = new URLSearchParams(window.location.search);
-    if (!gradioURL.includes('__theme=')) {
-      window.location.replace(`${window.location.origin}?${searchParam}&__theme=${theme}`);
+    const url = new URL(window.location.href);
+
+    if (!url.searchParams.has("__theme")) {
+        url.searchParams.set("__theme", theme);
+        window.location.replace(url.toString());
     }
 }
 

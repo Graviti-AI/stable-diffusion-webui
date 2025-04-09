@@ -185,7 +185,7 @@ async function _submit() {
     const [all_style_info_index, all_style_info] = await getAllStyleInfo(res, signature);
     const [all_model_info_index, all_model_info] = await getAllModelInfo("txt2img", res, signature, all_style_info);
 
-    await tierCheckFlux(all_model_info);
+    tierCheckFlux(all_model_info);
 
     showSubmitButtons('txt2img', false);
 
@@ -234,7 +234,7 @@ async function submit_img2img() {
     const [all_style_info_index, all_style_info] = await getAllStyleInfo(res, signature);
     const [all_model_info_index, all_model_info] = await getAllModelInfo("img2img", res, signature, all_style_info);
 
-    await tierCheckFlux(all_model_info);
+    tierCheckFlux(all_model_info);
 
     var id = randomId();
     localSet("img2img_task_id", id);

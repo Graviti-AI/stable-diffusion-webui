@@ -46,12 +46,16 @@ function _checkSamplingSteps(tabname, getArg, featurePermissions) {
     featurePermissions.checkSamplingStepsLimit(steps);
 }
 
-async function tierCheckFlux(all_model_info) {
+function tierCheckButton(feature_name) {
+    const featurePermissions = getDiffusApp().featurePermissions;
+    featurePermissions.checkTierForButton(feature_name);
+}
+
+function tierCheckFlux(all_model_info) {
     if (all_model_info.every((item) => item.base !== "FLUX")) {
         return;
     }
-    const featurePermissions = getDiffusApp().featurePermissions;
-    featurePermissions.checkTierForButton("Flux");
+    tierCheckButton("Flux");
 }
 
 async function tierCheckGenerate(tabname, args) {
@@ -95,15 +99,6 @@ async function tierCheckGenerate(tabname, args) {
     _checkSamplingSteps(tabname, getArg, featurePermissions);
     _checkControlNetUnits(tabname, getArg, featurePermissions);
     await featurePermissions.checkSafetyAgreement(getArg("prompt"));
-}
-
-function tierCheckButton(feature_name) {
-    return async (...args) => {
-        const featurePermissions = getDiffusApp().featurePermissions;
-        featurePermissions.checkTierForButton(feature_name);
-
-        return args;
-    };
 }
 
 function checkQueue(is_queued, textinfo) {

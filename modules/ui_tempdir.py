@@ -157,6 +157,10 @@ async def async_move_files_to_cache(data, block, postprocess=False, check_in_upl
     )
 
 
+def get_root_url(request, route_path: str, root_path: str | None) -> str:
+    return root_path
+
+
 def install_ui_tempdir_override():
     """
     override save to file function so that it also writes PNG info.
@@ -165,6 +169,7 @@ def install_ui_tempdir_override():
 
     gradio.processing_utils.save_pil_to_cache = save_pil_to_file
     gradio.processing_utils.async_move_files_to_cache = async_move_files_to_cache
+    gradio.route_utils.get_root_url = get_root_url
 
 
 def on_tmpdir_changed():

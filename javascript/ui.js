@@ -633,8 +633,8 @@ function requestRefreshPage(timeoutId) {
 async function checkSignatureCompatibility(timeoutId = null)
 {
     const currentDomain = window.location.hostname;
-    const txt2imgSignaturePromise = fetchGet("/internal/signature/txt2img", {mode: "cors"});
-    const img2imgSignaturePromise = fetchGet("/internal/signature/img2img", {mode: "cors"});
+    const txt2imgSignaturePromise = fetchGet("internal/signature/txt2img", {mode: "cors"});
+    const img2imgSignaturePromise = fetchGet("internal/signature/img2img", {mode: "cors"});
 
     const currentTxt2imgSignature = gradioApp().querySelector("#txt2img_signature textarea").value;
     const currentTxt2imgFnIndex = gradioApp().querySelector("#txt2img_function_index textarea").value;

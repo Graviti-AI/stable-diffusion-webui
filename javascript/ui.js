@@ -617,17 +617,9 @@ function requestRefreshPage(timeoutId) {
         clearTimeout(timeoutId);
     }
 
-    const diffusApp = getDiffusApp();
-    diffusApp.openConfirmDialog(
-        {
-            title: "Page Need Refresh",
-            description: "We have just updated the service with new features. Click the button to refresh to enjoy the new features.",
-            icon: "mdi-refresh",
-            persistent: true,
-            onConfirm: () => {location.reload()},
-            confirmText: "OK",
-        }
-    )
+    getDiffusApp().openRefreshDialog(async () => {
+        location.reload();
+    });
 }
 
 async function checkSignatureCompatibility(timeoutId = null)

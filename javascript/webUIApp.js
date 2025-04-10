@@ -67,25 +67,14 @@ const webUIApp = {
                 throw `Unknown Model Type: ${model_type}`;
         }
         const added = _updateExtraNetwork(tabname, text);
-
         const subject = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const verb = added ? "added to" : "removed from";
 
-        const options = {
-            title: `Prompt ${verb} <b>${tabname}</b> tab`,
-            description: subject,
-        };
-        if (added) {
-            toast.success(options);
-        } else {
-            toast.warning(options);
-        }
+        toast.setExtraNetwork(added, tabname, subject);
     },
     runImage(pnginfo, models, tabname) {
         gallery_run_pnginfo = pnginfo;
         gallery_run_models = models;
         gradioApp().getElementById(`${tabname}_paste`).click();
-        this.galleryOpen = false;
     },
 };
 

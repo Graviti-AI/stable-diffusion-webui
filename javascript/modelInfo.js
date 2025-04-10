@@ -1,5 +1,9 @@
+function _getToast() {
+    return getDiffusApp().toast;
+}
+
 function _alert(options) {
-    getDiffusApp().toast.error(options);
+    _getToast().error(options);
     throw new Error(JSON.stringify(options));
 }
 
@@ -272,10 +276,8 @@ function _buildModelTree(models) {
 function _getModel(model_tree, model_type, key) {
     const model = model_tree[model_type][key.value];
     if (!model) {
-        _alert({
-            title: `<b>${model_type}<\b> model not found in your favorites`,
-            description: key.value,
-        });
+        _getToast().modelMissing("UNFAVORITED", model_type, key.value);
+        throw new Error(`${model_type} model ${key.value} not found in favorites`);
     }
     return _convertModelInfo(model, key.source);
 }
@@ -293,9 +295,8 @@ function _findExtraNetworkModelKeys(prompts) {
             let type = result[1];
             const keys = network_keys[type];
             if (!keys) {
-                _alert({
-                    title: `Unknown network type <b>${type}<\b>`,
-                });
+                _getToast().unknownNetworkType(type);
+                throw new Error(`Unknown network type "${type}"`);
             }
 
             const key = result[2].split(":")[0];
@@ -337,9 +338,7 @@ function getSignatureFromArgs(args) {
             item.endsWith(_SIGNATURE.end),
     );
     if (!arg) {
-        _alert({
-            title: '"signature" not found in the arguments',
-        });
+        _alert({ title: '"signature" not found in the arguments' });
     }
     return JSON.parse(arg.slice(_SIGNATURE.start.length, -_SIGNATURE.end.length));
 }
@@ -368,9 +367,7 @@ async function getAllModelInfo(mode, args, signature, all_style_info) {
     // const signature = getSignatureFromArgs(args);
     const index = signature.indexOf("all_model_info");
     if (index === -1) {
-        _alert({
-            title: '"all_model_info" not found in signature',
-        });
+        _alert({ title: '"all_model_info" not found in signature' });
     }
 
     const getArg = (key) => args[signature.indexOf(key)];
@@ -580,36 +577,25 @@ async function _listCandidateModelsByHash(hashes) {
 
 function _filterModelWithStatus(models, from_gallery) {
     const results = [];
-    const toast = getDiffusApp().toast;
+    const toast = _getToast();
 
     for (const model of models) {
-        const prefix = from_gallery
-            ? `${model.info.model_type} model "${getStem(model.info.filename)}"`
-            : `${model.model_type} model "${model.stem} [${model.sha256}]"`;
+        const model_type = from_gallery ? model.info.model_type : model.model_type;
+        const model_title = from_gallery
+            ? getStem(model.info.filename)
+            : `${model.stem} [${model.sha256}]`;
 
-        switch (model.status) {
-            case "NOTFOUND":
-                toast.error({ title: `${prefix} not found in the Gallery` });
-                continue;
-
-            case "DELETED":
-                toast.error({ title: `${prefix} is a deleted model` });
-                continue;
-
-            case "UNPUBLISHED":
-                toast.error({ title: `${prefix} is a unpublished model` });
-                continue;
-
-            case "OK":
-                if (model.info.favorited_at === null) {
-                    toast.warning({ title: `${prefix} not found in your favorites` });
-                } else {
-                    results.push(model.info);
-                }
-                continue;
-            default:
-                throw `Unknown model status: "${model.status}"`;
+        if (model.status !== "OK") {
+            toast.modelMissing(model.status, model_type, model_title);
+            continue;
         }
+
+        if (model.info.favorited_at === null) {
+            toast.modelMissing("UNFAVORITED", model_type, model_title);
+            continue;
+        }
+
+        results.push(model.info);
     }
     return results;
 }

@@ -608,7 +608,13 @@ async function _getAllModelInfoFromPNGInfo(pnginfo) {
         ? []
         : await _listCandidateModelsByHash(hashes);
 
-    return _filterModelWithStatus(models, false);
+    const all_model_info = _filterModelWithStatus(models, false);
+
+    all_model_info.forEach((item) => {
+        item.name = item.filename;
+        delete item.filename;
+    });
+    return all_model_info;
 }
 
 function _getRunModelInfo(models) {
@@ -626,10 +632,14 @@ function _getRunModelInfo(models) {
 async function extractModelsFromPnginfo() {
     const res = Array.from(arguments);
 
-    if (gallery_run_pnginfo !== null && gallery_run_models !== null) {
+    if (gallery_run_pnginfo !== null) {
         try {
             res[0] = gallery_run_pnginfo;
-            res[1] = JSON.stringify(_getRunModelInfo(gallery_run_models));
+            res[1] = JSON.stringify(
+                gallery_run_models
+                    ? _getRunModelInfo(gallery_run_models)
+                    : await _getAllModelInfoFromPNGInfo(gallery_run_pnginfo),
+            );
         } finally {
             gallery_run_pnginfo = null;
             gallery_run_models = null;
@@ -639,10 +649,6 @@ async function extractModelsFromPnginfo() {
 
     const pnginfo = res[0];
     const all_model_info = await _getAllModelInfoFromPNGInfo(pnginfo);
-    all_model_info.forEach((item) => {
-        item.name = item.filename;
-        delete item.filename;
-    });
     res[1] = JSON.stringify(all_model_info);
 
     return res;

@@ -71,7 +71,7 @@ const webUIApp = {
 
         toast.setExtraNetwork(added, tabname, subject);
     },
-    runImage(pnginfo, models, tabname) {
+    runImage(tabname, pnginfo, models) {
         gallery_run_pnginfo = pnginfo;
         gallery_run_models = models;
         gradioApp().getElementById(`${tabname}_paste`).click();

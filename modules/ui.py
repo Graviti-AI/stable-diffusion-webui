@@ -1489,7 +1489,7 @@ def create_ui():
         footer = shared.html("footer.html")
         languages = list(localization.localizations.keys())
         languages.sort()
-        footer = footer.format(versions=versions_html(), language_list=['None'] + languages)
+        footer = footer.format(versions=versions_html(), language_list=["en_US"] + languages)
         gr.HTML(footer, elem_id="footer")
         settings.add_functionality(demo)
 

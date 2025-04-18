@@ -1,5 +1,6 @@
-const localization_name_mapper = {
-    None: "English",
+const languageCookieKey = "localization";
+const LANGUAGE_NAMES = {
+    en_US: "English",
     de_DE: "Deutsch",
     es_ES: "Español",
     fi_FI: "Suomi",
@@ -15,12 +16,20 @@ const localization_name_mapper = {
     zh_TW: "中文(繁體)",
 };
 
-const languageCookieKey = "localization";
+let _languageCodes = null;
+
+function getLanguageCodes() {
+    if (!_languageCodes) {
+        const languageListNode = gradioApp().querySelector(`#language-list`);
+        _languageCodes = JSON.parse(languageListNode.textContent.replaceAll("'", '"'));
+    }
+    return _languageCodes;
+}
 
 function setSelectChecked(selectId, checkValue) {
-    var select = gradioApp().querySelector(`#${selectId}`);
+    const select = gradioApp().querySelector(`#${selectId}`);
 
-    for (var i = 0; i < select.options.length; i++) {
+    for (let i = 0; i < select.options.length; i++) {
         if (select.options[i].value == checkValue) {
             select.options[i].selected = true;
             break;
@@ -30,18 +39,16 @@ function setSelectChecked(selectId, checkValue) {
 
 function generateLanguageSelectOptions() {
     const footerNode = gradioApp().querySelector(`#footer-nav`);
-    const languageListNode = gradioApp().querySelector(`#language-list`);
 
     const selectNode = document.createElement("select");
     selectNode.classList = "language-list";
     selectNode.title = "Select Language";
     selectNode.id = "language-select";
 
-    const laguageList = JSON.parse(languageListNode.textContent.replaceAll("'", '"'));
-    laguageList.forEach((language) => {
+    getLanguageCodes().forEach((code) => {
         const optionNode = document.createElement("option");
-        optionNode.value = language;
-        optionNode.label = localization_name_mapper[language];
+        optionNode.value = code;
+        optionNode.label = LANGUAGE_NAMES[code];
 
         selectNode.appendChild(optionNode);
     });
@@ -55,7 +62,30 @@ function adaptMobile() {
     isMobile && navList.forEach((nav) => nav.classList.remove("nav-item"));
 }
 
+function initialLanguage() {
+    if (!window.Cookies) {
+        return;
+    }
+
+    const languageCodes = getLanguageCodes();
+    let code = Cookies.get(languageCookieKey);
+    if (!languageCodes.includes(code)) {
+        code = "en_US";
+    }
+    setSelectChecked("language-select", code);
+
+    gradioApp()
+        .querySelector(`#language-select`)
+        .addEventListener("change", (event) => {
+            Cookies.set(languageCookieKey, event.target.value, {
+                expires: 365,
+                domain: "diffus.me",
+            });
+        });
+}
+
 onUiLoaded(() => {
     generateLanguageSelectOptions();
     adaptMobile();
+    initialLanguage();
 });

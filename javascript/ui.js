@@ -160,21 +160,7 @@ function showRestoreProgressButton(tabname, show) {
     button.style.setProperty('display', show ? 'flex' : 'none', 'important');
 }
 
-function extractNumberFromGenerateButton(str) {
-  const matches = str.match(/\d+/);
-
-  if (matches && matches.length > 0) {
-    return parseInt(matches[0], 10); // Convert the string to an integer
-  }
-
-  return null;
-}
-
-function addGenerateGtagEvent(selector, itemName) {
-    const creditsInfo = document.querySelector(selector);
-    const credits = extractNumberFromGenerateButton(creditsInfo.textContent);
-    reportSpendCreditsEvent(itemName, credits);
-}
+const idToItemNames = {};
 
 async function _submit() {
     var res = create_submit_args(arguments);
@@ -206,11 +192,15 @@ async function _submit() {
 }
 
 async function submit() {
-    addGenerateGtagEvent("#txt2img_generate > span", "txt2img_generation_button");
     await tierCheckGenerate("txt2img", arguments);
     checkSignatureCompatibility();
 
-    return await _submit(...arguments);
+    const res = await _submit(...arguments);
+
+    const id = res[0];
+    idToItemNames[id] = "txt2img_generation_button";
+
+    return res
 }
 
 async function submit_txt2img_upscale() {
@@ -222,7 +212,6 @@ async function submit_txt2img_upscale() {
 }
 
 async function submit_img2img() {
-    addGenerateGtagEvent("#img2img_generate > span", "img2img_generation_button");
     await tierCheckGenerate("img2img", arguments);
     showSubmitButtons('img2img', false);
 
@@ -237,6 +226,7 @@ async function submit_img2img() {
     tierCheckFlux(all_model_info);
 
     var id = randomId();
+    idToItemNames[id] = "img2img_generation_button";
     localSet("img2img_task_id", id);
 
     requestProgress(id, gradioApp().getElementById('img2img_gallery_container'), gradioApp().getElementById('img2img_gallery'), function() {

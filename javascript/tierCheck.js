@@ -122,7 +122,16 @@ function checkQueue(is_queued, textinfo) {
 }
 
 async function upgradeCheck(upgrade_info) {
+    const itemName = idToItemNames[upgrade_info.id_task];
+    if (itemName) {
+        delete idToItemNames[upgrade_info.id_task];
+    }
+
     if (!upgrade_info.need_upgrade) {
+        const credits = upgrade_info.credits;
+        if (itemName && typeof credits === "number") {
+            reportSpendCreditsEvent(itemName, credits);
+        }
         return;
     }
 

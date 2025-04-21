@@ -449,7 +449,7 @@ def after_task_finished(
         status: str,
         message: Optional[str] = None,
         is_intermediate: bool = False,
-        refund_if_failed: bool = False):
+        refund_if_failed: bool = False) -> int | None:
     if job_id is None:
         logger.error('task_id is not present in after_task_finished, there might be error occured in before_task_started.')
         return
@@ -491,6 +491,9 @@ def after_task_finished(
     if resp.status_code < 200 or resp.status_code > 299:
         logger.error((f'update monitor log failed, status: monitor_log_id: {job_id}, {resp.status_code}, '
                       f'message: {resp.text[:1000]}'))
+        return
+
+    return resp.json()["consumptions"]["credit_consumption"]
 
 
 def generate_function_name(func) -> str:
@@ -519,6 +522,7 @@ def monitor_call_context(
     feature_type: Literal["generate", "buttons", None] = None,
     feature_name: str | None = None,
     is_flux: bool = False,
+    output_container: dict[str, int | None] | None = None,
 ):
     status = 'unknown'
     message = ''
@@ -561,4 +565,6 @@ def monitor_call_context(
         message = f'{type(e).__name__}: {str(e)}'
         raise e
     finally:
-        after_task_finished(request, task_id, status, message, is_intermediate, refund_if_failed)
+        credits = after_task_finished(request, task_id, status, message, is_intermediate, refund_if_failed)
+        if output_container is not None:
+            output_container["credits"] = credits

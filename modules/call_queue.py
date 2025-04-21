@@ -213,9 +213,10 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         status = 'failed'
         res = extra_outputs_array + [_make_error_html(repr(e))]
         if add_monitor_state:
-            return res, json.dumps({
+            return res, {
                 "need_upgrade": True,
-                "message": f"This feature is available for {', '.join(e.allowed_tiers)} users, please upgrade to access it."})
+                "message": f"This feature is available for {', '.join(e.allowed_tiers)} users, please upgrade to access it."
+            }
         return res
     except Exception as e:
         logger.exception(f'task {id_task} failed: {e.__str__()}')
@@ -348,15 +349,17 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
     def f(request: gradio.routes.Request, *args, extra_outputs_array=extra_outputs, **kwargs):
         assert shared.state, "shared.state is not initialized"
         task_id = None
+        id_task = None
         loop = asyncio.get_event_loop()
         request_body = loop.run_until_complete(get_body(request))
         for item in request_body["data"]:
             if isinstance(item, str) and item.startswith("task("):
                 task_id = item.removeprefix("task(").removesuffix(")")
+                id_task = item
         current_datetime = datetime.now()
         print(f"{current_datetime.strftime('%Y-%m-%d %H:%M:%S')} task({task_id}) begins", file=sys.stderr)
 
-        monitor_state = json.dumps({"need_upgrade": False})
+        monitor_state: dict = {"need_upgrade": False}
         run_memmon = shared.opts.memmon_poll_rate > 0 and not shared.mem_mon.disabled and add_stats
         if run_memmon:
             shared.mem_mon.monitor()
@@ -375,13 +378,16 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
 
         task_failed = False
         error_message = ''
+        credits_output = {}
         try:
             with monitor_call_context(
-                    request,
-                    generate_function_name(func),
-                    generate_function_name(func),
-                    task_id,
-                    is_intermediate=False) as result_encoder:
+                request,
+                generate_function_name(func),
+                generate_function_name(func),
+                task_id,
+                is_intermediate=False,
+                output_container=credits_output
+            ) as result_encoder:
                 if add_monitor_state:
                     res, monitor_state = func(request, *args, **kwargs)
                     res = list(res)
@@ -395,6 +401,8 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
                         str(private_tempdir),
                         save_image_callback=save_image_if_not_saved_already),
                     task_failed=progress.is_task_failed(f"task({task_id})" if task_id else ""))
+
+            monitor_state["credits"] = credits_output.get('credits', None)
             devices.torch_gc()
         except MonitorTierMismatchedException as e:
             task_failed = True
@@ -405,9 +413,10 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
             if extra_outputs_array is None:
                 extra_outputs_array = [None, '']
             res = extra_outputs_array + [_make_error_html(repr(e))]
-            monitor_state = json.dumps({
+            monitor_state = {
                 "need_upgrade": True,
-                "message": error_message})
+                "message": error_message
+            }
         except Exception as e:
             task_failed = True
             error_message = f'{type(e).__name__}: {e}'
@@ -456,6 +465,7 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
             current_datetime = datetime.now()
             print(f"{current_datetime.strftime('%Y-%m-%d %H:%M:%S')} task({task_id}) ends", file=sys.stderr)
             if add_monitor_state:
+                monitor_state["id_task"] = id_task
                 return tuple(res + [monitor_state])
             return tuple(res)
 
@@ -501,6 +511,7 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
         current_datetime = datetime.now()
         print(f"{current_datetime.strftime('%Y-%m-%d %H:%M:%S')} task({task_id}) ends", file=sys.stderr)
         if add_monitor_state:
+            monitor_state["id_task"] = id_task
             return tuple(res + [monitor_state])
         return tuple(res)
 

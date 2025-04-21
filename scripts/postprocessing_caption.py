@@ -1,6 +1,5 @@
 from modules import scripts_postprocessing, ui_components, deepbooru, shared
 from modules.system_monitor import monitor_call_context
-from modules.postprocessing import monitor_extras_params
 import gradio as gr
 
 
@@ -11,9 +10,6 @@ class ScriptPostprocessingCeption(scripts_postprocessing.ScriptPostprocessing):
     def ui(self):
         with ui_components.InputAccordion(False, label="Caption") as enable:
             option = gr.CheckboxGroup(value=["Deepbooru"], choices=["Deepbooru", "BLIP"], show_label=False)
-
-        monitor_extras_params(enable, "caption_enabled")
-        monitor_extras_params(option, "caption_option_number", "(x) => x.length")
 
         return {
             "enable": enable,

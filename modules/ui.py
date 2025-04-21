@@ -458,16 +458,6 @@ def create_ui():
                             with gr.Column(elem_id="txt2img_column_size", scale=4):
                                 width = gr.Slider(minimum=64, maximum=2048, step=8, label="Width", value=512, elem_id="txt2img_width")
                                 height = gr.Slider(minimum=64, maximum=2048, step=8, label="Height", value=512, elem_id="txt2img_height")
-                                width.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[width],
-                                    _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'width')")
-                                height.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[height],
-                                    _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'height')")
 
                             with gr.Column(elem_id="txt2img_dimensions_row", scale=1, elem_classes="dimensions-tools"):
                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="txt2img_res_switch_btn", tooltip="Switch width/height")
@@ -476,16 +466,6 @@ def create_ui():
                                 with gr.Column(elem_id="txt2img_column_batch"):
                                     batch_count = gr.Slider(minimum=1, maximum=4, step=1, label='Batch count', value=1, elem_id="txt2img_batch_count")
                                     batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=4, elem_id="txt2img_batch_size")
-                                    batch_count.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[batch_count],
-                                        _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'n_iter')")
-                                    batch_size.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[batch_size],
-                                        _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'batch_size')")
 
                     elif category == "cfg":
                         with gr.Row():
@@ -515,20 +495,10 @@ def create_ui():
                     elif category == "checkboxes":
                         with FormRow(elem_classes="checkboxes-row", variant="compact"):
                             restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(shared.face_restorers) > 1, elem_id="txt2img_restore_faces")
-                            restore_faces.change(
-                                None,
-                                inputs=[],
-                                outputs=[restore_faces],
-                                _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'restore_faces')")
 
                     elif category == "accordions":
                         with gr.Row(elem_id="txt2img_accordions", elem_classes="accordions"):
                             with InputAccordion(False, label="Hires. fix", elem_id="txt2img_hr") as enable_hr:
-                                enable_hr.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[enable_hr],
-                                    _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'enable_hr')")
                                 with enable_hr.extra():
                                     hr_final_resolution = FormHTML(value="", elem_id="txtimg_hr_finalres", label="Upscaled resolution")
 
@@ -536,31 +506,11 @@ def create_ui():
                                     hr_upscaler = gr.Dropdown(label="Upscaler", elem_id="txt2img_hr_upscaler", choices=[*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]], value=shared.latent_upscale_default_mode)
                                     hr_second_pass_steps = gr.Slider(minimum=0, maximum=150, step=1, label='Hires steps', value=0, elem_id="txt2img_hires_steps")
                                     denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.7, elem_id="txt2img_denoising_strength")
-                                    hr_second_pass_steps.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[hr_second_pass_steps],
-                                        _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'hr_second_pass_steps')")
 
                                 with FormRow(elem_id="txt2img_hires_fix_row2", variant="compact"):
                                     hr_scale = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="Upscale by", value=2.0, elem_id="txt2img_hr_scale")
                                     hr_resize_x = gr.Slider(minimum=0, maximum=2048, step=8, label="Resize width to", value=0, elem_id="txt2img_hr_resize_x")
                                     hr_resize_y = gr.Slider(minimum=0, maximum=2048, step=8, label="Resize height to", value=0, elem_id="txt2img_hr_resize_y")
-                                    hr_scale.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[hr_scale],
-                                        _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'hr_scale')")
-                                    hr_resize_x.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[hr_resize_x],
-                                        _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'hr_resize_x')")
-                                    hr_resize_y.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[hr_resize_y],
-                                        _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'hr_resize_y')")
 
                                 with FormRow(elem_id="txt2img_hires_fix_row_cfg", variant="compact"):
                                     hr_distilled_cfg = gr.Slider(minimum=0.0, maximum=30.0, step=0.1, label="Hires Distilled CFG Scale", value=3.5, elem_id="txt2img_hr_distilled_cfg", interactive=False)
@@ -612,16 +562,6 @@ def create_ui():
                             with FormRow(elem_id="txt2img_column_batch"):
                                 batch_count = gr.Slider(minimum=1, maximum=4, step=1, label='Batch count', value=1, elem_id="txt2img_batch_count")
                                 batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=1, elem_id="txt2img_batch_size")
-                                batch_count.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[batch_count],
-                                    _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'n_iter')")
-                                batch_size.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[batch_size],
-                                    _js="monitorThisParam('tab_txt2img', 'modules.txt2img.txt2img', 'batch_size')")
 
                     elif category == "override_settings":
                         with FormRow(elem_id="txt2img_override_settings_row") as row:
@@ -950,35 +890,13 @@ def create_ui():
                                             with gr.Column(elem_id="img2img_column_size", scale=4):
                                                 width = gr.Slider(minimum=64, maximum=2048, step=8, label="Width", value=512, elem_id="img2img_width")
                                                 height = gr.Slider(minimum=64, maximum=2048, step=8, label="Height", value=512, elem_id="img2img_height")
-                                                width.change(
-                                                    None,
-                                                    inputs=[],
-                                                    outputs=[width, height],
-                                                    _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', ['width', 'height'])")
-                                                height.change(
-                                                    None,
-                                                    inputs=[],
-                                                    outputs=[width, height],
-                                                    _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', ['width', 'height'])")
+
                                             with gr.Column(elem_id="img2img_dimensions_row", scale=1, elem_classes="dimensions-tools"):
                                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="img2img_res_switch_btn", tooltip="Switch width/height")
                                                 detect_image_size_btn = ToolButton(value=detect_image_size_symbol, elem_id="img2img_detect_image_size_btn", tooltip="Auto detect size from img2img")
 
                                     with gr.Tab(label="Resize by", id="by", elem_id="img2img_tab_resize_by") as tab_scale_by:
                                         scale_by = gr.Slider(minimum=0.05, maximum=4.0, step=0.01, label="Scale", value=1.0, elem_id="img2img_scale")
-                                        scale_by.change(
-                                            None,
-                                            inputs=[],
-                                            outputs=[scale_by],
-                                            _js="""monitorThisParam(
-                                                    'tab_img2img',
-                                                    'modules.img2img.img2img',
-                                                    ['width', 'height'],
-                                                    extractor = (scale_by) => {
-                                                        let [imgWidth, imgHeight, scaleBy] = currentImg2imgSourceResolution(512, 512, scale_by);
-                                                        return [Math.floor(imgWidth * scale_by), Math.floor(imgHeight * scale_by)];
-                                                    })"""
-                                        )
 
                                         with FormRow():
                                             scale_by_html = FormHTML(resize_from_to_html(0, 0, 0.0), elem_id="img2img_scale_resolution_preview")
@@ -1014,16 +932,6 @@ def create_ui():
                                 with gr.Column(elem_id="img2img_column_batch"):
                                     batch_count = gr.Slider(minimum=1, maximum=4, step=1, label='Batch count', value=1, elem_id="img2img_batch_count")
                                     batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=1, elem_id="img2img_batch_size")
-                                    batch_count.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[batch_count],
-                                        _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', 'n_iter')")
-                                    batch_size.change(
-                                        None,
-                                        inputs=[],
-                                        outputs=[batch_size],
-                                        _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', 'batch_size')")
 
                     elif category == "denoising":
                         denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.75, elem_id="img2img_denoising_strength")
@@ -1038,11 +946,6 @@ def create_ui():
                     elif category == "checkboxes":
                         with FormRow(elem_classes="checkboxes-row", variant="compact"):
                             restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(shared.face_restorers) > 1, elem_id="img2img_restore_faces")
-                            restore_faces.change(
-                                None,
-                                inputs=[],
-                                outputs=[restore_faces],
-                                _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', 'restore_faces')")
 
                     elif category == "accordions":
                         with gr.Row(elem_id="img2img_accordions", elem_classes="accordions"):
@@ -1053,16 +956,6 @@ def create_ui():
                             with FormRow(elem_id="img2img_column_batch"):
                                 batch_count = gr.Slider(minimum=1, maximum=4, step=1, label='Batch count', value=1, elem_id="img2img_batch_count")
                                 batch_size = gr.Slider(minimum=1, maximum=4, step=1, label='Batch size', value=4, elem_id="img2img_batch_size")
-                                batch_count.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[batch_count],
-                                    _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', 'n_iter')")
-                                batch_size.change(
-                                    None,
-                                    inputs=[],
-                                    outputs=[batch_size],
-                                    _js="monitorThisParam('tab_img2img', 'modules.img2img.img2img', 'batch_size')")
 
                     elif category == "override_settings":
                         with FormRow(elem_id="img2img_override_settings_row") as row:

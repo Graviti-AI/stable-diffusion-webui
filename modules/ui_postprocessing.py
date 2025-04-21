@@ -4,8 +4,6 @@ import modules.infotext_utils as parameters_copypaste
 from modules.ui_components import ResizeHandleRow
 from modules_forge.forge_canvas.canvas import ForgeCanvas
 
-from modules.postprocessing import monitor_extras_params
-
 import os
 from PIL import Image
 from tempfile import _TemporaryFileWrapper
@@ -62,12 +60,6 @@ def create_ui():
         inputs=[image_batch],
         outputs=[source_widths, source_heights],
     )
-
-    monitor_extras_params(tab_index, "extras_mode")
-    monitor_extras_params(source_width, "source_width")
-    monitor_extras_params(source_height, "source_height")
-    monitor_extras_params(source_widths, "source_widths")
-    monitor_extras_params(source_heights, "source_heights")
 
     submit_click_inputs = [
         dummy_component,

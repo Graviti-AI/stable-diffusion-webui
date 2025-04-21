@@ -10,7 +10,6 @@ import gradio as gr
 from modules.ui_components import FormRow, ToolButton, InputAccordion
 from modules.ui import switch_values_symbol
 from modules.system_monitor import monitor_call_context
-from modules.postprocessing import monitor_extras_params
 
 upscale_cache = {}
 
@@ -74,16 +73,6 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
         tab_scale_to.select(fn=lambda: 1, inputs=[], outputs=[selected_tab])
 
         extras_upscaler_1.change(on_selected_upscale_method, inputs=[extras_upscaler_1], outputs=[upscaling_resize], show_progress="hidden")
-
-        monitor_extras_params(selected_tab, "resize_mode")
-        monitor_extras_params(upscaling_resize, "scale_by")
-        monitor_extras_params(upscaling_resize_w, "scale_to_w")
-        monitor_extras_params(upscaling_resize_h, "scale_to_h")
-        monitor_extras_params(upscaling_crop, "scale_crop")
-        monitor_extras_params(extras_upscaler_1, "upscaler_1_enabled", "(x) => !['', 'None'].includes(x)")
-        monitor_extras_params(extras_upscaler_2, "upscaler_2_enabled", "(x) => !['', 'None'].includes(x)")
-        monitor_extras_params(extras_upscaler_2_visibility, "upscaler_2_visibility")
-
 
         return {
             "upscale_enabled": upscale_enabled,

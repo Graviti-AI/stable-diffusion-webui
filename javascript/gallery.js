@@ -20,20 +20,23 @@ function initMobileCanvas(canvas) {
 }
 
 function getDiffusApp() {
-    if ((!"diffusApp") in window.parent) {
+    if (!("diffusApp" in window.parent)) {
         throw "diffusApp not found in the parent window.";
     }
 
     return window.parent.diffusApp;
 }
 
+function getDiffusCheckpointsApp() {
+    return getDiffusApp().webUI.checkpoints;
+}
+
 function setDiffusCheckpoint(title) {
-    const diffusApp = getDiffusApp();
-    diffusApp.checkpoints.setTitle(title);
+    getDiffusCheckpointsApp().setTitle(title);
 }
 
 function initFavoriteCheckpoints() {
-    const checkpointsApp = getDiffusApp().checkpoints;
+    const checkpointsApp = getDiffusCheckpointsApp();
     const checkpoints = checkpointsApp.listInfo();
     const selection = checkpointsApp.getInfo();
     if (selection && selection.base === "FLUX") {
@@ -44,13 +47,13 @@ function initFavoriteCheckpoints() {
 }
 
 function updateFavoriteCheckpoints() {
-    const checkpoints = getDiffusApp().checkpoints.listInfo();
+    const checkpoints = getDiffusCheckpointsApp().listInfo();
 
     return { value: checkpoints, __type__: "update" };
 }
 
 async function refreshFavoriteCheckpoints() {
-    const checkpointsApp = getDiffusApp().checkpoints;
+    const checkpointsApp = getDiffusCheckpointsApp();
     await checkpointsApp.refesh();
     const checkpoints = checkpointsApp.listInfo();
 

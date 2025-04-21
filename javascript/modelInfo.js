@@ -1,9 +1,9 @@
-function _getToast() {
+function getDiffusToastApp() {
     return getDiffusApp().toast;
 }
 
 function _alert(options) {
-    _getToast().error(options);
+    getDiffusToastApp().error(options);
     throw new Error(JSON.stringify(options));
 }
 
@@ -276,7 +276,7 @@ function _buildModelTree(models) {
 function _getModel(model_tree, model_type, key) {
     const model = model_tree[model_type][key.value];
     if (!model) {
-        _getToast().modelMissing("UNFAVORITED", model_type, key.value);
+        getDiffusToastApp().modelMissing("UNFAVORITED", model_type, key.value);
         throw new Error(`${model_type} model ${key.value} not found in favorites`);
     }
     return _convertModelInfo(model, key.source);
@@ -295,7 +295,7 @@ function _findExtraNetworkModelKeys(prompts) {
             let type = result[1];
             const keys = network_keys[type];
             if (!keys) {
-                _getToast().unknownNetworkType(type);
+                getDiffusToastApp().unknownNetworkType(type);
                 throw new Error(`Unknown network type "${type}"`);
             }
 
@@ -577,7 +577,7 @@ async function _listCandidateModelsByHash(hashes) {
 
 function _filterModelWithStatus(models, from_gallery) {
     const results = [];
-    const toast = _getToast();
+    const toastApp = getDiffusToastApp();
 
     for (const model of models) {
         const model_type = from_gallery ? model.info.model_type : model.model_type;
@@ -586,12 +586,12 @@ function _filterModelWithStatus(models, from_gallery) {
             : `${model.stem} [${model.sha256}]`;
 
         if (model.status !== "OK") {
-            toast.modelMissing(model.status, model_type, model_title);
+            toastApp.modelMissing(model.status, model_type, model_title);
             continue;
         }
 
         if (model.info.favorited_at === null) {
-            toast.modelMissing("UNFAVORITED", model_type, model_title);
+            toastApp.modelMissing("UNFAVORITED", model_type, model_title);
             continue;
         }
 

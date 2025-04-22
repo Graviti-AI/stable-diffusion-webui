@@ -22,21 +22,9 @@ def javascript_html(request: gr.Request):
     head += f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
     head += f'<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.6/dist/perfect-scrollbar.min.js"></script>'
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
-    # head += '<script type="text/javascript" src="/public/js/calarity.js"></script>\n'
-    head += '<script type="text/javascript" src="/public/js/posthog.js?v=0.2"></script>\n'
     head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
-    head += f'<script type="text/javascript" src="/public/js/analytics/consent.js?version={time.time()}"></script>\n'
-    head += '<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SKEYMGQ07"></script>\n'
-    head += f'<script type="text/javascript" src="/public/js/analytics/init.js?version={time.time()}"></script>\n'
-    head += f"""
-    <script>
-        configGtag('{base64_encoded_user_id}', {{'user_tier': '{user.tire}'}});
-    </script>
-    """
-    head += f'<script type="module" src="/public/js/analytics/cookieconsent-config.mjs?version={time.time()}"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
     head += '<script src=" https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
-    head += f'<script type="text/javascript" src="/public/js/analytics/turn.js?version={time.time()}"></script>\n'
 
     from modules_forge.forge_canvas.canvas import web_js
     head += web_js('canvas.min.js')

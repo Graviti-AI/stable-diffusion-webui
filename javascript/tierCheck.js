@@ -130,7 +130,7 @@ async function upgradeCheck(upgrade_info) {
     if (!upgrade_info.need_upgrade) {
         const credits = upgrade_info.credits;
         if (itemName && typeof credits === "number") {
-            reportSpendCreditsEvent(itemName, credits);
+            getDiffusApp().analytics.reportSpendCreditsEvent(itemName, credits);
         }
         return;
     }

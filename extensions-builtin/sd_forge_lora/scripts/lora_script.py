@@ -87,4 +87,4 @@ def infotext_pasted(infotext, d):
     d["Prompt"] = re.sub(re_lora, network_replacement, d["Prompt"])
 
 
-script_callbacks.on_infotext_pasted(infotext_pasted)
+# script_callbacks.on_infotext_pasted(infotext_pasted)

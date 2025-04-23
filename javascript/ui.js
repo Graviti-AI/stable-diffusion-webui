@@ -677,6 +677,9 @@ async function checkSignatureCompatibility(timeoutId = null)
 
 async function monitorSignatureChange() {
     const timeoutId = setTimeout(monitorSignatureChange, 30000);
+    if (!getDiffusApp().webUI.showWebUI()) {
+        return;
+    };
     checkSignatureCompatibility(timeoutId);
 }
 

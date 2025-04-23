@@ -64,6 +64,7 @@ def get_feature_permissions() -> dict[str, Any]:
         _feature_permissions = {
             "generate": {item["name"]: item for item in content["generate"]},
             "buttons": {item["name"]: item for item in content["buttons"]},
+            "features": {item["name"]: item for item in content["features"]},
         }
 
     return _feature_permissions

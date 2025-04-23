@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 from PIL import Image, ImageFilter
 
-_NSFW_ALLOWED_TIERS = {"basic", "plus", "pro", "api", "ltd s", "appsumo ltd tier 2"}
+from modules.system_monitor import get_feature_permissions
 
 if TYPE_CHECKING:
     from modules.processing import StableDiffusionProcessing
@@ -43,7 +43,8 @@ def nsfw_blur(
     request = p.get_request()
     assert request is not None
 
-    if request.headers["user-tire"].lower() in _NSFW_ALLOWED_TIERS:
+    allowed_tiers = get_feature_permissions()["features"]["NSFWContent"]["allowed_tiers"]
+    if request.headers["user-tire"] in allowed_tiers:
         return image, None
 
     endpoint = request.headers["x-diffus-api-gateway-endpoint"]

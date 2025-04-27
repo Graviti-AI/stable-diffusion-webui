@@ -54,7 +54,7 @@ function updateFavoriteCheckpoints() {
 
 async function refreshFavoriteCheckpoints() {
     const checkpointsApp = getDiffusCheckpointsApp();
-    await checkpointsApp.refesh();
+    await checkpointsApp.refresh();
     const checkpoints = checkpointsApp.listInfo();
 
     return { value: checkpoints, __type__: "update" };

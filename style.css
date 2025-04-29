@@ -171,8 +171,9 @@ a{
 
 /* gradio 3.39 puts a lot of overflow: hidden all over the place for an unknown reason. */
 /* div.gradio-container, .block.gradio-textbox, div.gradio-group, div.gradio-dropdown{ */
-/*     overflow: visible !important; */
-/* } */
+.block.gradio-textbox, div.gradio-group, div.gradio-dropdown{
+    overflow: visible !important;
+}
 
 /* align-items isn't enough and elements may overflow in Safari. */
 .unequal-height {
@@ -2211,10 +2212,6 @@ body.resizing .resize-handle {
 
 .prompt textarea[disabled] {
     opacity: 0.25 !important;
-}
-
-.prompt-overflow-visible {
-    overflow: visible !important;
 }
 
 #quicksettings .gradio-slider span {

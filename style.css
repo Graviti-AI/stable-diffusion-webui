@@ -2211,11 +2211,10 @@ body.resizing .resize-handle {
 
 .prompt textarea[disabled] {
     opacity: 0.25 !important;
-    visibility: visible;
 }
 
-.prompt-textarea {
-    overflow: visible;
+.prompt-overflow-visible {
+    overflow: visible !important;
 }
 
 #quicksettings .gradio-slider span {

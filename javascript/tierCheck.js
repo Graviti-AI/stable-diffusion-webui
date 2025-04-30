@@ -136,25 +136,5 @@ async function upgradeCheck(upgrade_info) {
     }
 
     const featurePermissions = getDiffusApp().featurePermissions;
-
-    switch (upgrade_info.reason) {
-        case "NSFW_CONTENT":
-            featurePermissions.openNSFWContentDialog();
-            return;
-
-        case "INSUFFICIENT_CREDITS":
-            featurePermissions.openInsufficientCreditsDialog();
-            return;
-
-        case "INSUFFICIENT_DAILY_CREDITS":
-            featurePermissions.openInsufficientDailyCreditsDialog();
-            return;
-
-        case "REACH_CONCURRENCY_LIMIT":
-            featurePermissions.openConcurrentTasksLimitDialog();
-            return;
-
-        default:
-            throw `Unknown upgrade reason: "${upgrade_info.reason}".`;
-    }
+    featurePermissions.openUpgradeDialogByReason(upgrade_info.reason);
 }

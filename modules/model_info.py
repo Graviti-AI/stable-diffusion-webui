@@ -93,7 +93,7 @@ class ModelInfoProtocal(Protocol):
 class ModelInfo(BaseModel):
     id: int
     model_type: Literal["CHECKPOINT", "EMBEDDING", "HYPERNETWORK", "LORA", "LYCORIS"]
-    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX", "ILLUSTRIOUS"] | None
+    base: Literal["SD1", "SD2", "SDXL", "PONY", "SD3", "FLUX", "NOOBAI", "ILLUSTRIOUS"] | None
     source: str | None = None
     name: str
     sha256: str

@@ -85,7 +85,7 @@ function _get_promot_keys() {
                 flag: (getArg) => getArg("Script:script_list:") === "Prompts from file or textbox",
                 values: (getArg) =>
                     getArg(
-                        "Prompts from file or textbox:List of prompt inputs:script_txt2img_prompts_from_file_or_textbox_prompt_txt",
+                        `Prompts from file or textbox:List of prompt inputs:script_${mode}_prompts_from_file_or_textbox_prompt_txt`,
                     ).split("\n"),
             },
         ];

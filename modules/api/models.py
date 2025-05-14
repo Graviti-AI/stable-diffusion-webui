@@ -333,6 +333,7 @@ class GetTaskCountResponse(BaseModel):
     finished_task_count: int = Field(title="FinishedTaskCount")
     failed_task_count: int = Field(title="FailedTaskCount")
     consecutive_failed_task_count: int = Field(title="ConsecutiveFailedTaskCount")
+    force_restart: bool = Field(title="ForceRestart")
     last_error_message: str = Field(title="CurrentTask")
     gpu_utilization: float = Field(title="GPUUtilization")
 

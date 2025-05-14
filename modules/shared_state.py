@@ -6,6 +6,7 @@ import traceback
 import torch
 
 from modules import errors, shared, devices, script_callbacks
+from modules.black_image import set_current_latent_callback
 from typing import Optional
 import gradio as gr
 
@@ -26,6 +27,7 @@ class State:
     _current_latent = None
     current_image = None
     current_image_sampling_step = 0
+    black_image_count: int | None = 0
     id_live_preview = 0
     textinfo = None
     time_start = None
@@ -45,6 +47,7 @@ class State:
     @current_latent.setter
     def current_latent(self, value):
         self._current_latent = value
+        set_current_latent_callback(self)
         script_callbacks.state_updated_callback(self)
 
     @property
@@ -145,6 +148,7 @@ class State:
         self.job_no += 1
         self.sampling_step = 0
         self.current_image_sampling_step = 0
+        self.black_image_count = 0
         script_callbacks.state_updated_callback(self)
 
     def dict(self):
@@ -172,6 +176,7 @@ class State:
         self.current_latent = None
         self.current_image = None
         self.current_image_sampling_step = 0
+        self.black_image_count = 0
         self.id_live_preview = 0
         self.skipped = False
         self.interrupted = False

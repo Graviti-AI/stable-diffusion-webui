@@ -26,6 +26,7 @@ recorded_results_limit = 2
 finished_task_count = 0
 failed_task_count = 0
 consecutive_failed_task_count = 0
+force_restart = False
 last_error_message = ''
 
 # this queue is just used for telling user where he/she is in the queue
@@ -51,7 +52,13 @@ def _make_gpu_utilization():
     return busy_time/(curr - _service_begin_time)
 
 def get_task_queue_info():
-    return current_task, pending_tasks, finished_tasks, finished_task_count, failed_task_count, consecutive_failed_task_count, last_error_message, _make_gpu_utilization()
+    return current_task, pending_tasks, finished_tasks, finished_task_count, failed_task_count, consecutive_failed_task_count, force_restart, last_error_message, _make_gpu_utilization()
+
+
+def set_force_restart(force: bool) -> None:
+    global force_restart
+    force_restart = force
+    logger.info(f'set_force_restart, force_restart: {force}')
 
 
 def start_task(id_task):
@@ -81,6 +88,7 @@ def finish_task(id_task, task_failed=False, error_message=''):
     global finished_task_count
     global failed_task_count
     global consecutive_failed_task_count
+    global force_restart
     global finished_tasks
     global failed_tasks
     global last_error_message

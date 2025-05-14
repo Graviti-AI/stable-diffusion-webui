@@ -904,7 +904,7 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
         p.scripts.preprocess(p)
         p.scripts.before_process(p)
         
-    stored_opts = {k: opts.data[k] if k in opts.data else opts.get_default(k) for k in p.override_settings.keys() if k in opts.data}
+    stored_opts = {k: opts.data[k] if k in opts.data else opts.get_default(k) for k in p.override_settings.keys()}
     all_model_info = p.get_all_model_info()
 
     try:

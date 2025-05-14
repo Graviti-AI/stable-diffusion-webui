@@ -20,7 +20,7 @@ import modules.sd_hijack
 from modules import util
 from modules.sd_hijack import model_hijack
 from modules.model_info import AllModelInfo, ModelInfo
-from modules.nsfw import nsfw_blur
+from modules.nsfw import nsfw_blur, detect_black_image, BlackImageException
 
 from modules import devices, prompt_parser, masking, sd_samplers, lowvram, infotext_utils, extra_networks, sd_vae_approx, scripts, sd_samplers_common, sd_unet, errors, rng, profiling
 from modules.rng import slerp, get_noise_source_type  # noqa: F401
@@ -1182,6 +1182,9 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     pp = scripts.PostprocessImageArgs(image, i + p.iteration * p.batch_size)
                     p.scripts.postprocess_image_after_composite(p, pp)
                     image = pp.image
+
+                if detect_black_image(image):
+                    raise BlackImageException()
 
                 image, nsfw_result = nsfw_blur(image, p.prompts[i], p)
 

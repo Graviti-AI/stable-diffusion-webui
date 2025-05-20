@@ -9,7 +9,7 @@ function _alert(options) {
 
 function _get_checkpoint_keys() {
     const checkpoint_keys = {};
-    for (let mode of ["txt2img", "img2img"]) {
+    for (const mode of ["txt2img", "img2img"]) {
         const keys = [
             {
                 source: null,
@@ -55,7 +55,7 @@ function _get_checkpoint_keys() {
             });
         }
 
-        for (let axis of ["Z", "Y", "X"]) {
+        for (const axis of ["Z", "Y", "X"]) {
             keys.push({
                 source: "xyz_plot",
                 flag: (getArg) =>
@@ -73,7 +73,7 @@ function _get_checkpoint_keys() {
 
 function _get_promot_keys() {
     const prompt_keys = {};
-    for (let mode of ["txt2img", "img2img"]) {
+    for (const mode of ["txt2img", "img2img"]) {
         const keys = [
             {
                 source: null,
@@ -114,7 +114,7 @@ function _get_promot_keys() {
             });
         }
 
-        for (let axis of ["Z", "Y", "X"]) {
+        for (const axis of ["Z", "Y", "X"]) {
             keys.push({
                 source: "xyz_plot",
                 flag: (getArg) =>
@@ -205,7 +205,7 @@ function _findLast(array, callbackFn) {
     if (typeof array.findLast === "function") {
         return array.findLast(callbackFn);
     }
-    for (let item of PYTHON.reversed(array)) {
+    for (const item of PYTHON.reversed(array)) {
         if (callbackFn(item)) {
             return item;
         }
@@ -229,7 +229,7 @@ async function _listCandidateModels(all_model_names, prompts) {
     const params = new URLSearchParams();
 
     prompts.forEach((prompt) => params.append("prompt", prompt.value));
-    for (let [model_type, model_names] of Object.entries(all_model_names)) {
+    for (const [model_type, model_names] of Object.entries(all_model_names)) {
         model_names.forEach((model_name) => params.append(model_type.toLowerCase(), model_name));
     }
 
@@ -261,7 +261,7 @@ function _buildModelTree(models) {
         HYPERNETWORK: {},
         LORA: {},
     };
-    for (let model of models) {
+    for (const model of models) {
         const model_type = model.model_type === "LYCORIS" ? "LORA" : model.model_type;
         const key =
             model_type === "CHECKPOINT"
@@ -289,10 +289,10 @@ function _findExtraNetworkModelKeys(prompts) {
         hypernet: [],
     };
 
-    for (let prompt of prompts) {
+    for (const prompt of prompts) {
         const results = prompt.value.matchAll(_NETWORK_REG);
-        for (let result of results) {
-            let type = result[1];
+        for (const result of results) {
+            const type = result[1];
             const keys = network_keys[type];
             if (!keys) {
                 getDiffusToastApp().unknownNetworkType(type);
@@ -300,7 +300,9 @@ function _findExtraNetworkModelKeys(prompts) {
             }
 
             const key = result[2].split(":")[0];
-            keys.push({ value: key, source: prompt.source });
+            if (!keys.some((item) => item.value === key && item.source === prompt.source)) {
+                keys.push({ value: key, source: prompt.source });
+            }
         }
     }
     return {
@@ -316,10 +318,10 @@ function _findEmbeddingModels(model_tree, prompts) {
         source: item.source,
     }));
 
-    for (let [key, model_info] of Object.entries(model_tree.EMBEDDING)) {
+    for (const [key, model_info] of Object.entries(model_tree.EMBEDDING)) {
         const reg = new RegExp(`\\b${key}\\b`);
 
-        for (let prompt of processed_prompts) {
+        for (const prompt of processed_prompts) {
             if (reg.test(prompt.value)) {
                 models.push(_convertModelInfo(model_info, prompt.source));
                 break;
@@ -351,8 +353,8 @@ function _getAllModelInfo(checkpoint_titles, prompts, network_keys, model_tree) 
     };
     const all_model_info = [];
 
-    for (let [model_type, keys] of Object.entries(all_keys)) {
-        for (let key of keys) {
+    for (const [model_type, keys] of Object.entries(all_keys)) {
+        for (const key of keys) {
             all_model_info.push(_getModel(model_tree, model_type, key));
         }
     }
@@ -375,7 +377,7 @@ async function getAllModelInfo(mode, args, signature, all_style_info) {
     let checkpoint_titles = [];
     const prompts = [];
 
-    for (let key_info of _CHECKPOINT_KEYS[mode]) {
+    for (const key_info of _CHECKPOINT_KEYS[mode]) {
         if (key_info.flag(getArg)) {
             checkpoint_titles.push(
                 ...key_info
@@ -389,7 +391,7 @@ async function getAllModelInfo(mode, args, signature, all_style_info) {
         (title) => title.value && title.value !== "Use same checkpoint",
     );
 
-    for (let key_info of _PROMPT_KEYS[mode]) {
+    for (const key_info of _PROMPT_KEYS[mode]) {
         if (key_info.flag(getArg)) {
             prompts.push(
                 ...key_info
@@ -402,7 +404,7 @@ async function getAllModelInfo(mode, args, signature, all_style_info) {
     }
 
     if (all_style_info) {
-        for (let style of all_style_info) {
+        for (const style of all_style_info) {
             if (style.prompt) {
                 prompts.push({ value: style.prompt, source: "style" });
             }
@@ -550,7 +552,7 @@ function _parseParams(params) {
 async function _listCandidateModelsByHash(hashes) {
     const params = new URLSearchParams();
 
-    for (let [model_type, values] of Object.entries(hashes)) {
+    for (const [model_type, values] of Object.entries(hashes)) {
         values.forEach((value) => params.append(model_type.toLowerCase(), value));
     }
 

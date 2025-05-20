@@ -155,12 +155,12 @@ def wrap_gpu_call(request: gradio.routes.Request, func, func_name, id_task, *arg
         if all_model_info:
             progress.set_current_task_step('reload_model_weights')
             script_callbacks.state_updated_callback(shared.state)
-            if not all_model_info.is_xyz_plot_enabled():
-                model_info = all_model_info.get_checkpoint_by_title(model_title)
-                if model_info is None:
-                    raise KeyError(model_title)
 
-                set_forge_checkpoint_info(model_info)
+            model_info = all_model_info.get_checkpoint_by_title(model_title)
+            if model_info is None:
+                raise KeyError(model_title)
+
+            set_forge_checkpoint_info(model_info)
 
         timer.record('load_models')
 

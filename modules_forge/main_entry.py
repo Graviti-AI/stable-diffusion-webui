@@ -575,7 +575,7 @@ class Txt2imgForgePreset:
         self._radio = gr.Radio(
             show_label=False,
             value=shared.opts.forge_preset,
-            choices=['sd', 'xl', 'flux', 'all'],
+            choices=['sd', 'xl', 'xl-turbo', 'flux', 'all'],
             elem_id="forge_ui_txt2img_preset",
         )
 
@@ -648,6 +648,19 @@ class Txt2imgForgePreset:
                 gr.update(visible=False, value=3.5),                                        # ui_txt2img_hr_distilled_cfg
             ]
 
+        if preset == 'xl-turbo':
+            return [
+                gr.update(value=getattr(shared.opts, "xl_turbo_t2i_steps", 5)),                   # ui_txt2img_steps
+                gr.update(value=getattr(shared.opts, "xl_turbo_t2i_width", 896)),                 # ui_txt2img_width
+                gr.update(value=getattr(shared.opts, "xl_turbo_t2i_height", 1152)),               # ui_txt2img_height
+                gr.update(value=getattr(shared.opts, "xl_turbo_t2i_cfg", 2)),                     # ui_txt2img_cfg
+                gr.update(visible=False, value=3.5),                                              # ui_txt2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "xl_turbo_t2i_sampler", 'DPM++ SDE')),       # ui_txt2img_sampler
+                gr.update(value=getattr(shared.opts, "xl_turbo_t2i_scheduler", 'Karras')),        # ui_txt2img_scheduler
+                gr.update(visible=True, value=getattr(shared.opts, "xl_turbo_t2i_hr_cfg", 2.0)),  # ui_txt2img_hr_cfg
+                gr.update(visible=False, value=3.5),                                              # ui_txt2img_hr_distilled_cfg
+            ]
+
         if preset == 'flux':
             return [
                 gr.update(value=getattr(shared.opts, "flux_t2i_steps", 20)),                # ui_txt2img_steps
@@ -683,7 +696,7 @@ class Img2imgForgePreset:
         self._radio = gr.Radio(
             show_label=False,
             value=shared.opts.forge_preset,
-            choices=['sd', 'xl', 'flux', 'all'],
+            choices=['sd', 'xl', 'xl-turbo', 'flux', 'all'],
             elem_id="forge_ui_img2img_preset",
         )
 
@@ -745,6 +758,17 @@ class Img2imgForgePreset:
                 gr.update(visible=False, value=3.5),                                        # ui_img2img_distilled_cfg
                 gr.update(value=getattr(shared.opts, "xl_i2i_sampler", 'Euler a')),         # ui_img2img_sampler
                 gr.update(value=getattr(shared.opts, "xl_i2i_scheduler", 'Automatic')),     # ui_img2img_scheduler
+            ]
+
+        if preset == 'xl-turbo':
+            return [
+                gr.update(value=getattr(shared.opts, "xl_turbo_i2i_steps", 5)),                   # ui_img2img_steps
+                gr.update(value=getattr(shared.opts, "xl_turbo_i2i_width", 1024)),                # ui_img2img_width
+                gr.update(value=getattr(shared.opts, "xl_turbo_i2i_height", 1024)),               # ui_img2img_height
+                gr.update(value=getattr(shared.opts, "xl_turbo_i2i_cfg", 2)),                     # ui_img2img_cfg
+                gr.update(visible=False, value=3.5),                                              # ui_img2img_distilled_cfg
+                gr.update(value=getattr(shared.opts, "xl_turbo_i2i_sampler", 'DPM++ SDE')),       # ui_img2img_sampler
+                gr.update(value=getattr(shared.opts, "xl_turbo_i2i_scheduler", 'Karras')),        # ui_img2img_scheduler
             ]
 
         if preset == 'flux':

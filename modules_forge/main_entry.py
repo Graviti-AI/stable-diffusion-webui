@@ -580,6 +580,7 @@ class Txt2imgForgePreset:
         )
 
     def enable(self) -> None:
+        ui_txt2img_steps = get_a1111_ui_component('txt2img', 'Steps')
         ui_txt2img_width = get_a1111_ui_component('txt2img', 'Size-1')
         ui_txt2img_height = get_a1111_ui_component('txt2img', 'Size-2')
         ui_txt2img_cfg = get_a1111_ui_component('txt2img', 'CFG scale')
@@ -591,6 +592,7 @@ class Txt2imgForgePreset:
         ui_txt2img_hr_distilled_cfg = get_a1111_ui_component('txt2img', 'Hires Distilled CFG Scale')
 
         output_targets = [
+            ui_txt2img_steps,
             ui_txt2img_width,
             ui_txt2img_height,
             ui_txt2img_cfg,
@@ -622,6 +624,7 @@ class Txt2imgForgePreset:
 
         if preset == 'sd':
             return [
+                gr.update(value=getattr(shared.opts, "sd_t2i_steps", 20)),                  # ui_txt2img_steps
                 gr.update(value=getattr(shared.opts, "sd_t2i_width", 512)),                 # ui_txt2img_width
                 gr.update(value=getattr(shared.opts, "sd_t2i_height", 640)),                # ui_txt2img_height
                 gr.update(value=getattr(shared.opts, "sd_t2i_cfg", 7)),                     # ui_txt2img_cfg
@@ -634,6 +637,7 @@ class Txt2imgForgePreset:
 
         if preset == 'xl':
             return [
+                gr.update(value=getattr(shared.opts, "xl_t2i_steps", 20)),                  # ui_txt2img_steps
                 gr.update(value=getattr(shared.opts, "xl_t2i_width", 896)),                 # ui_txt2img_width
                 gr.update(value=getattr(shared.opts, "xl_t2i_height", 1152)),               # ui_txt2img_height
                 gr.update(value=getattr(shared.opts, "xl_t2i_cfg", 5)),                     # ui_txt2img_cfg
@@ -646,6 +650,7 @@ class Txt2imgForgePreset:
 
         if preset == 'flux':
             return [
+                gr.update(value=getattr(shared.opts, "flux_t2i_steps", 20)),                # ui_txt2img_steps
                 gr.update(value=getattr(shared.opts, "flux_t2i_width", 896)),               # ui_txt2img_width
                 gr.update(value=getattr(shared.opts, "flux_t2i_height", 1152)),             # ui_txt2img_height
                 gr.update(value=getattr(shared.opts, "flux_t2i_cfg", 1)),                   # ui_txt2img_cfg
@@ -660,6 +665,7 @@ class Txt2imgForgePreset:
         ui_settings_from_file = loadsave.ui_settings.copy()
 
         return [
+            gr.update(value=20),                                            # ui_txt2img_steps
             gr.update(value=ui_settings_from_file['txt2img/Width/value']),  # ui_txt2img_width
             gr.update(value=ui_settings_from_file['txt2img/Height/value']),  # ui_txt2img_height
             gr.update(value=ui_settings_from_file['txt2img/CFG Scale/value']),  # ui_txt2img_cfg
@@ -682,6 +688,7 @@ class Img2imgForgePreset:
         )
 
     def enable(self) -> None:
+        ui_img2img_steps = get_a1111_ui_component('img2img', 'Steps')
         ui_img2img_width = get_a1111_ui_component('img2img', 'Size-1')
         ui_img2img_height = get_a1111_ui_component('img2img', 'Size-2')
         ui_img2img_cfg = get_a1111_ui_component('img2img', 'CFG scale')
@@ -690,6 +697,7 @@ class Img2imgForgePreset:
         ui_img2img_scheduler = get_a1111_ui_component('img2img', 'scheduler')
 
         output_targets = [
+            ui_img2img_steps,
             ui_img2img_width,
             ui_img2img_height,
             ui_img2img_cfg,
@@ -719,6 +727,7 @@ class Img2imgForgePreset:
 
         if preset == 'sd':
             return [
+                gr.update(value=getattr(shared.opts, "sd_i2i_steps", 20)),                  # ui_img2img_steps
                 gr.update(value=getattr(shared.opts, "sd_i2i_width", 512)),                 # ui_img2img_width
                 gr.update(value=getattr(shared.opts, "sd_i2i_height", 512)),                # ui_img2img_height
                 gr.update(value=getattr(shared.opts, "sd_i2i_cfg", 7)),                     # ui_img2img_cfg
@@ -729,6 +738,7 @@ class Img2imgForgePreset:
 
         if preset == 'xl':
             return [
+                gr.update(value=getattr(shared.opts, "xl_i2i_steps", 20)),                  # ui_img2img_steps
                 gr.update(value=getattr(shared.opts, "xl_i2i_width", 1024)),                # ui_img2img_width
                 gr.update(value=getattr(shared.opts, "xl_i2i_height", 1024)),               # ui_img2img_height
                 gr.update(value=getattr(shared.opts, "xl_i2i_cfg", 5)),                     # ui_img2img_cfg
@@ -739,6 +749,7 @@ class Img2imgForgePreset:
 
         if preset == 'flux':
             return [
+                gr.update(value=getattr(shared.opts, "flux_i2i_steps", 20)),                # ui_img2img_steps
                 gr.update(value=getattr(shared.opts, "flux_i2i_width", 1024)),              # ui_img2img_width
                 gr.update(value=getattr(shared.opts, "flux_i2i_height", 1024)),             # ui_img2img_height
                 gr.update(value=getattr(shared.opts, "flux_i2i_cfg", 1)),                   # ui_img2img_cfg
@@ -751,6 +762,7 @@ class Img2imgForgePreset:
         ui_settings_from_file = loadsave.ui_settings.copy()
 
         return [
+            gr.update(value=20),                                            # ui_img2img_steps
             gr.update(value=ui_settings_from_file['img2img/Width/value']),  # ui_img2img_width
             gr.update(value=ui_settings_from_file['img2img/Height/value']),  # ui_img2img_height
             gr.update(value=ui_settings_from_file['img2img/CFG Scale/value']),  # ui_img2img_cfg

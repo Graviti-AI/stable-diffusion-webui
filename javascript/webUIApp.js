@@ -21,12 +21,50 @@ function _updateExtraNetwork(tabname, text) {
     return added;
 }
 
+let _currentPreset = null;
+
+function _setPreset(preset) {
+    _currentPreset = preset;
+    return preset;
+}
+
 const webUIApp = {
     updateFavoriteCheckpoints() {
         const refreshButton = gradioApp().getElementById("refresh_sd_model_checkpoint_dropdown");
         if (refreshButton) {
             refreshButton.click();
         }
+    },
+    setCheckpoint(model_base, filename) {
+        let preset;
+
+        switch (model_base) {
+            case "SD1":
+            case "SD2":
+                preset = "sd";
+                break;
+            case "SDXL":
+            case "PONY":
+            case "NOOBAI":
+            case "ILLUSTRIOUS":
+                const lowerFilename = filename.toLowerCase();
+                preset =
+                    lowerFilename.includes("turbo") || lowerFilename.includes("lightning")
+                        ? "xl-turbo"
+                        : "xl";
+                break;
+            case "FLUX":
+                preset = "flux";
+                break;
+            default:
+                console.error(`Unknown Model Base: ${model_base}`);
+                return;
+        }
+
+        if (preset === _currentPreset) {
+            return;
+        }
+        gradioApp().querySelector(`[data-testid="${preset}-radio-label"] input`).click();
     },
     setExtraNetwork(model_type, filename) {
         const toast = getDiffusApp().toast;

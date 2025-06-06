@@ -39,8 +39,10 @@ function initFavoriteCheckpoints() {
     const checkpointsApp = getDiffusCheckpointsApp();
     const checkpoints = checkpointsApp.listInfo();
     const selection = checkpointsApp.getInfo();
-    if (selection && selection.base === "FLUX") {
-        webUIApp.updateFluxMonitor(true);
+    if (selection) {
+        webUIApp.setCheckpoint(selection.base, selection.filename);
+    } else {
+        webUIApp.setCheckpoint("SD1", "");
     }
 
     return { value: checkpoints, __type__: "update" };

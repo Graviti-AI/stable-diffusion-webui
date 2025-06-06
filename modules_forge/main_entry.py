@@ -609,14 +609,16 @@ class Txt2imgForgePreset:
             outputs=output_targets,
             queue=False,
             show_progress=False,
+            _js="_setPreset"
         )
-        Context.root_block.load(
-            self.on_change,
-            inputs=[self._radio],
-            outputs=output_targets,
-            queue=False,
-            show_progress=False,
-        )
+        # Context.root_block.load(
+        #     self.on_change,
+        #     inputs=[self._radio],
+        #     outputs=output_targets,
+        #     queue=False,
+        #     show_progress=False,
+        #     js="_setPreset"
+        # )
 
     @staticmethod
     def on_change(preset):
@@ -725,14 +727,16 @@ class Img2imgForgePreset:
             outputs=output_targets,
             queue=False,
             show_progress=False,
+            _js="_setPreset"
         )
-        Context.root_block.load(
-            self.on_change,
-            inputs=[self._radio],
-            outputs=output_targets,
-            queue=False,
-            show_progress=False,
-        )
+        # Context.root_block.load(
+        #     self.on_change,
+        #     inputs=[self._radio],
+        #     outputs=output_targets,
+        #     queue=False,
+        #     show_progress=False,
+        #     js="_setPreset"
+        # )
 
     @staticmethod
     def on_change(preset):

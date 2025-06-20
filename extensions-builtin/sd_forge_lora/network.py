@@ -63,18 +63,18 @@ class NetworkOnDisk:
         obj.is_safetensors = model_info.is_safetensors
         obj.is_gguf = model_info.is_gguf
 
-        def read_metadata():
-            metadata = sd_models.read_metadata_from_safetensors(model_info.filename)
-            metadata.pop('ssmd_cover_images', None)  # those are cover images, and they are too big to display in UI as text
-
-            return metadata
-
-        if obj.is_safetensors:
-            try:
-                obj.metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + model_info.sha256, obj.filename, read_metadata)
-            except Exception as e:
-                errors.display(e, f"reading lora {obj.filename}")
-
+        # def read_metadata():
+        #     metadata = sd_models.read_metadata_from_safetensors(model_info.filename)
+        #     metadata.pop('ssmd_cover_images', None)  # those are cover images, and they are too big to display in UI as text
+        #
+        #     return metadata
+        #
+        # if obj.is_safetensors:
+        #     try:
+        #         obj.metadata = cache.cached_data_for_file('safetensors-metadata', "lora/" + model_info.sha256, obj.filename, read_metadata)
+        #     except Exception as e:
+        #         errors.display(e, f"reading lora {obj.filename}")
+        #
         obj.alias = obj.name
         obj.set_hash(model_info.sha256)
         obj.sd_version = obj.detect_version()

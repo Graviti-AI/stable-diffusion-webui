@@ -295,7 +295,7 @@ class StableDiffusionProcessing:
 
     def get_all_model_info(self) -> AllModelInfo:
         if self.diffus_all_model_info is None:
-            raise NotImplementedError("Trying to 'set_all_model_info' before 'set_all_model_info'")
+            raise NotImplementedError("Trying to 'get_all_model_info' before 'set_all_model_info'")
 
         return self.diffus_all_model_info
 

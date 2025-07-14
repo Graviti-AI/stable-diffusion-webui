@@ -139,6 +139,10 @@ function create_submit_args(args) {
     return res;
 }
 
+function setGenerationDisabled(tabname, disabled) {
+    gradioApp().getElementById(tabname + '_generate').disabled = disabled;
+}
+
 function setSubmitButtonsVisibility(tabname, showInterrupt, showSkip, showInterrupting) {
     gradioApp().getElementById(tabname + '_interrupt').style.display = showInterrupt ? "block" : "none";
     gradioApp().getElementById(tabname + '_skip').style.display = showSkip ? "block" : "none";
@@ -191,7 +195,7 @@ async function _submit() {
     return res;
 }
 
-async function submit() {
+async function submit_internal() {
     await tierCheckGenerate("txt2img", arguments);
     checkSignatureCompatibility();
 
@@ -203,6 +207,16 @@ async function submit() {
     return res
 }
 
+async function submit() {
+    const tabname = "txt2img";
+    setGenerationDisabled(tabname, true);
+    try {
+        return await submit_internal(...arguments);
+    } finally {
+        setGenerationDisabled(tabname, false);
+    }
+}
+
 async function submit_txt2img_upscale() {
     var res = await _submit(...arguments);
 
@@ -211,7 +225,7 @@ async function submit_txt2img_upscale() {
     return res;
 }
 
-async function submit_img2img() {
+async function submit_img2img_internal() {
     await tierCheckGenerate("img2img", arguments);
     showSubmitButtons('img2img', false);
 
@@ -242,6 +256,16 @@ async function submit_img2img() {
     res[all_model_info_index] = all_model_info === null ? null : JSON.stringify(all_model_info);
 
     return res;
+}
+
+async function submit_img2img() {
+    const tabname = "img2img";
+    setGenerationDisabled(tabname, true);
+    try {
+        return await submit_img2img_internal(...arguments);
+    } finally {
+        setGenerationDisabled(tabname, false);
+    }
 }
 
 function submit_extras() {

@@ -48,5 +48,5 @@ class DaemonApi:
         raise HTTPException(status_code=401, detail="invalid API secret")
 
     @staticmethod
-    def health_check() -> str:
+    async def health_check() -> str:
         return 'OK'

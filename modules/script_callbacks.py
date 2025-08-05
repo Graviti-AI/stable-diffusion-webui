@@ -21,8 +21,14 @@ def report_exception(c, job):
     errors.report(f"Error executing callback {job} for {c.script}", exc_info=True)
 
 
+class GalleryOutput:
+    def __init__(self, url: str | None, is_nsfw: bool | None):
+        self.url = url
+        self.is_nsfw = is_nsfw
+
+
 class ImageSaveParams:
-    def __init__(self, image, p, filename, pnginfo, *, skip_register=False, nsfw_result=None):
+    def __init__(self, image, p, filename, pnginfo, *, skip_register=False):
         self.image = image
         """the PIL image itself"""
 
@@ -36,7 +42,7 @@ class ImageSaveParams:
         """dictionary with parameters for image's PNG info data; infotext will have the key 'parameters'"""
 
         self.skip_register = skip_register
-        self.nsfw_result = nsfw_result
+        self.gallery_response = None
 
 
 class ExtraNoiseParams:

@@ -20,7 +20,7 @@ import modules.sd_hijack
 from modules import util
 from modules.sd_hijack import model_hijack
 from modules.model_info import AllModelInfo, ModelInfo
-from modules.nsfw import nsfw_blur, detect_black_image, BlackImageException
+from modules.nsfw import detect_black_image, BlackImageException
 
 from modules import devices, prompt_parser, masking, sd_samplers, lowvram, infotext_utils, extra_networks, sd_vae_approx, scripts, sd_samplers_common, sd_unet, errors, rng, profiling
 from modules.rng import slerp, get_noise_source_type  # noqa: F401
@@ -1186,16 +1186,21 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                 if detect_black_image(image):
                     raise BlackImageException()
 
-                image, nsfw_result = nsfw_blur(image, p.prompts[i], p)
-
-                if save_samples and not getattr(image, "is_nsfw", False):
-                    images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p, nsfw_result=nsfw_result)
+                image_url = None
+                if save_samples:
+                    _, _, gallery_response = images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p)
+                    if gallery_response["is_nsfw"]:
+                        image = images.blur_image(image)
+                        setattr(image, "is_nsfw", True)
+                    else:
+                        image_url = gallery_response["url"]
 
                 text = infotext(i)
                 infotexts.append(text)
                 if opts.enable_pnginfo:
                     image.info["parameters"] = text
-                output_images.append(image)
+
+                output_images.append(image_url if image_url is not None else image)
 
                 if mask_for_overlay is not None:
                     if opts.return_mask or opts.save_mask:

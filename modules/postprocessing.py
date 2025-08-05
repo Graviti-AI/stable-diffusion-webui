@@ -6,7 +6,6 @@ import json
 
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
-from modules.nsfw import nsfw_blur
 from modules_forge.utils import prepare_free_memory
 
 
@@ -110,6 +109,7 @@ def run_postprocessing(
 
             shared.state.assign_current_image(pp.image)
 
+            image_url = None
             if save_output:
                 # we make a StableDiffusionProcessing here to let on_image_saved script can get request from it
                 from modules.processing import StableDiffusionProcessing
@@ -118,10 +118,11 @@ def run_postprocessing(
                 p.set_request(request)
                 p.feature = "EXTRAS"
 
-                pp.image, nsfw_result = nsfw_blur(pp.image, None, p)
-
-                if not getattr(pp.image, "is_nsfw", False):
-                    fullfn, _ = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, nsfw_result=nsfw_result)
+                fullfn, _, gallery_response = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, nsfw_result=nsfw_result)
+                if gallery_response["is_nsfw"]:
+                    pp.image = images.blur_image(pp.image)
+                else:
+                    image_url = gallery_response["url"]
 
                 if pp.caption and False:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"
@@ -148,7 +149,7 @@ def run_postprocessing(
                             file.write(caption)
 
             if extras_mode != 2 or show_extras_results:
-                outputs.append(pp.image)
+                outputs.append(image_url if image_url is not None else pp.image)
                 if pp.caption:
                     caption_lines = [ui_common.plaintext_to_html(f"{key}:\n{value}") for key, value in pp.caption.items()]
                     caption_results.append("".join(caption_lines))

@@ -14,7 +14,7 @@ import re
 import numpy as np
 import piexif
 import piexif.helper
-from PIL import Image, ImageFont, ImageDraw, ImageColor, PngImagePlugin, ImageOps
+from PIL import Image, ImageFont, ImageDraw, ImageColor, PngImagePlugin, ImageOps, ImageFilter
 # pillow_avif needs to be imported somewhere in code for it to work
 import pillow_avif # noqa: F401
 import string
@@ -624,7 +624,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         image.save(filename, format=image_format, quality=opts.jpeg_quality)
 
 
-def save_image(image, path, basename, seed=None, prompt=None, extension='png', info=None, short_filename=False, no_prompt=False, grid=False, pnginfo_section_name='parameters', p=None, existing_info=None, forced_filename=None, suffix="", save_to_dirs=None, *, nsfw_result=None):
+def save_image(image, path, basename, seed=None, prompt=None, extension='png', info=None, short_filename=False, no_prompt=False, grid=False, pnginfo_section_name='parameters', p=None, existing_info=None, forced_filename=None, suffix="", save_to_dirs=None):
     """Save an image.
 
     Args:
@@ -708,7 +708,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
     if info is not None:
         pnginfo[pnginfo_section_name] = info
 
-    params = script_callbacks.ImageSaveParams(image, p, fullfn, pnginfo, skip_register=grid, nsfw_result=nsfw_result)
+    params = script_callbacks.ImageSaveParams(image, p, fullfn, pnginfo, skip_register=grid)
     script_callbacks.before_image_saved_callback(params)
 
     image = params.image
@@ -774,7 +774,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
 
     script_callbacks.image_saved_callback(params)
 
-    return fullfn, txt_fullfn
+    return fullfn, txt_fullfn, params.gallery_response
 
 
 IGNORED_INFO_KEYS = {
@@ -884,4 +884,10 @@ def fix_png_transparency(image: Image.Image):
         return image
 
     image = image.convert("RGBA")
+    return image
+
+
+def blur_image(image: Image.Image, radius: int = 10) -> Image.Image:
+    image = image.filter(ImageFilter.BoxBlur(radius))
+
     return image

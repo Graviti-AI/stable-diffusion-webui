@@ -122,7 +122,7 @@ def run_postprocessing(
                 if gallery_response["is_nsfw"]:
                     pp.image = images.blur_image(pp.image)
                 else:
-                    image_url = gallery_response["url"]
+                    image_url = images.make_cdn_image_url(gallery_response["url"])
 
                 if pp.caption and False:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"

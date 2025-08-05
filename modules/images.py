@@ -891,3 +891,13 @@ def blur_image(image: Image.Image, radius: int = 10) -> Image.Image:
     image = image.filter(ImageFilter.BoxBlur(radius))
 
     return image
+
+
+GALLERY_CDN_URL = os.getenv("GALLERY_CDN_URL")
+def make_cdn_image_url(url: str) -> str:
+    if not GALLERY_CDN_URL:
+        raise ValueError("GALLERY_CDN_URL environment variable is not set")
+
+    return f"{GALLERY_CDN_URL.rstrip('/')}/{url.lstrip('/')}"
+
+

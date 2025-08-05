@@ -1193,7 +1193,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                         image = images.blur_image(image)
                         setattr(image, "is_nsfw", True)
                     else:
-                        image_url = gallery_response["url"]
+                        image_url = images.make_cdn_image_url(gallery_response["url"])
 
                 text = infotext(i)
                 infotexts.append(text)

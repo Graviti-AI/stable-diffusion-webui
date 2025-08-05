@@ -1186,7 +1186,6 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                 if detect_black_image(image):
                     raise BlackImageException()
 
-                image_url = None
                 if save_samples:
                     _, _, gallery_response = images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p)
                     if gallery_response["is_nsfw"]:
@@ -1194,13 +1193,15 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                         setattr(image, "is_nsfw", True)
                     else:
                         image_url = images.make_cdn_image_url(gallery_response["url"])
+                        setattr(image, "gallery_url", image_url)
+
 
                 text = infotext(i)
                 infotexts.append(text)
                 if opts.enable_pnginfo:
                     image.info["parameters"] = text
 
-                output_images.append(image_url if image_url is not None else image)
+                output_images.append(image)
 
                 if mask_for_overlay is not None:
                     if opts.return_mask or opts.save_mask:
@@ -1246,6 +1247,8 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         extra_networks.deactivate(p, p.extra_network_data)
 
     devices.torch_gc()
+
+    output_images = [getattr(image, "gallery_url", image) for image in output_images]
 
     res = Processed(
         p,

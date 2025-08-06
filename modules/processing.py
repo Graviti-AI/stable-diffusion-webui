@@ -1187,7 +1187,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     raise BlackImageException()
 
                 if save_samples:
-                    _, _, gallery_response = images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p)
+                    _, _, gallery_response = images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p, skip_register=False)
                     if gallery_response["is_nsfw"]:
                         image = images.blur_image(image)
                         setattr(image, "is_nsfw", True)

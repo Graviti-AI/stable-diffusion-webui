@@ -118,7 +118,7 @@ def run_postprocessing(
                 p.set_request(request)
                 p.feature = "EXTRAS"
 
-                fullfn, _, gallery_response = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True)
+                fullfn, _, gallery_response = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, skip_register=False)
                 if gallery_response["is_nsfw"]:
                     pp.image = images.blur_image(pp.image)
                     setattr(pp.image, "is_nsfw", True)

@@ -1250,8 +1250,6 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
     devices.torch_gc()
 
-    output_images = [getattr(image, "gallery_url", image) for image in output_images]
-
     res = Processed(
         p,
         images_list=output_images,

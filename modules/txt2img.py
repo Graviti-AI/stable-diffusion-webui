@@ -137,6 +137,7 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery, gallery_index, g
             if processed is None:
                 processed = processing.process_images(p)
 
+    processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
     shared.total_tqdm.clear()
 
     insert = getattr(shared.opts, 'hires_button_gallery_insert', False)
@@ -175,6 +176,7 @@ def txt2img(request: gr.Request, id_task: str, *args):
             if processed is None:
                 processed = processing.process_images(p)
 
+    processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
     shared.total_tqdm.clear()
 
     generation_info_js = processed.js()

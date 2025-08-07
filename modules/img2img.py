@@ -285,6 +285,7 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
                 if processed is None:
                     processed = process_images(p)
 
+    processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
     shared.total_tqdm.clear()
 
     generation_info_js = processed.js()

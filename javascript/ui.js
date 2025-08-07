@@ -699,8 +699,10 @@ async function checkSignatureCompatibility(timeoutId = null)
     });
 }
 
+const SIGNATURE_CHECK_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
 async function monitorSignatureChange() {
-    const timeoutId = setTimeout(monitorSignatureChange, 30000);
+    const timeoutId = setTimeout(monitorSignatureChange, SIGNATURE_CHECK_INTERVAL);
     if (!getDiffusApp().webUI.showWebUI()) {
         return;
     };
@@ -728,7 +730,7 @@ onUiLoaded(function(){
     const isDarkTheme = /theme=dark/g.test(search);
     Cookies.set('theme', isDarkTheme ? 'dark' : 'light');
 
-    setTimeout(monitorSignatureChange, 30000);
+    setTimeout(monitorSignatureChange, SIGNATURE_CHECK_INTERVAL);
 });
 
 var onEditTimers = {};

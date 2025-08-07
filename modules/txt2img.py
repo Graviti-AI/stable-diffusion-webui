@@ -135,6 +135,7 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery, gallery_index, g
             processed = modules.scripts.scripts_txt2img.run(p, *p.script_args)
 
             if processed is None:
+                p.do_not_save_grid = True
                 processed = processing.process_images(p)
 
     processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
@@ -174,6 +175,7 @@ def txt2img(request: gr.Request, id_task: str, *args):
             processed = modules.scripts.scripts_txt2img.run(p, *p.script_args)
 
             if processed is None:
+                p.do_not_save_grid = True
                 processed = processing.process_images(p)
 
     processed.images = [getattr(image, "gallery_url", image) for image in processed.images]

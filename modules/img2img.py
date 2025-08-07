@@ -283,6 +283,7 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
             ):
                 processed = modules.scripts.scripts_img2img.run(p, *args)
                 if processed is None:
+                    p.do_not_save_grid = True
                     processed = process_images(p)
 
     processed.images = [getattr(image, "gallery_url", image) for image in processed.images]

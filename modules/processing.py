@@ -1242,7 +1242,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     grid.info["parameters"] = text
                 output_images.insert(0, grid)
                 index_of_first_image = 1
-            if opts.grid_save and not getattr(grid, "is_nsfw", False):
+            if False and opts.grid_save and not getattr(grid, "is_nsfw", False):
                 images.save_image(grid, p.outpath_grids, "grid", p.all_seeds[0], p.all_prompts[0], opts.grid_format, info=infotext(use_main_prompt=True), short_filename=not opts.grid_extended_filename, p=p, grid=True)
 
     if not p.disable_extra_networks and p.extra_network_data:

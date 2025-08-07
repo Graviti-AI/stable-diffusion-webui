@@ -1188,12 +1188,14 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
                 if save_samples:
                     _, _, gallery_response = images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p, skip_register=False)
-                    if gallery_response["is_nsfw"]:
+                    if gallery_response["url"]:
+                        image_url = images.make_cdn_image_url(gallery_response["url"])
+                        setattr(image, "gallery_url", image_url)
+                    elif gallery_response["is_nsfw"]:
                         image = images.blur_image(image)
                         setattr(image, "is_nsfw", True)
                     else:
-                        image_url = images.make_cdn_image_url(gallery_response["url"])
-                        setattr(image, "gallery_url", image_url)
+                        raise ValueError("Failed to get image url from Gallery response when no NSFW flag.")
 
 
                 text = infotext(i)

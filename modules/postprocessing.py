@@ -119,11 +119,13 @@ def run_postprocessing(
                 p.feature = "EXTRAS"
 
                 fullfn, _, gallery_response = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, skip_register=False)
-                if gallery_response["is_nsfw"]:
+                if gallery_response["url"]:
+                    image_url = images.make_cdn_image_url(gallery_response["url"])
+                elif gallery_response["is_nsfw"]:
                     pp.image = images.blur_image(pp.image)
                     setattr(pp.image, "is_nsfw", True)
                 else:
-                    image_url = images.make_cdn_image_url(gallery_response["url"])
+                    raise ValueError("Failed to get image url from Gallery response when no NSFW flag.")
 
                 if pp.caption and False:
                     caption_filename = os.path.splitext(fullfn)[0] + ".txt"

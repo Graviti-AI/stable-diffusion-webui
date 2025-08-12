@@ -21,13 +21,6 @@ function _updateExtraNetwork(tabname, text) {
     return added;
 }
 
-let _currentPreset = null;
-
-function _setPreset(preset) {
-    _currentPreset = preset;
-    return preset;
-}
-
 const webUIApp = {
     updateFavoriteCheckpoints() {
         const refreshButton = gradioApp().getElementById("refresh_sd_model_checkpoint_dropdown");
@@ -61,9 +54,6 @@ const webUIApp = {
                 return;
         }
 
-        if (preset === _currentPreset) {
-            return;
-        }
         gradioApp().querySelector(`[data-testid="${preset}-radio-label"] input`).click();
     },
     setExtraNetwork(model_type, filename) {

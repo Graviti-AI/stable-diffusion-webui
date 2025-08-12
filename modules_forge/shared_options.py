@@ -20,7 +20,7 @@ def register(options_templates, options_section, OptionInfo):
         "forge_inference_memory": OptionInfo(1024),
         "forge_async_loading": OptionInfo('Queue'),
         "forge_pin_shared_memory": OptionInfo('CPU'),
-        "forge_preset": OptionInfo('sd'),
+        "forge_preset": OptionInfo('all'),
         # "forge_additional_modules": OptionInfo([]),
 
         "forge_additional_modules": OptionInfo([], "VAE / Text Encoder", gr.Dropdown, lambda: {"choices": _list_forge_modules(), "multiselect": True}, refresh=_list_forge_modules, infotext='VAE / Text Encoder').info("choose VAE / Text Encoder"),

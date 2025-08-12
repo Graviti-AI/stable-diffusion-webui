@@ -609,7 +609,6 @@ class Txt2imgForgePreset:
             outputs=output_targets,
             queue=False,
             show_progress=False,
-            _js="_setPreset"
         )
         # Context.root_block.load(
         #     self.on_change,
@@ -617,7 +616,6 @@ class Txt2imgForgePreset:
         #     outputs=output_targets,
         #     queue=False,
         #     show_progress=False,
-        #     js="_setPreset"
         # )
 
     @staticmethod
@@ -727,7 +725,6 @@ class Img2imgForgePreset:
             outputs=output_targets,
             queue=False,
             show_progress=False,
-            _js="_setPreset"
         )
         # Context.root_block.load(
         #     self.on_change,
@@ -735,7 +732,6 @@ class Img2imgForgePreset:
         #     outputs=output_targets,
         #     queue=False,
         #     show_progress=False,
-        #     js="_setPreset"
         # )
 
     @staticmethod

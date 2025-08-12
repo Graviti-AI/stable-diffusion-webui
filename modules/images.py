@@ -24,6 +24,7 @@ import hashlib
 from modules import sd_samplers, shared, script_callbacks, errors
 from modules.paths_internal import roboto_ttf_file
 from modules.shared import opts
+from modules.paths import workdir
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 
@@ -901,3 +902,18 @@ def make_cdn_image_url(url: str) -> str:
     return f"{GALLERY_CDN_URL.rstrip('/')}/{url.lstrip('/')}"
 
 
+def read_image_from_cdn_image_url(url: str) -> Image.Image:
+    if not GALLERY_CDN_URL:
+        raise ValueError("GALLERY_CDN_URL environment variable is not set")
+
+    prefix = f"{GALLERY_CDN_URL.rstrip('/')}/api/public/gallery/v1/media/"
+    path = workdir / url.split("?", 1)[0].removeprefix(prefix)
+
+    if path.exists():
+        return Image.open(path)
+
+    import requests
+
+    response = requests.get(url, timeout=15)
+    response.raise_for_status()
+    return Image.open(io.BytesIO(response.content))

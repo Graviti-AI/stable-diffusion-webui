@@ -51,6 +51,10 @@ function extract_image_from_gallery(gallery) {
     return [[gallery[index]]];
 }
 
+function update_gallery_urls(gallery) {
+    return { value: gallery.map((item) => item.image.url), __type__: "update" }
+}
+
 window.args_to_array = Array.from; // Compatibility with e.g. extensions that may expect this to be around
 
 function switchToTab(tab_id) {

@@ -52,6 +52,12 @@ function extract_image_from_gallery(gallery) {
 }
 
 function extract_image_url_from_gallery_urls(gallery_urls) {
+    if (gallery_send_to_url) {
+        let result = [gallery_send_to_url];
+        gallery_send_to_url = null;
+        return result;
+    }
+
     if (gallery_urls.length == 0) {
         return [null];
     }

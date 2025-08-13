@@ -1,5 +1,6 @@
 let gallery_run_pnginfo = null;
 let gallery_run_models = null;
+let gallery_send_to_url = null;
 
 const _TAB_ID_TO_NAME = {
     tab_txt2img: "txt2img",
@@ -96,6 +97,10 @@ const webUIApp = {
         gallery_run_models = models;
         gradioApp().getElementById(`${tabname}_paste`).click();
     },
+    sendToImg2Img(url) {
+        gallery_send_to_url = url;
+        gradioApp().getElementById("txt2img_send_to_img2img").click();
+    }
 };
 
 onUiLoaded(() => {

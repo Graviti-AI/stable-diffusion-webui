@@ -166,6 +166,9 @@ def connect_paste_params_buttons(dummy_component):
             if isinstance(binding.source_image_component, gr.Gallery):
                 func = send_image_and_dimensions if need_send_dementions else image_from_url_text
                 jsfunc = "extract_image_from_gallery"
+            elif isinstance(binding.source_image_component, gr.JSON):
+                func = send_image_and_dimensions_from_url if need_send_dementions else images.read_image_from_cdn_image_url
+                jsfunc = "extract_image_url_from_gallery_urls"
             else:
                 func = send_image_and_dimensions if need_send_dementions else lambda x: x
                 jsfunc = None
@@ -215,6 +218,18 @@ def send_image_and_dimensions(x):
         h = gr.update()
 
     return img, w, h
+
+
+def send_image_and_dimensions_from_url(url: str):
+    image = images.read_image_from_cdn_image_url(url)
+    if shared.opts.send_size and isinstance(image, Image.Image):
+        w = image.width
+        h = image.height
+    else:
+        w = gr.update()
+        h = gr.update()
+
+    return image, w, h
 
 
 def restore_old_hires_fix_params(res):

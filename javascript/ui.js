@@ -51,6 +51,21 @@ function extract_image_from_gallery(gallery) {
     return [[gallery[index]]];
 }
 
+function extract_image_url_from_gallery_urls(gallery_urls) {
+    if (gallery_urls.length == 0) {
+        return [null];
+    }
+
+    var index = selected_gallery_index();
+
+    if (index < 0 || index >= gallery_urls.length) {
+        // Use the first image in the gallery as the default
+        index = 0;
+    }
+
+    return [gallery_urls[index]];
+}
+
 function update_gallery_urls(gallery) {
     return { value: gallery.map((item) => item.image.url), __type__: "update" }
 }

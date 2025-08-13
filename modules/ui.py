@@ -433,7 +433,6 @@ def create_ui():
         txt2img_prompt_selections = toprow.ui_styles.selection
 
         dummy_component = gr.Textbox(visible=False)
-        gallery_urls = gr.JSON(visible=False)
 
         with gr.Row():
             txt2img_preset = main_entry.Txt2imgForgePreset()
@@ -595,12 +594,6 @@ def create_ui():
                 )
 
             output_panel = create_output_panel("txt2img", Paths(None).outdir_txt2img_samples(), toprow)
-            output_panel.gallery.change(
-                fn=None,
-                inputs=[output_panel.gallery],
-                outputs=[gallery_urls],
-                _js="update_gallery_urls",
-            )
 
             txt2img_inputs = [
                 dummy_component,
@@ -685,7 +678,7 @@ def create_ui():
                     index += 1
                 return gr.update(selected_index=index)
             
-            txt2img_upscale_inputs = txt2img_inputs[0:1] + [gallery_urls, dummy_component, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature]
+            txt2img_upscale_inputs = txt2img_inputs[0:1] + [output_panel.gallery_urls, dummy_component, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature]
 
             output_panel.button_upscale.click(
                 fn=wrap_gradio_gpu_call(
@@ -776,8 +769,6 @@ def create_ui():
         img2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_function_index")
         img2img_prompt_styles = toprow.ui_styles.dropdown
         img2img_prompt_selections = toprow.ui_styles.selection
-
-        gallery_urls = gr.JSON(visible=False)
 
         with gr.Row():
             img2img_preset = main_entry.Img2imgForgePreset()
@@ -1007,12 +998,6 @@ def create_ui():
                 )
 
             output_panel = create_output_panel("img2img", Paths(None).outdir_img2img_samples(), toprow)
-            output_panel.gallery.change(
-                fn=None,
-                inputs=[output_panel.gallery],
-                outputs=[gallery_urls],
-                _js="update_gallery_urls",
-            )
 
             toprow.prompt_img.change(
                 fn=modules.images.image_data,

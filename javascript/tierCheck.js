@@ -1,3 +1,5 @@
+const _FEATURE = "WebUI";
+
 function _getControlNetArgNames() {
     const arg_names = {};
     for (let tabname of ["txt2img", "img2img"]) {
@@ -36,14 +38,14 @@ function _checkControlNetUnits(tabname, getArg, featurePermissions) {
     const names = _controlNetArgNames[tabname];
     const controlnet_units = names.map((item) => getArg(item.enable)).reduce((a, b) => a + b, 0);
 
-    featurePermissions.checkControlNetUnitsLimit(controlnet_units);
+    featurePermissions.checkControlNetUnitsLimit(controlnet_units, _FEATURE);
 }
 
 function _checkSamplingSteps(tabname, getArg, featurePermissions) {
     const argName = `Sampler:Sampling steps:${tabname}_steps`;
     const steps = getArg(argName);
 
-    featurePermissions.checkSamplingStepsLimit(steps);
+    featurePermissions.checkSamplingStepsLimit(steps, _FEATURE);
 }
 
 function tierCheckButton(feature_name) {
@@ -115,7 +117,7 @@ function checkQueue(is_queued, textinfo) {
 
     const featurePermissions = getDiffusApp().featurePermissions;
     try {
-        featurePermissions.checkFreeQueue(ahead);
+        featurePermissions.checkFreeQueue(ahead, _FEATURE);
     } catch (_) {
         return true;
     }
@@ -136,5 +138,5 @@ async function upgradeCheck(upgrade_info) {
     }
 
     const featurePermissions = getDiffusApp().featurePermissions;
-    featurePermissions.openUpgradeDialogByReason(upgrade_info.reason);
+    featurePermissions.openUpgradeDialogByReason(upgrade_info.reason, _FEATURE);
 }

@@ -443,6 +443,8 @@ def create_ui():
     with gr.Blocks(analytics_enabled=False, head=canvas_head) as txt2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=False, is_compact=shared.opts.compact_prompt_box)
         upgrade_info = gr.JSON(value={}, visible=False)
+        txt2img_signature = gr.Textbox(value="", interactive=False, visible=False)
+        txt2img_upscale_signature = gr.Textbox(value="", interactive=False, visible=False)
         txt2img_prompt_styles = toprow.ui_styles.dropdown
         txt2img_prompt_selections = toprow.ui_styles.selection
 
@@ -617,12 +619,7 @@ def create_ui():
                 extras=["model_title", "vae_title", "all_style_info", "all_model_info"],
                 start_from=1)  # Start from 1 to remove request
 
-            txt2img_signature = gr.Textbox(
-                value=return_signature_str_from_list(txt2img_signature_args),
-                interactive=False,
-                visible=False,
-                elem_id="txt2img_signature",
-            )
+            txt2img_signature.value = return_signature_str_from_list(txt2img_signature_args)
 
             txt2img_inputs = [
                 dummy_component,
@@ -693,12 +690,7 @@ def create_ui():
             )
             txt2img_upscale_signature_args += txt2img_signature_args[1:]
 
-            txt2img_upscale_signature = gr.Textbox(
-                value=return_signature_str_from_list(txt2img_upscale_signature_args),
-                interactive=False,
-                visible=False,
-                elem_id="txt2img_upscale_signature",
-            )
+            txt2img_upscale_signature.value = return_signature_str_from_list(txt2img_upscale_signature_args)
 
             def select_gallery_image(index):
                 index = int(index)
@@ -793,6 +785,7 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False, head=canvas_head) as img2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=True, is_compact=shared.opts.compact_prompt_box)
+        img2img_signature = gr.Textbox(value="", interactive=False, visible=False)
         img2img_prompt_styles = toprow.ui_styles.dropdown
         img2img_prompt_selections = toprow.ui_styles.selection
 
@@ -1045,12 +1038,7 @@ def create_ui():
                 extras=["model_title", "vae_title", "all_style_info", "all_model_info"],
                 start_from=1)  # Start from 1 to remove request
 
-            img2img_signature = gr.Textbox(
-                value=return_signature_str_from_list(img2img_signature_args),
-                interactive=False,
-                visible=False,
-                elem_id="img2img_signature",
-            )
+            img2img_signature.value = return_signature_str_from_list(img2img_signature_args)
 
             submit_img2img_inputs = [
                 dummy_component,

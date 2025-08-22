@@ -1470,6 +1470,7 @@ def create_ui():
         loadsave.dump_defaults()
     demo.ui_loadsave = loadsave
 
+    global signature_hash
     signature_hash = get_signature_hash()
     signature_hash_component.value = signature_hash
 

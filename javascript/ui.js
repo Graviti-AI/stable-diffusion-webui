@@ -670,7 +670,9 @@ async function checkSignatureCompatibility() {
     }
     
     if (response.status !== 200) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(
+            `Failed to get signature hash, response: ${response.status}, ${response.statusText}`,
+        );
     }
     
     const data = await response.json();
@@ -692,7 +694,7 @@ async function monitorSignatureChange() {
             
             await checkSignatureCompatibility();
         } catch (error) {
-            console.error("Error in monitorSignatureChange:", error);
+            console.error("Failed to monitor signature change:", error);
         }
     }
 }

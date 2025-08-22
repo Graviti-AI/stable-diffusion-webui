@@ -222,7 +222,6 @@ async function _submit() {
 
 async function submit_internal() {
     await tierCheckGenerate("txt2img", arguments);
-    checkSignatureCompatibility();
 
     const res = await _submit(...arguments);
 
@@ -651,87 +650,51 @@ function setUiPageSize() {
     uiPageSize = Math.floor(contentWidth / 238) * 2;
 }
 
-function requestRefreshPage(timeoutId) {
-    if (timeoutId) {
-        clearTimeout(timeoutId);
-    }
-
+function requestRefreshPage() {
     getDiffusApp().openRefreshDialog(async () => {
         location.reload();
     });
 }
 
-async function checkSignatureCompatibility(timeoutId = null)
-{
-    const currentDomain = window.location.hostname;
-    const txt2imgSignaturePromise = fetchGet("internal/signature/txt2img", {mode: "cors"});
-    const img2imgSignaturePromise = fetchGet("internal/signature/img2img", {mode: "cors"});
 
-    const currentTxt2imgSignature = gradioApp().querySelector("#txt2img_signature textarea").value;
-    const currentTxt2imgFnIndex = gradioApp().querySelector("#txt2img_function_index textarea").value;
-    const currentImg2imgSignature = gradioApp().querySelector("#img2img_signature textarea").value;
-    const currentImg2imgFnIndex = gradioApp().querySelector("#img2img_function_index textarea").value;
+async function checkSignatureCompatibility() {
+    const currentSignatureHash = gradioApp().querySelector("#signature_hash textarea").value;
 
-    let needRefresh = false;
-
-    txt2imgSignaturePromise
-    .then(response => {
-        const redirectUrl = new URL(response.url);
-        const redirectDomain = redirectUrl.hostname;
-        if (currentDomain !== redirectDomain) {
-            needRefresh = true;
-            requestRefreshPage(timeoutId);
-            console.log('Redirected to a new domain:', redirectDomain);
-            return Promise.reject(response);
-        } else {
-            if (response.status === 200) {
-                return response.json();
-            }
-            return Promise.reject(response);
-        }
-    })
-    .then((txt2imgSignature) => {
-        if (txt2imgSignature && txt2imgSignature.signature && txt2imgSignature.fn_index) {
-            if ((txt2imgSignature.signature != currentTxt2imgSignature || txt2imgSignature.fn_index != currentTxt2imgFnIndex) && !needRefresh)
-            {
-                needRefresh = true;
-                requestRefreshPage(timeoutId);
-            }
-        }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
-
-    img2imgSignaturePromise
-    .then(response => {
-        if (response.status === 200) {
-            return response.json();
-        }
-        return Promise.reject(response);
-    })
-    .then((img2imgSignature) => {
-        if (img2imgSignature && img2imgSignature.signature && img2imgSignature.fn_index) {
-            if ((img2imgSignature.signature != currentImg2imgSignature || img2imgSignature.fn_index != currentImg2imgFnIndex) && !needRefresh)
-            {
-                needRefresh = true;
-                requestRefreshPage(timeoutId);
-            }
-        }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
+    const response = await fetchGet("internal/signature/hash", {mode: "cors"});
+    
+    const redirectUrl = new URL(response.url);
+    if (window.location.hostname !== redirectUrl.hostname) {
+        requestRefreshPage();
+        console.log('Redirected to a new domain:', redirectUrl.hostname);
+        return;
+    }
+    
+    if (response.status !== 200) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    if (data.signature_hash !== currentSignatureHash) {
+        requestRefreshPage();
+    }
 }
 
 const SIGNATURE_CHECK_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
 async function monitorSignatureChange() {
-    const timeoutId = setTimeout(monitorSignatureChange, SIGNATURE_CHECK_INTERVAL);
-    if (!getDiffusApp().webUI.showWebUI()) {
-        return;
-    };
-    checkSignatureCompatibility(timeoutId);
+    while(true) {
+        try {
+            await PYTHON.asyncio.sleep(SIGNATURE_CHECK_INTERVAL);
+            
+            if (!getDiffusApp().webUI.showWebUI()) {
+                continue;
+            }
+            
+            await checkSignatureCompatibility();
+        } catch (error) {
+            console.error("Error in monitorSignatureChange:", error);
+        }
+    }
 }
 
 function on_sd_model_selection_updated(model_title){
@@ -755,7 +718,7 @@ onUiLoaded(function(){
     const isDarkTheme = /theme=dark/g.test(search);
     Cookies.set('theme', isDarkTheme ? 'dark' : 'light');
 
-    setTimeout(monitorSignatureChange, SIGNATURE_CHECK_INTERVAL);
+    monitorSignatureChange();
 });
 
 var onEditTimers = {};

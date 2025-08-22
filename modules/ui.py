@@ -8,6 +8,7 @@ import inspect
 import json
 from typing import Optional, List, Callable
 from contextlib import ExitStack
+import hashlib
 
 import gradio as gr
 import gradio.utils
@@ -407,6 +408,22 @@ img2img_params_default_values: list = list()
 img2img_function_index: int | None = None
 interface_function_indicies: dict[str, dict] = dict()
 
+def get_signature_hash() -> str:
+    hasher = hashlib.md5()
+    hasher.update(json.dumps(txt2img_signature_args).encode())
+    hasher.update(json.dumps(txt2img_params_default_values).encode())
+    hasher.update(str(txt2img_function_index).encode())
+    hasher.update(json.dumps(txt2img_suffix_outputs).encode())
+
+    hasher.update(json.dumps(img2img_signature_args).encode())
+    hasher.update(json.dumps(img2img_params_default_values).encode())
+    hasher.update(str(img2img_function_index).encode())
+    hasher.update(json.dumps(img2img_suffix_outputs).encode())
+
+    return hasher.hexdigest()
+
+signature_hash: str = ""
+
 
 def create_ui():
     assert opts is not None, "opts is not initialized"
@@ -426,7 +443,6 @@ def create_ui():
     with gr.Blocks(analytics_enabled=False, head=canvas_head) as txt2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=False, is_compact=shared.opts.compact_prompt_box)
         upgrade_info = gr.JSON(value={}, visible=False)
-        txt2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="txt2img_function_index")
         txt2img_prompt_styles = toprow.ui_styles.dropdown
         txt2img_prompt_selections = toprow.ui_styles.selection
 
@@ -777,7 +793,6 @@ def create_ui():
 
     with gr.Blocks(analytics_enabled=False, head=canvas_head) as img2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=True, is_compact=shared.opts.compact_prompt_box)
-        img2img_fn_index_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="img2img_function_index")
         img2img_prompt_styles = toprow.ui_styles.dropdown
         img2img_prompt_selections = toprow.ui_styles.selection
 
@@ -1432,11 +1447,6 @@ def create_ui():
             if demo_block_function == img2img_gradio_function:
                 img2img_function_index = demo_block_function_idx
 
-        demo.load(
-            fn=lambda: txt2img_function_index, inputs=None, outputs=[txt2img_fn_index_component], queue=False)
-        demo.load(
-            fn=lambda: img2img_function_index, inputs=None, outputs=[img2img_fn_index_component], queue=False)
-
         # build elements for script page load callbback
         interface_list = []
         interface_components = []
@@ -1470,6 +1480,15 @@ def create_ui():
     if ui_settings_from_file != loadsave.ui_settings:
         loadsave.dump_defaults()
     demo.ui_loadsave = loadsave
+
+    signature_hash = get_signature_hash()
+    gr.Textbox(
+        value=signature_hash,
+        interactive=False,
+        visible=False,
+        elem_id="signature_hash",
+    )
+
 
     return demo
 
@@ -1566,6 +1585,12 @@ def setup_ui_api(app):
         "/internal/scripts/function_index",
         lambda: interface_function_indicies,
         methods=["GET"])
+
+    app.add_api_route(
+        "/internal/signature/hash",
+        lambda: { "signature_hash": signature_hash },
+        methods=["GET"],
+    )
 
     import fastapi.staticfiles
     app.mount("/webui-assets", fastapi.staticfiles.StaticFiles(directory=launch_utils.repo_dir('stable-diffusion-webui-assets')), name="webui-assets")

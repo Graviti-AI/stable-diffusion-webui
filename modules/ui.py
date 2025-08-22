@@ -449,6 +449,7 @@ def create_ui():
         txt2img_prompt_selections = toprow.ui_styles.selection
 
         dummy_component = gr.Textbox(visible=False)
+        signature_hash_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="signature_hash")
 
         with gr.Row():
             txt2img_preset = main_entry.Txt2imgForgePreset()
@@ -1470,13 +1471,7 @@ def create_ui():
     demo.ui_loadsave = loadsave
 
     signature_hash = get_signature_hash()
-    gr.Textbox(
-        value=signature_hash,
-        interactive=False,
-        visible=False,
-        elem_id="signature_hash",
-    )
-
+    signature_hash_component.value = signature_hash
 
     return demo
 

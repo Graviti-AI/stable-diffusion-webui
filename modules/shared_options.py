@@ -435,6 +435,7 @@ options_templates.update(options_section((None, "Hidden options"), {
     "disable_all_extensions": OptionInfo("none", "Disable all extensions (preserves the list of disabled extensions)", gr.Radio, {"choices": ["none", "extra", "all"]}),
     "restore_config_state_file": OptionInfo("", "Config state file to restore from, under 'config-states/' folder"),
     "sd_checkpoint_hash": OptionInfo("", "SHA256 hash of the current checkpoint"),
+    "assets_cdn_url": OptionInfo(os.getenv("ASSETS_CDN_URL"), "Asset CDN URl"),
 }))
 
 forge_shared_options.register(options_templates, options_section, OptionInfo)

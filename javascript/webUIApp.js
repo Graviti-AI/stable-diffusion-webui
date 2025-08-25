@@ -55,7 +55,10 @@ const webUIApp = {
                 return;
         }
 
-        gradioApp().querySelector(`[data-testid="${preset}-radio-label"] input`).click();
+        const presetInputs = gradioApp().querySelectorAll(
+            `[data-testid="${preset}-radio-label"] input`,
+        );
+        presetInputs.forEach((input) => input.click());
     },
     setExtraNetwork(model_type, filename) {
         const toast = getDiffusApp().toast;

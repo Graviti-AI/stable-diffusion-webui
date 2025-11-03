@@ -89,11 +89,17 @@ function registerIntroJS(tabname, introjs) {
     });
 
     observer.observe(tab, { attributes: true, attributeFilter: ["style"] });
+
+    return { introjs, cookie_key };
 }
 
 function loadIntroJS() {
-    registerIntroJS("txt2img", txt2imgIntroJS());
+    const { introjs, cookie_key } = registerIntroJS("txt2img", txt2imgIntroJS());
     registerIntroJS("img2img", img2imgIntroJS());
+
+    if (!window.Cookies.get(cookie_key)) {
+        introjs.start();
+    }
 }
 
 onUiLoaded(loadIntroJS);

@@ -22,9 +22,9 @@ def javascript_html(request: gr.Request):
     head += f'<script type="text/javascript" src="{webpath(script_js)}"></script>\n'
     head += f'<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.6/dist/perfect-scrollbar.min.js"></script>'
     head += '<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>\n'
-    head += '<script type="text/javascript" src="/public/js/js.cookie.js"></script>\n'
+    head += '<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>\n'
     head += '<script src="https://cdn.jsdelivr.net/gh/cferdinandi/tabby@12/dist/js/tabby.polyfills.min.js"></script>\n'
-    head += '<script src=" https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
+    head += '<script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>\n'
 
     from modules_forge.forge_canvas.canvas import web_js
     head += web_js('canvas.min.js')

@@ -50,6 +50,8 @@ def create_ui():
     tab_batch.select(fn=lambda: 1, inputs=[], outputs=[tab_index])
     # tab_batch_dir.select(fn=lambda: 2, inputs=[], outputs=[tab_index])
 
+    extras_gallery_sync = gr.Button(elem_id="extras_gallery_sync", visible=False)
+
     extras_image.change(
         _get_image_resolution,
         inputs=[extras_image],
@@ -72,6 +74,21 @@ def create_ui():
         *script_inputs
     ]
 
+    extras_outputs = [
+        output_panel.gallery,
+        output_panel.generation_info,
+        output_panel.infotext,
+        output_panel.html_log,
+        upgrade_info,
+    ]
+
+    extras_gallery_sync.click(
+        fn=None,
+        _js="_syncTaskResultToGalleryWrapper('extras_gallery')",
+        inputs=None,
+        outputs=extras_outputs,
+    )
+
     submit.click(
         fn=call_queue.wrap_gradio_gpu_call(
             postprocessing.run_postprocessing,
@@ -81,13 +98,7 @@ def create_ui():
         ),
         _js="submit_extras",
         inputs=submit_click_inputs,
-        outputs=[
-            output_panel.gallery,
-            output_panel.generation_info,
-            output_panel.infotext,
-            output_panel.html_log,
-            upgrade_info,
-        ],
+        outputs=extras_outputs,
         show_progress=False,
     )
 

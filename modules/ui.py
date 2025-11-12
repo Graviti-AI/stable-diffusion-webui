@@ -430,6 +430,7 @@ def create_ui():
     import modules.img2img
     import modules.txt2img
 
+
     reload_javascript()
 
     parameters_copypaste.reset()
@@ -447,6 +448,8 @@ def create_ui():
         txt2img_upscale_signature = gr.Textbox(value="", interactive=False, visible=False)
         txt2img_prompt_styles = toprow.ui_styles.dropdown
         txt2img_prompt_selections = toprow.ui_styles.selection
+
+        txt2img_gallery_sync = gr.Button(elem_id="txt2img_gallery_sync", visible=False)
 
         dummy_component = gr.Textbox(visible=False)
         signature_hash_component = gr.Textbox(value="", interactive=False, visible=False, elem_id="signature_hash")
@@ -666,6 +669,13 @@ def create_ui():
                 upgrade_info,
             ]
 
+            txt2img_gallery_sync.click(
+                fn=None,
+                _js="_syncTaskResultToGalleryWrapper('txt2img_gallery')",
+                inputs=None,
+                outputs=txt2img_outputs,
+            )
+
             txt2img_args = dict(
                 fn=wrap_gradio_gpu_call(
                     modules.txt2img.txt2img, func_name='txt2img', extra_outputs=[None, '', ''], add_monitor_state=True),
@@ -789,6 +799,8 @@ def create_ui():
         img2img_signature = gr.Textbox(value="", interactive=False, visible=False)
         img2img_prompt_styles = toprow.ui_styles.dropdown
         img2img_prompt_selections = toprow.ui_styles.selection
+
+        img2img_gallery_sync = gr.Button(elem_id="img2img_gallery_sync", visible=False)
 
         with gr.Row():
             img2img_preset = main_entry.Img2imgForgePreset()
@@ -1091,18 +1103,27 @@ def create_ui():
                 img2img_signature,
             ]
 
+            img2img_outputs = [
+                output_panel.gallery,
+                output_panel.generation_info,
+                output_panel.infotext,
+                output_panel.html_log,
+                upgrade_info,
+            ]
+
+            img2img_gallery_sync.click(
+                fn=None,
+                _js="_syncTaskResultToGalleryWrapper('img2img_gallery')",
+                inputs=None,
+                outputs=img2img_outputs,
+            )
+
             img2img_args = dict(
                 fn=wrap_gradio_gpu_call(
                     modules.img2img.img2img, func_name='img2img', extra_outputs=[None, '', ''], add_monitor_state=True),
                 _js="submit_img2img",
                 inputs=submit_img2img_inputs,
-                outputs=[
-                    output_panel.gallery,
-                    output_panel.generation_info,
-                    output_panel.infotext,
-                    output_panel.html_log,
-                    upgrade_info,
-                ],
+                outputs=img2img_outputs,
                 show_progress=False,
             )
             global img2img_suffix_outputs

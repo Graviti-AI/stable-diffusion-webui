@@ -82,6 +82,21 @@ function randomId() {
     return `task(${randomUUID()})`;
 }
 
+
+let _lastTaskResults = {
+    txt2img_gallery: null,
+    img2img_gallery: null,
+    extras_gallery: null,
+}
+
+function _syncTaskResultToGalleryWrapper(key) {
+    return () => {
+        const result = _lastTaskResults[key];
+        _lastTaskResults[key] = null;
+        return result;
+    }
+}
+
 // starts sending progress requests to "/internal/progress" uri, creating progressbar above progressbarContainer element and
 // preview inside gallery element. Cleans up all created stuff when the task is over and calls atEnd.
 // calls onProgress every time there is a progress update
@@ -140,6 +155,11 @@ function requestProgress(id_task, progressbarContainer, gallery, atEnd, onProgre
         request("./internal/progress", {id_task: id_task, id_live_preview: id_live_preview}, function(res) {
             lastFailedAt = null;
             if(res.completed){
+                const key = gallery.id;
+                if(_lastTaskResults.hasOwnProperty(key)) {
+                    _lastTaskResults[key] = res.result;
+                    gradioApp().getElementById(`${key}_sync`).click();
+                }
                 removeProgressBar();
                 console.log("remove progress bar: res.completed");
                 return;

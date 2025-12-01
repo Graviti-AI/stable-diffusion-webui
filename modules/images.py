@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+import base64
 import datetime
 import functools
 import pytz
@@ -25,6 +26,7 @@ from modules import sd_samplers, shared, script_callbacks, errors
 from modules.paths_internal import roboto_ttf_file
 from modules.shared import opts
 from modules.paths import workdir
+from modules.system_monitor import remove_schema
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 
@@ -917,3 +919,9 @@ def read_image_from_cdn_image_url(url: str) -> Image.Image:
     response = requests.get(url, timeout=15)
     response.raise_for_status()
     return Image.open(io.BytesIO(response.content))
+
+
+def decode_base64_image(data: str) -> Image.Image:
+    base64_data = remove_schema(data)
+    image_data = base64.b64decode(base64_data)
+    return Image.open(io.BytesIO(image_data))

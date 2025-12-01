@@ -72,7 +72,7 @@ def get_feature_permissions() -> dict[str, Any]:
 
 def remove_schema(base64_str: str) -> str:
     if "base64," in base64_str:
-        base64_str = base64_str.split("base64,")[1]
+        base64_str = base64_str.split("base64,", 1)[1]
     return base64_str
 
 

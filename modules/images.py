@@ -921,6 +921,17 @@ def read_image_from_cdn_image_url(url: str) -> Image.Image:
     return Image.open(io.BytesIO(response.content))
 
 
+def build_url_to_image_ids(images) -> dict[str, int]:
+    gallery_ids = {}
+    for image in images:
+        url = getattr(image, "gallery_url", None)
+        image_id = getattr(image, "gallery_id", None)
+        if url is not None and image_id is not None:
+            gallery_ids[url] = image_id
+
+    return gallery_ids
+
+
 def decode_base64_image(data: str) -> Image.Image:
     base64_data = remove_schema(data)
     image_data = base64.b64decode(base64_data)

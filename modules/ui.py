@@ -663,6 +663,7 @@ def create_ui():
 
             txt2img_outputs = [
                 output_panel.gallery,
+                output_panel.gallery_ids,
                 output_panel.generation_info,
                 output_panel.infotext,
                 output_panel.html_log,
@@ -678,7 +679,7 @@ def create_ui():
 
             txt2img_args = dict(
                 fn=wrap_gradio_gpu_call(
-                    modules.txt2img.txt2img, func_name='txt2img', extra_outputs=[None, '', ''], add_monitor_state=True),
+                    modules.txt2img.txt2img, func_name='txt2img', extra_outputs=[None, {}, '', ''], add_monitor_state=True),
                 _js="submit",
                 inputs=txt2img_inputs,
                 outputs=txt2img_outputs,
@@ -709,13 +710,13 @@ def create_ui():
                     index += 1
                 return gr.update(selected_index=index)
             
-            txt2img_upscale_inputs = txt2img_inputs[0:1] + [output_panel.gallery_urls, dummy_component, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature]
+            txt2img_upscale_inputs = txt2img_inputs[0:1] + [output_panel.gallery_urls, dummy_component, output_panel.gallery_ids, output_panel.generation_info] + txt2img_inputs[1:-1] + [txt2img_upscale_signature]
 
             output_panel.button_upscale.click(
                 fn=wrap_gradio_gpu_call(
                     modules.txt2img.txt2img_upscale,
                     func_name='txt2img_upscale',
-                    extra_outputs=[None, '', ''],
+                    extra_outputs=[None, {}, '', ''],
                     add_monitor_state=True,
                 ),
                 _js="submit_txt2img_upscale",
@@ -1105,6 +1106,7 @@ def create_ui():
 
             img2img_outputs = [
                 output_panel.gallery,
+                output_panel.gallery_ids,
                 output_panel.generation_info,
                 output_panel.infotext,
                 output_panel.html_log,
@@ -1120,7 +1122,7 @@ def create_ui():
 
             img2img_args = dict(
                 fn=wrap_gradio_gpu_call(
-                    modules.img2img.img2img, func_name='img2img', extra_outputs=[None, '', ''], add_monitor_state=True),
+                    modules.img2img.img2img, func_name='img2img', extra_outputs=[None, {}, '', ''], add_monitor_state=True),
                 _js="submit_img2img",
                 inputs=submit_img2img_inputs,
                 outputs=img2img_outputs,

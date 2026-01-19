@@ -12,7 +12,7 @@ from modules.system_monitor import (
     generate_function_name, monitor_call_context)
 from modules.style_info import AllStyleInfo
 from modules.model_info import AllModelInfo
-from modules.images import read_image_from_cdn_image_url
+from modules.images import read_image_from_cdn_image_url, build_url_to_image_ids
 
 from PIL import Image
 import gradio as gr
@@ -88,13 +88,13 @@ def txt2img_create_processing(request: gr.Request, id_task: str, prompt: str, ne
     return p
 
 
-def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], gallery_index, generation_info, *args):
+def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], gallery_index, gallery_ids, generation_info, *args):
 # def txt2img_upscale_function(id_task: str, request: gr.Request, gallery, gallery_index, generation_info, *args):
     assert len(gallery_urls) > 0, 'No image to upscale'
     gallery_index = int(gallery_index)
 
     if gallery_index < 0 or gallery_index >= len(gallery_urls):
-        return gallery_urls, generation_info, f'Bad image index: {gallery_index}', ''
+        return gallery_urls, gallery_ids, generation_info, f'Bad image index: {gallery_index}', ''
 
     geninfo = json.loads(generation_info)
 
@@ -103,7 +103,7 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], 
     #   catch if user tries to upscale a control image, this function will fail later trying to get infotext that doesn't exist
     count_images = len(geninfo.get('infotexts'))        #   note: we have batch_size in geninfo, but not batch_count
     if len(gallery_urls) > 1 and (gallery_index < first_image_index or gallery_index >= count_images):
-        return gallery_urls, generation_info, 'Unable to upscale grid or control images.', ''
+        return gallery_urls, gallery_ids, generation_info, 'Unable to upscale grid or control images.', ''
 
     p = txt2img_create_processing(request, id_task, *args, force_enable_hr=True)
     p.batch_size = 1
@@ -140,7 +140,11 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], 
                 p.do_not_save_grid = True
                 processed = processing.process_images(p)
 
+    new_gallery_ids = build_url_to_image_ids(processed.images)
+    gallery_ids.update(new_gallery_ids)
+    del gallery_ids[gallery_urls[gallery_index]]
     processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
+
     shared.total_tqdm.clear()
 
     insert = getattr(shared.opts, 'hires_button_gallery_insert', False)
@@ -159,7 +163,7 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], 
     else:
         geninfo["infotexts"][gallery_index] = processed.info
 
-    return new_gallery, json.dumps(geninfo), plaintext_to_html(processed.info), plaintext_to_html(processed.comments, classname="comments")
+    return new_gallery, gallery_ids, json.dumps(geninfo), plaintext_to_html(processed.info), plaintext_to_html(processed.comments, classname="comments")
 
 
 # def txt2img_function(id_task: str, request: gr.Request, *args):
@@ -180,7 +184,9 @@ def txt2img(request: gr.Request, id_task: str, *args):
                 p.do_not_save_grid = True
                 processed = processing.process_images(p)
 
+    gallery_ids = build_url_to_image_ids(processed.images)
     processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
+
     shared.total_tqdm.clear()
 
     generation_info_js = processed.js()
@@ -190,7 +196,13 @@ def txt2img(request: gr.Request, id_task: str, *args):
     if opts.do_not_show_images:
         processed.images = []
 
-    return processed.images + processed.extra_images, generation_info_js, plaintext_to_html(processed.info), plaintext_to_html(processed.comments, classname="comments")
+    return (
+        processed.images + processed.extra_images,
+        gallery_ids,
+        generation_info_js,
+        plaintext_to_html(processed.info),
+        plaintext_to_html(processed.comments, classname="comments"),
+    )
 
 
 # def txt2img_upscale(id_task: str, request: gr.Request, gallery, gallery_index, generation_info, *args):

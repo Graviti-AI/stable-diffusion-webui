@@ -173,6 +173,7 @@ class OutputPanel:
     button_upscale = None
 
     gallery_urls = None
+    gallery_ids = None
  
 
 def create_output_panel(tabname, outdir, toprow=None):
@@ -199,6 +200,7 @@ def create_output_panel(tabname, outdir, toprow=None):
         with gr.Column(variant='panel', elem_id=f"{tabname}_results_panel"):
             with gr.Group(elem_id=f"{tabname}_gallery_container"):
                 res.gallery_urls = gr.JSON(visible=False)
+                res.gallery_ids = gr.JSON(visible=False, elem_id=f"{tabname}_gallery_ids")
                 res.gallery = gr.Gallery(label='Output', show_label=False, elem_id=f"{tabname}_gallery", columns=4, preview=True, height=shared.opts.gallery_height or None, interactive=False, type="pil", object_fit="contain")
                 res.gallery.change(
                     fn=None,

@@ -1190,7 +1190,9 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     _, _, gallery_response = images.save_image(image, p.outpath_samples, "", p.seeds[i], p.prompts[i], opts.samples_format, info=infotext(i), p=p, skip_register=False)
                     if gallery_response["info"]:
                         image_url = images.make_cdn_image_url(gallery_response["info"]["url"])
+                        image_id = gallery_response["info"]["id"]
                         setattr(image, "gallery_url", image_url)
+                        setattr(image, "gallery_id", image_id)
                     elif gallery_response["is_nsfw"]:
                         blurred_image = gallery_response.get("blurred_image")
                         image = images.decode_base64_image(blurred_image) if blurred_image else images.blur_image(image)

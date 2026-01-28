@@ -76,6 +76,7 @@ def create_ui():
 
     extras_outputs = [
         output_panel.gallery,
+        output_panel.gallery_ids,
         output_panel.generation_info,
         output_panel.infotext,
         output_panel.html_log,

@@ -1,5 +1,6 @@
 import os
 
+
 import gradio as gr
 from PIL import Image
 import json
@@ -19,6 +20,7 @@ def run_postprocessing(
 
     outputs = []
     caption_results = []
+    gallery_ids = {}
 
     if isinstance(image, dict):
         image = image["composite"]
@@ -119,10 +121,12 @@ def run_postprocessing(
                 p.feature = "EXTRAS"
 
                 fullfn, _, gallery_response = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, skip_register=False)
-                if gallery_response["url"]:
-                    image_url = images.make_cdn_image_url(gallery_response["url"])
+                if gallery_response["info"]:
+                    image_url = images.make_cdn_image_url(gallery_response["info"]["url"])
+                    gallery_ids[image_url] = gallery_response["info"]["id"]
                 elif gallery_response["is_nsfw"]:
-                    pp.image = images.blur_image(pp.image)
+                    blurred_image = gallery_response.get("blurred_image")
+                    pp.image = images.decode_base64_image(blurred_image) if blurred_image else images.blur_image(image)
                     setattr(pp.image, "is_nsfw", True)
                 else:
                     raise ValueError("Failed to get image url from Gallery response when no NSFW flag.")
@@ -167,7 +171,7 @@ def run_postprocessing(
     if caption_results and caption_results[0] is not None:
         infotext_result += caption_results[0]
 
-    return outputs, json.dumps({"info": infotext_html, "captions": caption_results}), infotext_result, ''
+    return outputs, gallery_ids, json.dumps({"info": infotext_html, "captions": caption_results}), infotext_result, ''
 
 
 def run_postprocessing_webui(request: gr.Request, id_task, *args, **kwargs):

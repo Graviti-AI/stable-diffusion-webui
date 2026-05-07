@@ -145,36 +145,59 @@ document.addEventListener('keydown', function(e) {
     const isEnter = e.key === 'Enter' || e.keyCode === 13;
     const isCtrlKey = e.metaKey || e.ctrlKey;
     const isAltKey = e.altKey;
+    const isShiftKey = e.shiftKey;
     const isEsc = e.key === 'Escape';
 
     const generateButton = get_uiCurrentTabContent().querySelector('button[id$=_generate]');
     const interruptButton = get_uiCurrentTabContent().querySelector('button[id$=_interrupt]');
     const skipButton = get_uiCurrentTabContent().querySelector('button[id$=_skip]');
+    const target = e.composedPath()[0];
+    const isPromptTextarea = target.tagName === 'TEXTAREA' && target.closest?.(":is([id$='_prompt'], [id$='_neg_prompt'], .prompt)");
 
-    if (isCtrlKey && isEnter) {
-        if (interruptButton.style.display === 'block') {
-            interruptButton.click();
-            const callback = (mutationList) => {
-                for (const mutation of mutationList) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                        if (interruptButton.style.display === 'none') {
-                            generateButton.click();
-                            observer.disconnect();
+    if (isEnter) {
+        if (isPromptTextarea && !isCtrlKey && !isAltKey) {
+            if (isShiftKey) {
+                const start = target.selectionStart;
+                const end = target.selectionEnd;
+                target.value = target.value.substring(0, start) + "\n" + target.value.substring(end);
+                target.selectionStart = target.selectionEnd = start + 1;
+                updateInput(target);
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+            }
+
+            generateButton.click();
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+        }
+
+        if (isCtrlKey) {
+            if (interruptButton.style.display === 'block') {
+                interruptButton.click();
+                const callback = (mutationList) => {
+                    for (const mutation of mutationList) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            if (interruptButton.style.display === 'none') {
+                                generateButton.click();
+                                observer.disconnect();
+                            }
                         }
                     }
-                }
-            };
-            const observer = new MutationObserver(callback);
-            observer.observe(interruptButton, {attributes: true});
-        } else {
-            generateButton.click();
+                };
+                const observer = new MutationObserver(callback);
+                observer.observe(interruptButton, {attributes: true});
+            } else {
+                generateButton.click();
+            }
+            e.preventDefault();
         }
-        e.preventDefault();
-    }
 
-    if (isAltKey && isEnter) {
-        skipButton.click();
-        e.preventDefault();
+        if (isAltKey) {
+            skipButton.click();
+            e.preventDefault();
+        }
     }
 
     if (isEsc) {
@@ -188,7 +211,7 @@ document.addEventListener('keydown', function(e) {
             }
         }
     }
-});
+}, true);
 
 /**
  * checks that a UI element is not in another hidden element or tab content

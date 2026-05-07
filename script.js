@@ -147,6 +147,7 @@ document.addEventListener('keydown', function(e) {
     const isAltKey = e.altKey;
     const isShiftKey = e.shiftKey;
     const isEsc = e.key === 'Escape';
+    const isComposing = e.isComposing || e.keyCode === 229;
 
     const generateButton = get_uiCurrentTabContent().querySelector('button[id$=_generate]');
     const interruptButton = get_uiCurrentTabContent().querySelector('button[id$=_interrupt]');
@@ -155,7 +156,7 @@ document.addEventListener('keydown', function(e) {
     const isPromptTextarea = target.tagName === 'TEXTAREA' && target.closest?.(":is([id$='_prompt'], [id$='_neg_prompt'], .prompt)");
 
     if (isEnter) {
-        if (isPromptTextarea && !isCtrlKey && !isAltKey) {
+        if (isPromptTextarea && !isCtrlKey && !isAltKey && !isComposing) {
             if (isShiftKey) {
                 const start = target.selectionStart;
                 const end = target.selectionEnd;

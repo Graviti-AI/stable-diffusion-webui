@@ -536,25 +536,43 @@ def monitor_call_context(
             task_is_failed = task_failed
         except Exception as e:
             logger.error(f'{task_id}: Json encode result failed {str(e)}.')
+
+    only_available_for = None
+    if feature_type is not None:
+        only_available_for = get_feature_permissions()[feature_type][feature_name][
+            "allowed_tiers"
+        ]
+
+    if is_flux:
+        if decoded_params:
+            decoded_params["ratio"] = 2
+
+        flux_allowed_tiers = get_feature_permissions()["buttons"]["Flux"][
+            "allowed_tiers"
+        ]
+        if only_available_for is None:
+            only_available_for = flux_allowed_tiers
+        else:
+            only_available_for = [
+                item for item in only_available_for if item in flux_allowed_tiers
+            ]
+
+    task_id = before_task_started(
+        request,
+        api_name,
+        function_name,
+        task_id,
+        decoded_params,
+        is_intermediate,
+        refund_if_task_failed,
+        only_available_for,
+    )
+    logger.info(
+        f"before step {function_name}: {task_id} Free VRAM: %.2f MB, Total VRAM: %.2f MB"
+        % tuple(number / 1e6 for number in torch.cuda.mem_get_info())
+    )
+
     try:
-        only_available_for = None
-        if feature_type is not None:
-            only_available_for = get_feature_permissions()[feature_type][feature_name]["allowed_tiers"]
-
-        if is_flux:
-            if decoded_params:
-                decoded_params["ratio"] = 2
-
-            flux_allowed_tiers = get_feature_permissions()["buttons"]["Flux"]["allowed_tiers"]
-            if only_available_for is None:
-                only_available_for = flux_allowed_tiers
-            else:
-                only_available_for = [item for item in only_available_for if item in flux_allowed_tiers]
-                
-
-        task_id = before_task_started(
-            request, api_name, function_name, task_id, decoded_params, is_intermediate, refund_if_task_failed, only_available_for)
-        logger.info(f"before step {function_name}: {task_id} Free VRAM: %.2f MB, Total VRAM: %.2f MB" % tuple(number / 1e6 for number in torch.cuda.mem_get_info()))
         yield result_encoder
         if task_is_failed:
             status = 'failed'

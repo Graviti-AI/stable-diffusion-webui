@@ -48,6 +48,7 @@ const webUIApp = {
                         : "xl";
                 break;
             case "FLUX":
+            case "FLUX1":
                 preset = "flux";
                 break;
             default:

@@ -54,7 +54,7 @@ function tierCheckButton(feature_name) {
 }
 
 function tierCheckFlux(all_model_info) {
-    if (all_model_info.every((item) => item.base !== "FLUX")) {
+    if (all_model_info.every((item) => !["FLUX", "FLUX1"].includes(item.base))) {
         return;
     }
     tierCheckButton("Flux");

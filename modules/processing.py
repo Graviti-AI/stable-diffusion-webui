@@ -313,7 +313,7 @@ class StableDiffusionProcessing:
 
     @property
     def is_flux(self) -> bool:
-        return self.get_base() == "FLUX"
+        return self.get_base() in ["FLUX", "FLUX1"]
 
     def get_used_model_ids(self) -> list[int]:
         return self.get_all_model_info().get_used_model_ids(self)

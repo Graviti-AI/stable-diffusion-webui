@@ -385,6 +385,7 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
                 generate_function_name(func),
                 generate_function_name(func),
                 task_id,
+                added_at=request_body.get("added_at", time.time()),
                 is_intermediate=False,
                 output_container=credits_output
             ) as result_encoder:

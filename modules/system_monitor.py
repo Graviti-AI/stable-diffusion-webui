@@ -379,6 +379,7 @@ def before_task_started(
         api_name: str,
         function_name: str,
         job_id: Optional[str] = None,
+        added_at: Optional[None] = None,
         decoded_params: Optional[dict] = None,
         is_intermediate: bool = False,
         refund_if_task_failed: bool = True,
@@ -415,6 +416,7 @@ def before_task_started(
         'api': api_name,
         'initiator': function_name,
         'user': modules.user.User.current_user(request).uid,
+        'added_at': added_at,
         'started_at': time.time(),
         'session_hash': session_hash,
         'skip_charge': not deduct_flag,
@@ -524,6 +526,7 @@ def monitor_call_context(
     feature_name: str | None = None,
     is_flux: bool = False,
     output_container: dict[str, int | None] | None = None,
+    added_at: Optional[int] = None,
 ):
     status = 'unknown'
     message = ''
@@ -562,6 +565,7 @@ def monitor_call_context(
         api_name,
         function_name,
         task_id,
+        added_at,
         decoded_params,
         is_intermediate,
         refund_if_task_failed,

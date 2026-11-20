@@ -10,6 +10,7 @@ import gradio as gr
 
 from modules.launch_utils import startup_timer
 from modules import shared, paths, script_callbacks, extensions, script_loading, scripts_postprocessing, errors, timer, util
+from modules.gallery_input_images import InputImageLoadError
 
 topological_sort = util.topological_sort
 
@@ -881,6 +882,9 @@ class ScriptRunner:
             try:
                 script_args = p.script_args[script.args_from:script.args_to]
                 script.process(p, *script_args)
+            except InputImageLoadError:
+                # Fails the generation, telling the user why (ControlNet).
+                raise
             except Exception as e:
                 p.diffus_comments.append(f'Extension {script.title()} Process Error: {type(e).__name__}: {str(e)}')
                 errors.report(f"Error running process: {script.filename}", exc_info=True)

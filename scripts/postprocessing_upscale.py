@@ -41,15 +41,15 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
                 extras_upscaler_2_visibility = gr.Slider(minimum=0.0, maximum=1.0, step=0.001, label="Upscaler 2 visibility", value=0.0, elem_id="extras_upscaler_2_visibility")
 
             with FormRow():
-                with gr.Tabs(elem_id="extras_resize_mode"):
-                    with gr.TabItem('Scale by', elem_id="extras_scale_by_tab") as tab_scale_by:
+                with gr.Tabs(elem_id="extras_resize_mode") as resize_mode_tabs:
+                    with gr.TabItem('Scale by', id="scale_by", elem_id="extras_scale_by_tab") as tab_scale_by:
                         with gr.Row():
                             with gr.Column(scale=4):
                                 upscaling_resize = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="Resize", value=2, elem_id="extras_upscaling_resize")
                             with gr.Column(scale=1, min_width=160):
                                 max_side_length = gr.Number(label="Max side length", value=0, elem_id="extras_upscale_max_side_length", tooltip="If any of two sides of the image ends up larger than specified, will downscale it to fit. 0 = no limit.", min_width=160, step=8, minimum=0)
 
-                    with gr.TabItem('Scale to', elem_id="extras_scale_to_tab") as tab_scale_to:
+                    with gr.TabItem('Scale to', id="scale_to", elem_id="extras_scale_to_tab") as tab_scale_to:
                         with FormRow():
                             with gr.Column(elem_id="upscaling_column_size", scale=4):
                                 upscaling_resize_w = gr.Slider(minimum=64, maximum=8192, step=8, label="Width", value=512, elem_id="extras_upscaling_resize_w")
@@ -72,7 +72,37 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
         tab_scale_by.select(fn=lambda: 0, inputs=[], outputs=[selected_tab])
         tab_scale_to.select(fn=lambda: 1, inputs=[], outputs=[selected_tab])
 
-        extras_upscaler_1.change(on_selected_upscale_method, inputs=[extras_upscaler_1], outputs=[upscaling_resize], show_progress="hidden")
+        # On the user's choice only, not when a RUN from the gallery sets it back with its scale.
+        extras_upscaler_1.input(on_selected_upscale_method, inputs=[extras_upscaler_1], outputs=[upscaling_resize], show_progress="hidden")
+
+        # A value missing from the infotext had no effect, or is unknown (None) for an older image.
+        def get_mode(params):
+            return 1 if "Postprocess upscale to" in params else 0 if "Postprocess upscale by" in params else None
+
+        def get_size(index):
+            def get(params):
+                size = params.get("Postprocess upscale to")
+                return int(size.split("x")[index]) if size else None
+            return get
+
+        def get_upscaler_2_visibility(params):
+            if "Postprocess upscaler 2" not in params:
+                return 0
+            return params.get("Postprocess upscaler 2 visibility")
+
+        self.infotext_fields = [
+            (upscale_enabled, lambda params: "Postprocess upscaler" in params),
+            (extras_upscaler_1, "Postprocess upscaler"),
+            (extras_upscaler_2, "Postprocess upscaler 2"),
+            (extras_upscaler_2_visibility, get_upscaler_2_visibility),
+            (selected_tab, get_mode),
+            (resize_mode_tabs, lambda params: None if get_mode(params) is None else gr.update(selected=["scale_by", "scale_to"][get_mode(params)])),
+            (upscaling_resize, "Postprocess upscale by"),
+            (max_side_length, lambda params: params.get("Max side length", 0) if get_mode(params) == 0 else None),
+            (upscaling_resize_w, get_size(0)),
+            (upscaling_resize_h, get_size(1)),
+            (upscaling_crop, lambda params: "Postprocess crop to" in params if get_mode(params) == 1 else None),
+        ]
 
         return {
             "upscale_enabled": upscale_enabled,
@@ -161,6 +191,7 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             upscaled_image = Image.blend(upscaled_image, second_upscale, upscaler_2_visibility)
 
             pp.info["Postprocess upscaler 2"] = upscaler2.name
+            pp.info["Postprocess upscaler 2 visibility"] = round(upscaler_2_visibility, 3)
 
         pp.image = upscaled_image
 

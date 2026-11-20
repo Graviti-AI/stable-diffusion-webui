@@ -1,5 +1,9 @@
 let gallery_run_pnginfo = null;
+// The infotext of an extras image run from the gallery, taken by the paste of extras.
+let gallery_run_extras_infotext = null;
 let gallery_run_models = null;
+// The img2img mode of a run from the gallery, taken by the paste of img2img.
+let gallery_run_img2img_mode = null;
 let gallery_send_to_url = null;
 
 const _TAB_ID_TO_NAME = {
@@ -96,16 +100,35 @@ const webUIApp = {
 
         toast.setExtraNetwork(added, tabname, subject);
     },
-    runImage(tabname, pnginfo, models) {
-        gallery_run_pnginfo = pnginfo;
-        gallery_run_models = models;
+    // The input images are loaded alongside the paste, which leaves the canvases as they are. The
+    // pnginfo of extras is its infotext.
+    runImage(tabname, pnginfo, models, inputImages) {
+        if (tabname === "extras") {
+            switchToTab("tab_extras");
+            gradioApp().getElementById("mode_extras").querySelectorAll("button")[0].click();
+            gallery_run_extras_infotext = pnginfo;
+        } else {
+            gallery_run_pnginfo = pnginfo;
+            gallery_run_models = models;
+            if (tabname === "img2img") {
+                gallery_run_img2img_mode = getGalleryInputImg2imgMode(inputImages);
+            }
+        }
         gradioApp().getElementById(`${tabname}_paste`).click();
+        loadGalleryInputImages(tabname, inputImages);
     },
-    sendToImg2Img(url) {
-        gallery_send_to_url = url;
+    // Sent with its gallery reference, the image is a gallery input of the img2img canvas.
+    sendToImg2Img(url, ref) {
+        gallery_send_to_url = ref ? {url, ref} : url;
         gradioApp().getElementById("txt2img_send_to_img2img").click();
     }
 };
+
+function takeGalleryRunExtrasInfotext() {
+    const infotext = gallery_run_extras_infotext ?? "";
+    gallery_run_extras_infotext = null;
+    return [infotext];
+}
 
 onUiLoaded(() => {
     window.webUIApp = webUIApp;

@@ -22,6 +22,7 @@ gradio.component_meta.create_or_modify_pyi = create_or_modify_pyi_org_patched
 
 
 import os
+import json
 import uuid
 import base64
 import gradio as gr
@@ -121,6 +122,11 @@ class LogicalImage(gr.Textbox):
         return "textbox"
 
 
+# The canvases taking gallery inputs, by elem_id, looked up while the UI is built: the ControlNet ones are
+# made anew, not shown, by Api.init_default_script_args, so an event pairs its inputs by gallery_background.
+gallery_input_canvases: dict[str, "ForgeCanvas"] = {}
+
+
 class ForgeCanvas:
     def __init__(
             self,
@@ -140,7 +146,8 @@ class ForgeCanvas:
             numpy=False,
             initial_image=None,
             elem_id=None,
-            elem_classes=None
+            elem_classes=None,
+            gallery_input=False,
     ):
         # self.uuid = 'uuid_' + uuid.uuid4().hex
         self.uuid = elem_id
@@ -152,3 +159,49 @@ class ForgeCanvas:
                                          f"'{scribble_color}', {scribble_color_fixed}, {scribble_width}, {scribble_width_fixed}, "
                                          f'{scribble_alpha}, {scribble_alpha_fixed}, {scribble_softness}, {scribble_softness_fixed}); '
                                          f'initMobileCanvas(forgeCanvas)}}', queue=False)
+
+        # The gallery image the background was loaded from (modules/gallery_input_images.py).
+        self.gallery_ref = None
+        self.gallery_sent = None
+        if gallery_input:
+            gallery_input_canvases[self.uuid] = self
+            self.gallery_ref = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_ref')
+            self.gallery_ref.do_not_save_to_config = True
+            # The background it is the reference of, wherever both are inputs of an event.
+            self.gallery_ref.gallery_background = self.background
+            # The background and reference loaded, put into the canvas by the browser unless cancelled.
+            gallery_loaded = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_loaded')
+            gallery_loaded.do_not_save_to_config = True
+            # The image sent to the canvas (modules/infotext_utils.py), put into it alike.
+            self.gallery_sent = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_sent')
+            self.gallery_sent.do_not_save_to_config = True
+            gallery_load = gr.Button(visible=False, elem_id=f'{self.uuid}_gallery_load')
+            gallery_load.click(
+                fn=load_gallery_input_image,
+                js=f'(value) => [takeGalleryInputImage("{self.uuid}")]',
+                inputs=[self.gallery_ref],
+                outputs=[gallery_loaded],
+                show_progress=False,
+            ).then(
+                fn=None,
+                js=f'(loaded) => [galleryInputImageLoaded("{self.uuid}", loaded)]',
+                inputs=[gallery_loaded],
+                outputs=[gallery_loaded],
+            )
+
+
+def load_gallery_input_image(value):
+    """The background and reference to load, as JSON; empty for no reference."""
+
+    from modules.gallery_input_images import InputImageLoadError, InputImageRef, load_gallery_media
+
+    ref = InputImageRef.parse(value)
+    if ref is None:
+        return ""
+
+    try:
+        image = load_gallery_media(ref.url)
+    except InputImageLoadError as error:
+        raise gr.Error(str(error)) from error
+
+    return json.dumps({"background": image_to_base64(image, numpy=False), "ref": ref.dumps()})

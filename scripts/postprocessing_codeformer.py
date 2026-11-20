@@ -16,6 +16,12 @@ class ScriptPostprocessingCodeFormer(scripts_postprocessing.ScriptPostprocessing
                 codeformer_visibility = gr.Slider(minimum=0.0, maximum=1.0, step=0.001, label="Visibility", value=1.0, elem_id="extras_codeformer_visibility")
                 codeformer_weight = gr.Slider(minimum=0.0, maximum=1.0, step=0.001, label="Weight (0 = maximum effect, 1 = minimum effect)", value=0, elem_id="extras_codeformer_weight")
 
+        self.infotext_fields = [
+            (enable, lambda params: "CodeFormer visibility" in params),
+            (codeformer_visibility, "CodeFormer visibility"),
+            (codeformer_weight, "CodeFormer weight"),
+        ]
+
         return {
             "enable": enable,
             "codeformer_visibility": codeformer_visibility,

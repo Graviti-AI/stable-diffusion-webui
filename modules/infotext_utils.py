@@ -1,5 +1,6 @@
 from __future__ import annotations
 import base64
+import functools
 import io
 import json
 import os
@@ -26,8 +27,10 @@ type_of_gr_update = type(gr.update())
 
 
 class ParamBinding:
-    def __init__(self, paste_button, tabname, source_text_component=None, source_image_component=None, source_tabname=None, override_settings_component=None, paste_field_names=None):
+    def __init__(self, paste_button, tabname, source_text_component=None, source_image_component=None, source_tabname=None, override_settings_component=None, paste_field_names=None, source_gallery_ids_component=None):
         self.paste_button = paste_button
+        # The gallery ids of the outputs by URL.
+        self.source_gallery_ids_component = source_gallery_ids_component
         self.tabname = tabname
         self.source_text_component = source_text_component
         self.source_image_component = source_image_component
@@ -163,23 +166,42 @@ def connect_paste_params_buttons(dummy_component):
 
         if binding.source_image_component and destination_image_component:
             need_send_dementions = destination_width_component and binding.tabname != 'inpaint'
+            outputs = [destination_image_component, destination_width_component, destination_height_component] if need_send_dementions else [destination_image_component]
+            inputs = [binding.source_image_component]
+            destination_canvas = None
             if isinstance(binding.source_image_component, gr.Gallery):
                 func = send_image_and_dimensions if need_send_dementions else image_from_url_text
                 jsfunc = "extract_image_from_gallery"
             elif isinstance(binding.source_image_component, gr.JSON):
-                func = send_image_and_dimensions_from_url if need_send_dementions else images.read_image_from_cdn_image_url
+                # A canvas taking gallery inputs gets the image and its reference through the browser,
+                # unless the send is cancelled or taken over meanwhile.
+                destination_canvas = get_gallery_input_canvas(destination_image_component)
+                if binding.source_gallery_ids_component is not None:
+                    inputs.append(binding.source_gallery_ids_component)
+
+                func = functools.partial(send_image_from_url, send_dimensions=bool(need_send_dementions), to_canvas=destination_canvas is not None)
                 jsfunc = "extract_image_url_from_gallery_urls"
+                if destination_canvas is not None:
+                    outputs[0] = destination_canvas.gallery_sent
+                    jsfunc = f'(...args) => {{ const inputs = extract_image_url_from_gallery_urls(...args); if (inputs[0]) startGalleryInputImageSend("{destination_canvas.uuid}"); return inputs; }}'
             else:
                 func = send_image_and_dimensions if need_send_dementions else lambda x: x
                 jsfunc = None
 
-            binding.paste_button.click(
+            sent = binding.paste_button.click(
                 fn=func,
                 _js=jsfunc,
-                inputs=[binding.source_image_component],
-                outputs=[destination_image_component, destination_width_component, destination_height_component] if need_send_dementions else [destination_image_component],
+                inputs=inputs,
+                outputs=outputs,
                 show_progress=False,
             )
+            if destination_canvas is not None:
+                sent.then(
+                    fn=None,
+                    js=f'(sent) => [galleryInputImageSent("{destination_canvas.uuid}", sent)]',
+                    inputs=[destination_canvas.gallery_sent],
+                    outputs=[destination_canvas.gallery_sent],
+                )
 
         if binding.source_text_component is not None and fields is not None:
             connect_paste(binding.paste_button, fields, binding.source_text_component, override_settings_component, binding.tabname, dummy_component)
@@ -220,16 +242,58 @@ def send_image_and_dimensions(x):
     return img, w, h
 
 
-def send_image_and_dimensions_from_url(url: str):
-    image = images.read_image_from_cdn_image_url(url)
-    if shared.opts.send_size and isinstance(image, Image.Image):
-        w = image.width
-        h = image.height
-    else:
-        w = gr.update()
-        h = gr.update()
+def get_gallery_input_canvas(image_component):
+    """The canvas taking gallery inputs whose background the image component is, if any."""
+    from modules_forge.forge_canvas.canvas import gallery_input_canvases
 
-    return image, w, h
+    return next((canvas for canvas in gallery_input_canvases.values() if canvas.background is image_component), None)
+
+
+GALLERY_NOTHING_SENT = "nothing"
+
+
+def send_image_from_url(value, gallery_ids=None, *, send_dimensions: bool, to_canvas: bool):
+    """Send an image by its URL, or as {url, ref} from diffus-app; a gallery image (with a reference or a
+    gallery id) is read from the gallery. To a canvas taking gallery inputs, as the background and the
+    reference (empty for an image not in the gallery) in JSON."""
+    from modules.gallery_input_images import InputImageLoadError, InputImageRef, is_gallery_media_url, load_gallery_media
+
+    def to_outputs(outputs):
+        # A single output is the value itself, not a tuple.
+        return outputs[0] if len(outputs) == 1 else tuple(outputs)
+
+    if isinstance(value, dict):
+        url = value.get("url")
+        ref = InputImageRef.parse(value.get("ref"))
+    else:
+        url = value
+        image_id = (gallery_ids or {}).get(url) if isinstance(url, str) else None
+        ref = InputImageRef(type="IMAGE", id=int(image_id), url=url) if image_id is not None and is_gallery_media_url(url) else None
+
+    if not url and ref is None:
+        # To a canvas, told apart from a failure (see galleryInputImageSent).
+        return to_outputs([GALLERY_NOTHING_SENT if to_canvas else gr.update()] + [gr.update()] * (2 * send_dimensions))
+
+    try:
+        image = load_gallery_media(ref.url) if ref is not None else images.read_image_from_sent_url(url)
+    except InputImageLoadError as error:
+        raise gr.Error(str(error)) from error
+
+    outputs = [image]
+
+    if send_dimensions:
+        if shared.opts.send_size and isinstance(image, Image.Image):
+            outputs += [image.width, image.height]
+        else:
+            outputs += [gr.update(), gr.update()]
+
+    if to_canvas:
+        from modules_forge.forge_canvas.canvas import image_to_base64
+
+        background = image_to_base64(image, numpy=False)
+        outputs[0] = json.dumps({"background": background, "ref": ref.dumps() if ref is not None else ""})
+
+    return to_outputs(outputs)
 
 
 def restore_old_hires_fix_params(res):

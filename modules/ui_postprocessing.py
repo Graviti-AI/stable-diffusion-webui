@@ -23,7 +23,8 @@ def create_ui():
         with gr.Column(variant='compact'):
             with gr.Tabs(elem_id="mode_extras"):
                 with gr.TabItem('Single Image', id="single_image", elem_id="extras_single_tab") as tab_single:
-                    extras_image = ForgeCanvas(elem_id="extras_image", height=512, no_scribbles=True).background
+                    extras_canvas = ForgeCanvas(elem_id="extras_image", height=512, no_scribbles=True, gallery_input=True)
+                    extras_image = extras_canvas.background
 
                 with gr.TabItem('Batch Process', id="batch_process", elem_id="extras_batch_process_tab") as tab_batch:
                     image_batch = gr.Files(label="Batch Process", interactive=True, elem_id="extras_image_batch")
@@ -71,7 +72,8 @@ def create_ui():
         extras_batch_input_dir,
         extras_batch_output_dir,
         show_extras_results,
-        *script_inputs
+        *script_inputs,
+        extras_canvas.gallery_ref,
     ]
 
     extras_outputs = [
@@ -92,7 +94,7 @@ def create_ui():
 
     submit.click(
         fn=call_queue.wrap_gradio_gpu_call(
-            postprocessing.run_postprocessing,
+            postprocessing.run_postprocessing_from_ui,
             func_name="extras",
             extra_outputs=[None, '', ''],
             add_monitor_state=True
@@ -105,6 +107,17 @@ def create_ui():
 
     upgrade_info.change(None, [upgrade_info], None, _js="upgradeCheck")
     parameters_copypaste.add_paste_fields("extras", extras_image, None)
+
+    # Sets the controls of the scripts back from the infotext of an image run from the gallery.
+    paste_fields = [field for script in scripts.scripts_postproc.scripts_in_preferred_order() for field in script.infotext_fields or []]
+    paste = gr.Button(visible=False, elem_id="extras_paste")
+    paste.click(
+        fn=lambda infotext: postprocessing.paste_infotext(infotext, paste_fields),
+        _js="takeGalleryRunExtrasInfotext",
+        inputs=[dummy_component],
+        outputs=[component for component, _ in paste_fields],
+        show_progress=False,
+    )
 
     extras_image.change(
         fn=scripts.scripts_postproc.image_changed,

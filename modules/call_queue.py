@@ -29,6 +29,7 @@ from modules.system_monitor import (
     copy_object_and_replace_images_with_path,
     monitor_call_context,
     generate_function_name)
+from modules.gallery_input_images import redact_gallery_media_urls, replace_referenced_backgrounds
 from modules import shared, progress, errors, script_callbacks, devices, fifo_lock
 
 from modules import sd_vae
@@ -370,8 +371,10 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
         logger.info(f"headers: {json.dumps(dict(request.headers), ensure_ascii=False, sort_keys=True)}")
         logger.info(f"query params: {request.query_params}")
         logger.info(f"path params: {request.path_params}")
-        logger.info(
-            f"body: {json.dumps(copy_object_and_replace_images_with_path(request_body, str(private_tempdir)), ensure_ascii=False, sort_keys=True)}")
+        # Gallery input images logged as their references, other images saved to files.
+        logged_body = replace_referenced_backgrounds(request_body, shared.demo, request.url.path)
+        logged_body = copy_object_and_replace_images_with_path(logged_body, str(private_tempdir))
+        logger.info(f"body: {json.dumps(redact_gallery_media_urls(logged_body), ensure_ascii=False, sort_keys=True)}")
         logger.info(f"End of task({task_id}) request")
         task_start_system_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024
         logger.info(f"task({task_id}) begin memory: {task_start_system_memory:.2f} GB")
@@ -426,7 +429,7 @@ def wrap_gradio_call_no_job(func, extra_outputs=None, add_stats=False, add_monit
             max_debug_str_len = 131072  # (1024*1024)/8
             message = "Error completing request"
             print(message, file=sys.stderr)
-            arg_str = f"Arguments: {args} {kwargs}"
+            arg_str = f"Arguments: {redact_gallery_media_urls(args)} {redact_gallery_media_urls(kwargs)}"
             print(arg_str[:max_debug_str_len], file=sys.stderr)
             if len(arg_str) > max_debug_str_len:
                 print(f"(Argument list truncated at {max_debug_str_len}/{len(arg_str)} characters)", file=sys.stderr)

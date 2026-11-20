@@ -12,7 +12,7 @@ from modules.system_monitor import (
     generate_function_name, monitor_call_context)
 from modules.style_info import AllStyleInfo
 from modules.model_info import AllModelInfo
-from modules.images import read_image_from_cdn_image_url, build_url_to_image_ids
+from modules.images import read_image_from_sent_url, build_url_to_image_ids
 
 from PIL import Image
 import gradio as gr
@@ -111,7 +111,8 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], 
     # txt2img_upscale attribute that signifies this is called by txt2img_upscale
     p.txt2img_upscale = True
 
-    target_image = read_image_from_cdn_image_url(gallery_urls[gallery_index])
+    # The first pass takes RGB, while a transparent gallery image is read as RGBA.
+    target_image = read_image_from_sent_url(gallery_urls[gallery_index]).convert("RGB")
 
     p.firstpass_image = target_image
 

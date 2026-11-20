@@ -298,7 +298,7 @@ def create_output_panel(tabname, outdir, toprow=None):
             for paste_tabname, paste_button in buttons.items():
                 parameters_copypaste.register_paste_params_button(parameters_copypaste.ParamBinding(
                     paste_button=paste_button, tabname=paste_tabname, source_tabname="txt2img" if tabname == "txt2img" else None, source_image_component=res.gallery_urls,
-                    paste_field_names=paste_field_names
+                    paste_field_names=paste_field_names, source_gallery_ids_component=res.gallery_ids
                 ))
 
     return res

@@ -6,6 +6,7 @@ from PIL import Image, ImageOps, ImageFilter, ImageEnhance, UnidentifiedImageErr
 import gradio as gr
 
 from modules import images
+from modules.gallery_input_images import apply_img2img_input_image
 from modules.infotext_utils import create_override_settings_dict, parse_generation_parameters
 from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images, build_decoded_params_from_processing
 from modules.shared import opts, state
@@ -253,6 +254,10 @@ def img2img(request: gr.Request, id_task: str, mode: int, prompt: str, negative_
 
     p.scripts = modules.scripts.scripts_img2img
     p.script_args = args
+
+    if not is_batch:
+        # Not in a script, whose error would not fail the generation; the references are set by one.
+        apply_img2img_input_image(p, mode, sketch_fg if mode == 1 else inpaint_color_sketch_fg if mode == 3 else None)
 
     p.user = request.username
 

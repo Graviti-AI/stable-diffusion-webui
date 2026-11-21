@@ -1,4 +1,6 @@
+import functools
 import os
+from types import SimpleNamespace
 
 
 import gradio as gr
@@ -8,11 +10,12 @@ import json
 from modules import shared, images, devices, scripts, scripts_postprocessing, ui_common, infotext_utils
 from modules.shared import opts
 from modules_forge.utils import prepare_free_memory
+from modules.gallery_input_images import EXTRAS_LABEL, InputImageRef, copy_input_images, resolve_input_image
 
 
 
 def run_postprocessing(
-        request: gr.Request, id_task, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True):
+        request: gr.Request, id_task, extras_mode, image, image_folder, input_dir, output_dir, show_extras_results, *args, save_output: bool = True, gallery_ref: str = ""):
     prepare_free_memory(True)
     devices.torch_gc()
 
@@ -24,6 +27,15 @@ def run_postprocessing(
 
     if isinstance(image, dict):
         image = image["composite"]
+
+    # Taken from the gallery when the canvas holds its reference, with the info of the gallery file.
+    gallery_inputs = SimpleNamespace()
+    if extras_mode == 0 and image is not None:
+        gallery_image = resolve_input_image(
+            gallery_inputs, EXTRAS_LABEL, "extras image", InputImageRef.parse(gallery_ref), image
+        )
+        if gallery_image is not None:
+            image = gallery_image
 
     def get_images(extras_mode, image, image_folder, input_dir):
         if extras_mode == 1:
@@ -121,6 +133,7 @@ def run_postprocessing(
                 p = StableDiffusionProcessing()
                 p.set_request(request)
                 p.feature = "EXTRAS"
+                copy_input_images(gallery_inputs, p)
 
                 fullfn, _, gallery_response = images.save_image(pp.image, path=outpath, basename=basename, extension=opts.samples_format, info=infotext, short_filename=False, no_prompt=True, grid=False, pnginfo_section_name="extras", existing_info=existing_pnginfo, forced_filename=forced_filename, suffix=suffix, p=p, save_to_dirs=True, skip_register=False)
                 if gallery_response["info"]:
@@ -182,6 +195,14 @@ def _is_json_serializable(value) -> bool:
         return True
     except (TypeError, ValueError):
         return False
+
+
+# Named and signed as run_postprocessing for the system monitor, which records the call by them.
+@functools.wraps(run_postprocessing)
+def run_postprocessing_from_ui(request: gr.Request, id_task, *args):
+    """run_postprocessing() with the gallery reference of the image as the last argument."""
+    *args, gallery_ref = args
+    return run_postprocessing(request, id_task, *args, gallery_ref=gallery_ref)
 
 
 def run_postprocessing_webui(request: gr.Request, id_task, *args, **kwargs):

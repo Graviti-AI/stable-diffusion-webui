@@ -350,6 +350,11 @@ def forget_input_image(processing: Any, label: str) -> None:
     _get_input_images(processing).pop(label, None)
 
 
+def copy_input_images(source: Any, target: Any) -> None:
+    """Record the inputs of one processing on another, which registers the images (extras)."""
+    _get_input_images(target).update(_get_input_images(source))
+
+
 def get_register_fields(processing: Any) -> dict[str, Any]:
     """The `input_images` of the request registering an image of the generation."""
 
@@ -359,6 +364,9 @@ def get_register_fields(processing: Any) -> dict[str, Any]:
 
     return {"input_images": [ref.to_gallery_input_image(label) for label, ref in inputs.items()]}
 
+
+# The input of extras, a single image.
+EXTRAS_LABEL = "extras"
 
 # The img2img canvases by mode (inpaint upload is no canvas) and the labels of their inputs, as
 # javascript/galleryInputImage.js maps them.

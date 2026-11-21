@@ -4,7 +4,8 @@ A canvas filled from the gallery holds a reference to the gallery image or uploa
 image is read again from the gallery, which checks the signature of its URL, and used and recorded only
 if it is still the image the browser sent.
 
-Imports PIL, numpy and requests only, to be shared with ComfyUI. See
+Imports PIL, numpy and requests only, to be shared with ComfyUI; what is for WebUI only (its paths, the
+Gradio events of a request) imports the rest where used. See
 docs/2026-11-19-embedded-app-gallery-input-images.md in diffus-app.
 """
 
@@ -15,6 +16,8 @@ import json
 import logging
 import os
 import re
+import uuid
+from collections import defaultdict
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 from urllib.parse import urlsplit
@@ -58,6 +61,67 @@ def redact_gallery_media_urls(value: Any) -> Any:
 
 def _redact_for_log(value: Any) -> str:
     return redact_gallery_media_urls(str(value))[:200]
+
+
+# The event name of a request calling an event by it (/run/{api_name}, /api/{api_name}, /call/{api_name}).
+_API_NAME_PATH = re.compile(r"/(run|api|call)/([^/]+)/?$")
+
+
+def _get_event(request_body: dict, blocks: Any, path: str) -> Any:
+    """The event of the request, found as Gradio finds it: by its index, else by the name in its path;
+    /call by its name only, its body taking no index."""
+    match = _API_NAME_PATH.search(path)
+    fn_index = request_body.get("fn_index")
+    if fn_index is not None and not (match and match.group(1) == "call"):
+        from pydantic import TypeAdapter, ValidationError
+
+        try:
+            # As Gradio validates it ("0.0" is 0).
+            return blocks.fns.get(TypeAdapter(int).validate_python(fn_index))
+        except ValidationError:
+            return None
+
+    if match is None:
+        return None
+    return next((fn for fn in blocks.fns.values() if fn.api_name == match.group(2)), None)
+
+
+def _get_canvas_inputs(inputs: list[Any]) -> list[tuple[int, int]]:
+    """The positions of the background and the reference of each gallery input canvas among the inputs of
+    an event, by the background its reference is of (ForgeCanvas): not by elem_id, which other components
+    may have too, nor by gallery_input_canvases, whose canvases are created anew by
+    Api.init_default_script_args calling the ui() of the scripts again. A canvas whose background or reference
+    is bound more than once is not paired: each position may be sent another value, all saved as before."""
+    positions = defaultdict(list)
+    for i, component in enumerate(inputs):
+        positions[id(component)].append(i)
+    return [
+        (positions[id(background)][0], i)
+        for i, component in enumerate(inputs)
+        if (background := getattr(component, "gallery_background", None)) is not None
+        and len(positions[id(component)]) == 1
+        and len(positions.get(id(background), [])) == 1
+    ]
+
+
+def replace_referenced_backgrounds(request_body: dict, blocks: Any, path: str) -> dict:
+    """The request body with the canvas backgrounds sent with their gallery references replaced by them, to
+    be logged as references, not saved to files. An empty background is kept: its canvas was cleared; so is
+    one whose reference the generation cannot parse, and then uses unrecorded."""
+
+    fn = _get_event(request_body, blocks, path) if blocks is not None else None
+    data = request_body.get("data")
+    if fn is None or not isinstance(data, list) or len(data) != len(fn.inputs):
+        return request_body
+
+    data = list(data)
+    for background, ref in _get_canvas_inputs(fn.inputs):
+        if not data[background]:
+            continue
+        # A str as the generation takes it: its Textbox makes anything else a str JSON cannot parse.
+        if isinstance(data[ref], str) and InputImageRef.parse(data[ref]) is not None:
+            data[background] = data[ref]
+    return {**request_body, "data": data}
 
 
 def set_gallery_endpoint_resolver(resolver: Callable[[], str] | None) -> None:
@@ -309,12 +373,14 @@ def resolve_input_image(
     name: str,
     ref: InputImageRef | None,
     sent_image: Image.Image | np.ndarray | None,
+    request: Any,
 ) -> Image.Image | None:
     """The gallery image of the input, recorded as the input. None without a reference, or when the image
-    sent is another one (the canvas changed another way), which is then used unrecorded.
+    sent is another one (the canvas changed another way), which is then used unrecorded and saved for the
+    log: the request logged has the reference in its place.
 
     Raises InputImageLoadError when the image cannot be read, even if it is not the one sent: that is
-    known only once read.
+    known only once read. The image sent is then saved for the log too.
     """
 
     forget_input_image(processing, label)
@@ -322,16 +388,39 @@ def resolve_input_image(
     if ref is None or sent_image is None:
         return None
 
-    image = load_gallery_media(ref.url, name)
+    try:
+        image = load_gallery_media(ref.url, name)
+    except InputImageLoadError:
+        logger.warning(
+            "The %s of %s cannot be read: %s %s; the image sent is saved to %s",
+            name, label, ref.type, ref.id, _save_sent_image(sent_image, request),
+        )
+        raise
 
     if not is_same_image(image, sent_image):
         logger.warning(
-            "The %s of %s is not used, as it is not the image sent: %s %s", name, label, ref.type, ref.id
+            "The %s of %s is not used, as it is not the image sent: %s %s; the image sent is saved to %s",
+            name, label, ref.type, ref.id, _save_sent_image(sent_image, request),
         )
         return None
 
     record_input_image(processing, label, ref)
     return image
+
+
+def _save_sent_image(image: Image.Image | np.ndarray, request: Any) -> str | None:
+    """The image saved to the temp dir of the user, as call_queue saves the images of the request logged;
+    None if it cannot be, which does not fail the generation."""
+
+    try:
+        from modules.paths import Paths
+
+        path = Paths(request).private_tempdir() / f"{uuid.uuid4()}.png"
+        (Image.fromarray(_squeeze_single_channel(image)) if isinstance(image, np.ndarray) else image).save(path)
+        return str(path)
+    except Exception as error:
+        logger.warning("Failed to save the image sent: %r", error)
+        return None
 
 
 def _get_input_images(processing: Any) -> dict[str, InputImageRef]:
@@ -401,9 +490,15 @@ def apply_img2img_input_image(processing: Any, mode: int, foreground: Image.Imag
     sent_image = init_images[0] if init_images else None
 
     if mode in _SKETCH_MODES and has_scribbles(foreground):
-        # Drawn over, it is used unrecorded.
+        # Used unrecorded and not compared, the background may be another image than the reference the
+        # request logged has in its place: the image used, drawn over, is saved for the log.
+        if ref is not None and sent_image is not None:
+            logger.info(
+                "The %s image is drawn over, not taken as %s %s; the image used is saved to %s",
+                label, ref.type, ref.id, _save_sent_image(sent_image, processing.get_request()),
+            )
         return
 
-    image = resolve_input_image(processing, label, f"{label} image", ref, sent_image)
+    image = resolve_input_image(processing, label, f"{label} image", ref, sent_image, processing.get_request())
     if image is not None:
         processing.init_images[0] = image

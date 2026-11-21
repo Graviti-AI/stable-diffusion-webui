@@ -122,7 +122,8 @@ class LogicalImage(gr.Textbox):
         return "textbox"
 
 
-# The canvases taking gallery inputs, by elem_id, looked up while the UI is built.
+# The canvases taking gallery inputs, by elem_id, looked up while the UI is built: the ControlNet ones are
+# made anew, not shown, by Api.init_default_script_args, so an event pairs its inputs by gallery_background.
 gallery_input_canvases: dict[str, "ForgeCanvas"] = {}
 
 
@@ -166,6 +167,8 @@ class ForgeCanvas:
             gallery_input_canvases[self.uuid] = self
             self.gallery_ref = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_ref')
             self.gallery_ref.do_not_save_to_config = True
+            # The background it is the reference of, wherever both are inputs of an event.
+            self.gallery_ref.gallery_background = self.background
             # The background and reference loaded, put into the canvas by the browser unless cancelled.
             gallery_loaded = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_loaded')
             gallery_loaded.do_not_save_to_config = True

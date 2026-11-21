@@ -32,7 +32,7 @@ def run_postprocessing(
     gallery_inputs = SimpleNamespace()
     if extras_mode == 0 and image is not None:
         gallery_image = resolve_input_image(
-            gallery_inputs, EXTRAS_LABEL, "extras image", InputImageRef.parse(gallery_ref), image
+            gallery_inputs, EXTRAS_LABEL, "extras image", InputImageRef.parse(gallery_ref), image, request
         )
         if gallery_image is not None:
             image = gallery_image

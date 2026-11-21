@@ -19,6 +19,7 @@ import gradio as gr
 import torch
 
 import modules.user
+from modules.gallery_input_images import redact_gallery_media_urls
 import modules.shared
 
 logger = logging.getLogger(__name__)
@@ -327,8 +328,9 @@ def on_task(request: gr.Request, func, task_info, *args, **kwargs):
         'api': api_name,
         'task_id': monitor_log_id,
         'user': modules.user.User.current_user(request).uid,
-        'args': func_args,
-        'extra_args': func_extra_args,
+        # Without the signatures of gallery media URLs, as logged below.
+        'args': redact_gallery_media_urls(func_args),
+        'extra_args': redact_gallery_media_urls(func_extra_args),
         'gpu_consumption': _make_gpu_consumption(api_name, func_args, *args, **kwargs),
         'node': os.getenv('HOST_IP', default=''),
         'added_at': task_info.get('added_at', time.time()),

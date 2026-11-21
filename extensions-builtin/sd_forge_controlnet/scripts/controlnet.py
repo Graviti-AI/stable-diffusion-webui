@@ -185,7 +185,7 @@ class ControlNetForForgeOfficial(scripts.Script):
 
         ref = InputImageRef.parse(unit.image_ref)
         gallery_image = resolve_input_image(
-            p, Infotext.unit_prefix(enabled_index), f"input image of ControlNet Unit {index}", ref, image
+            p, Infotext.unit_prefix(enabled_index), f"input image of ControlNet Unit {index}", ref, image, p.get_request()
         )
         return image if gallery_image is None else np.array(gallery_image)
 

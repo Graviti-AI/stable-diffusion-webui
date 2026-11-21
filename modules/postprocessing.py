@@ -81,6 +81,8 @@ def run_postprocessing(
         image_data = image_data if image_data.mode in ("RGBA", "RGB") else image_data.convert("RGB")
 
         parameters, existing_pnginfo = images.read_info_from_image(image_data)
+        # Registered as JSON, which bytes (a GIF comment or loop, a palette transparency) would fail.
+        existing_pnginfo = {key: value for key, value in existing_pnginfo.items() if _is_json_serializable(value)}
         if parameters:
             existing_pnginfo["parameters"] = parameters
 
@@ -172,6 +174,14 @@ def run_postprocessing(
         infotext_result += caption_results[0]
 
     return outputs, gallery_ids, json.dumps({"info": infotext_html, "captions": caption_results}), infotext_result, ''
+
+
+def _is_json_serializable(value) -> bool:
+    try:
+        json.dumps(value)
+        return True
+    except (TypeError, ValueError):
+        return False
 
 
 def run_postprocessing_webui(request: gr.Request, id_task, *args, **kwargs):

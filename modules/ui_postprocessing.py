@@ -108,6 +108,17 @@ def create_ui():
     upgrade_info.change(None, [upgrade_info], None, _js="upgradeCheck")
     parameters_copypaste.add_paste_fields("extras", extras_image, None)
 
+    # Sets the controls of the scripts back from the infotext of an image run from the gallery.
+    paste_fields = [field for script in scripts.scripts_postproc.scripts_in_preferred_order() for field in script.infotext_fields or []]
+    paste = gr.Button(visible=False, elem_id="extras_paste")
+    paste.click(
+        fn=lambda infotext: postprocessing.paste_infotext(infotext, paste_fields),
+        _js="takeGalleryRunExtrasInfotext",
+        inputs=[dummy_component],
+        outputs=[component for component, _ in paste_fields],
+        show_progress=False,
+    )
+
     extras_image.change(
         fn=scripts.scripts_postproc.image_changed,
         inputs=[], outputs=[]

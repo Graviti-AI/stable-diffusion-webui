@@ -346,7 +346,7 @@ function getGalleryInputImg2imgMode(inputImages) {
 }
 
 // Load the input images of a run from the gallery by their labels: the img2img ones into the canvas of
-// their mode, "ControlNet {i}" into the unit i.
+// their mode, "ControlNet {i}" into the unit i, "extras" into the image of extras.
 function loadGalleryInputImages(tabname, inputImages) {
     for (const {label, ...ref} of inputImages || []) {
         const img2imgMode = _getImg2imgMode(label);
@@ -355,6 +355,8 @@ function loadGalleryInputImages(tabname, inputImages) {
         let uuid = null;
         if (tabname === "img2img" && img2imgMode >= 0) {
             uuid = _IMG2IMG_GALLERY_INPUTS[img2imgMode][1];
+        } else if (tabname === "extras" && label === "extras") {
+            uuid = "extras_image";
         } else if (controlNetUnit !== undefined) {
             uuid = `${tabname}_controlnet_ControlNet-${controlNetUnit}_input_image`;
         }

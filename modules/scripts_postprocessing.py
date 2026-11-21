@@ -74,6 +74,10 @@ class ScriptPostprocessing:
     group = None
     """A gr.Group component that has all script's UI inside it"""
 
+    infotext_fields = None
+    """(component, infotext key or function of the infotext parameters) pairs, setting the controls of ui()
+    back from the infotext of an image run from the gallery; None leaves the control as it is"""
+
     def ui(self):
         """
         This function should create gradio UI elements. See https://gradio.app/docs/#components

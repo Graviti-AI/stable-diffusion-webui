@@ -205,6 +205,26 @@ def run_postprocessing_from_ui(request: gr.Request, id_task, *args):
     return run_postprocessing(request, id_task, *args, gallery_ref=gallery_ref)
 
 
+def paste_infotext(infotext: str, fields: list) -> list:
+    """The updates setting the controls of the scripts back from the infotext of an extras image."""
+    params = {key: infotext_utils.unquote(value) for key, value in infotext_utils.re_param.findall(infotext or "")}
+
+    updates = []
+    for component, key in fields:
+        value = key(params) if callable(key) else params.get(key)
+        if value is None or isinstance(value, dict):
+            updates.append(gr.update() if value is None else value)
+            continue
+
+        try:
+            # Numbers as floats: a slider starting at an int takes fractions.
+            convert = float if isinstance(component.value, (int, float)) and not isinstance(component.value, bool) else type(component.value)
+            updates.append(gr.update(value=convert(value) if component.value is not None else value))
+        except (TypeError, ValueError):
+            updates.append(gr.update())
+    return updates
+
+
 def run_postprocessing_webui(request: gr.Request, id_task, *args, **kwargs):
     return run_postprocessing(request, id_task, *args, **kwargs)
 

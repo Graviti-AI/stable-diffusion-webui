@@ -71,6 +71,7 @@ module.exports = {
         switch_to_inpaint_sketch: "readonly",
         switch_to_extras: "readonly",
         get_tab_index: "readonly",
+        switchToTab: "readonly",
         create_submit_args: "readonly",
         restart_reload: "readonly",
         updateInput: "readonly",

@@ -93,6 +93,11 @@ module.exports = {
         localGet: "readonly",
         localRemove: "readonly",
         // resizeHandle.js
-        setupResizeHandle: "writable"
+        setupResizeHandle: "writable",
+        // galleryInputImage.js
+        getGalleryInputImg2imgMode: "readonly",
+        loadGalleryInputImages: "readonly",
+        // webUIApp.js
+        gallery_run_img2img_mode: "writable"
     }
 };

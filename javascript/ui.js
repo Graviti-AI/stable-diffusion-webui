@@ -94,8 +94,10 @@ function switch_to_img2img_tab(no) {
     switchToTab("tab_img2img");
     gradioApp().getElementById('mode_img2img').querySelectorAll('button')[no].click();
 }
+// The paste of a run from the gallery switches to the mode of its input image (see webUIApp.runImage).
 function switch_to_img2img() {
-    switch_to_img2img_tab(0);
+    switch_to_img2img_tab(gallery_run_img2img_mode ?? 0);
+    gallery_run_img2img_mode = null;
     return Array.from(arguments);
 }
 

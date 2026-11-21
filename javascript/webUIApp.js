@@ -1,5 +1,7 @@
 let gallery_run_pnginfo = null;
 let gallery_run_models = null;
+// The img2img mode of a run from the gallery, taken by the paste of img2img.
+let gallery_run_img2img_mode = null;
 let gallery_send_to_url = null;
 
 const _TAB_ID_TO_NAME = {
@@ -96,10 +98,15 @@ const webUIApp = {
 
         toast.setExtraNetwork(added, tabname, subject);
     },
-    runImage(tabname, pnginfo, models) {
+    // The input images are loaded alongside the paste, which leaves the canvases as they are.
+    runImage(tabname, pnginfo, models, inputImages) {
         gallery_run_pnginfo = pnginfo;
         gallery_run_models = models;
+        if (tabname === "img2img") {
+            gallery_run_img2img_mode = getGalleryInputImg2imgMode(inputImages);
+        }
         gradioApp().getElementById(`${tabname}_paste`).click();
+        loadGalleryInputImages(tabname, inputImages);
     },
     // Sent with its gallery reference, the image is a gallery input of the img2img canvas.
     sendToImg2Img(url, ref) {

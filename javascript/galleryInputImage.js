@@ -1,6 +1,6 @@
 // Fill the ForgeCanvases taking gallery inputs through the gallery of diffus-app, as Create/Edit Image
 // does: picked with the image selector, uploaded when dropped or pasted, loaded by reference when sent
-// to it. See modules/gallery_input_images.py.
+// or run from the gallery. See modules/gallery_input_images.py.
 
 // The selection in progress of each canvas, until its image is loaded.
 const _gallerySelections = {};
@@ -11,6 +11,14 @@ const _galleryLoads = {};
 
 // What a Send to with no image answers (see send_image_from_url of infotext_utils.py).
 const _GALLERY_NOTHING_SENT = "nothing";
+
+// The img2img canvases by the label of their input, in the order of the img2img modes.
+const _IMG2IMG_GALLERY_INPUTS = [
+    ["img2img", "img2img_image"],
+    ["sketch", "img2img_sketch"],
+    ["inpaint", "img2maskimg"],
+    ["inpaint sketch", "inpaint_sketch"],
+];
 
 // Null when WebUI is not embedded in diffus-app, its own uploads then used.
 function _getInputImageApp() {
@@ -170,6 +178,14 @@ async function _pickGalleryInputImage(uuid, pick) {
     _loadGalleryInputImage(uuid, ref, selection);
 }
 
+// Load the input image of a run from the gallery. Its strokes are cleared: an input drawn over is not
+// registered, while ForgeCanvas keeps them for an image of the same size.
+function _setGalleryInputImage(uuid, ref) {
+    const selection = _startGallerySelection(uuid);
+    selection.clearsForeground = true;
+    _loadGalleryInputImage(uuid, ref, selection);
+}
+
 // The reference the hidden load button sends to the server.
 function takeGalleryInputImage(uuid) {
     const load = _galleryLoads[uuid]?.sent;
@@ -192,7 +208,7 @@ function galleryInputImageLoaded(uuid, loaded) {
         _cancelGalleryInputImage(uuid);
         if (loaded) {
             const {background, ref} = JSON.parse(loaded);
-            _putGalleryInputImage(uuid, background, ref);
+            _putGalleryInputImage(uuid, background, ref, selection.clearsForeground);
         }
     }
 
@@ -226,7 +242,7 @@ function galleryInputImageSent(uuid, sent) {
     return "";
 }
 
-function _putGalleryInputImage(uuid, background, ref) {
+function _putGalleryInputImage(uuid, background, ref, clearForeground = false) {
     const backgroundTextarea = _getBackgroundTextarea(uuid);
     const refTextarea = _getGalleryRefTextarea(uuid);
     if (!backgroundTextarea || !refTextarea) {
@@ -236,7 +252,7 @@ function _putGalleryInputImage(uuid, background, ref) {
     // No foreground, or an image of another size, whose strokes ForgeCanvas drops once it decodes it: a
     // blank one sent at its size now, as the sketch modes composite both.
     const size = _getPngSize(background);
-    if (!_getForegroundTextarea(uuid)?.value || !_hasSize(_getDrawingCanvas(uuid), size)) {
+    if (clearForeground || !_getForegroundTextarea(uuid)?.value || !_hasSize(_getDrawingCanvas(uuid), size)) {
         _clearForeground(uuid, size);
     }
     backgroundTextarea.value = background;
@@ -290,6 +306,36 @@ function _getPngSize(dataUrl) {
         return {width: read(16), height: read(20)};
     } catch (error) {
         return null;
+    }
+}
+
+// The img2img mode of an input label, or -1.
+function _getImg2imgMode(label) {
+    return _IMG2IMG_GALLERY_INPUTS.findIndex(([inputLabel]) => inputLabel === label);
+}
+
+// The img2img mode of the input images of a run from the gallery, if any, switched to by its paste.
+function getGalleryInputImg2imgMode(inputImages) {
+    const mode = (inputImages || []).map(({label}) => _getImg2imgMode(label)).find((index) => index >= 0);
+    return mode ?? null;
+}
+
+// Load the input images of a run from the gallery by their labels: the img2img ones into the canvas of
+// their mode.
+function loadGalleryInputImages(tabname, inputImages) {
+    for (const {label, ...ref} of inputImages || []) {
+        const img2imgMode = _getImg2imgMode(label);
+
+        let uuid = null;
+        if (tabname === "img2img" && img2imgMode >= 0) {
+            uuid = _IMG2IMG_GALLERY_INPUTS[img2imgMode][1];
+        }
+
+        if (!uuid || !_isGalleryInputCanvas(uuid)) {
+            console.warn(`No canvas for the gallery input image "${label}" in ${tabname}`);
+        } else {
+            _setGalleryInputImage(uuid, ref);
+        }
     }
 }
 

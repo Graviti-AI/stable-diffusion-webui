@@ -2268,3 +2268,72 @@ html {
 }
 
 /* Banner Notification Section Ends */
+
+/* The loading of a gallery input image over its canvas, see javascript/galleryInputImage.js */
+.gallery-input-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.gallery-input-loading.visible {
+    display: flex;
+}
+
+.gallery-input-loading-progress {
+    --gallery-input-progress: 0%;
+    position: relative;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.gallery-input-loading-progress::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary-500) var(--gallery-input-progress), rgba(255, 255, 255, 0.2) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+}
+
+.gallery-input-loading-progress.indeterminate::before {
+    background: conic-gradient(var(--primary-500) 25%, rgba(255, 255, 255, 0.2) 0);
+    animation: gallery-input-loading-spin 1s linear infinite;
+}
+
+@keyframes gallery-input-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.gallery-input-loading-cancel {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 14px;
+    line-height: 28px;
+    cursor: pointer;
+}
+
+.gallery-input-loading-cancel:hover {
+    background: rgba(255, 255, 255, 0.35);
+}

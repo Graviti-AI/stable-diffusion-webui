@@ -121,6 +121,10 @@ class LogicalImage(gr.Textbox):
         return "textbox"
 
 
+# The canvases taking gallery inputs, by elem_id, looked up while the UI is built.
+gallery_input_canvases: dict[str, "ForgeCanvas"] = {}
+
+
 class ForgeCanvas:
     def __init__(
             self,
@@ -140,7 +144,8 @@ class ForgeCanvas:
             numpy=False,
             initial_image=None,
             elem_id=None,
-            elem_classes=None
+            elem_classes=None,
+            gallery_input=False,
     ):
         # self.uuid = 'uuid_' + uuid.uuid4().hex
         self.uuid = elem_id
@@ -152,3 +157,10 @@ class ForgeCanvas:
                                          f"'{scribble_color}', {scribble_color_fixed}, {scribble_width}, {scribble_width_fixed}, "
                                          f'{scribble_alpha}, {scribble_alpha_fixed}, {scribble_softness}, {scribble_softness_fixed}); '
                                          f'initMobileCanvas(forgeCanvas)}}', queue=False)
+
+        # The gallery image the background was loaded from (modules/gallery_input_images.py).
+        self.gallery_ref = None
+        if gallery_input:
+            gallery_input_canvases[self.uuid] = self
+            self.gallery_ref = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_ref')
+            self.gallery_ref.do_not_save_to_config = True

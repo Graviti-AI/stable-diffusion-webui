@@ -271,7 +271,8 @@ class ControlNetUiGroup(object):
                                 elem_classes=["cnet-image"],
                                 contrast_scribbles=True,
                                 height=300,
-                                numpy=True
+                                numpy=True,
+                                gallery_input=True,
                             )
                             self.openpose_editor.render_upload()
 
@@ -403,6 +404,8 @@ class ControlNetUiGroup(object):
                 elem_id=f"{elem_id_tabname}_{tabname}_controlnet_enable_checkbox",
                 elem_classes=["cnet-unit-enabled"],
             )
+            # Clicked once the image of a RUN from the gallery is loaded.
+            self.gallery_enable = gr.Button(visible=False, elem_id=f"{elem_id_tabname}_{tabname}_controlnet_gallery_enable")
             self.pixel_perfect = gr.Checkbox(
                 label="Pixel Perfect",
                 value=self.default_unit.pixel_perfect,
@@ -918,7 +921,8 @@ class ControlNetUiGroup(object):
     def register_img2img_same_input(self):
         def fn_same_checked(x):
             return [
-                gr.update(value=None),
+                # Cleared on uncheck only: checked by a RUN from the gallery, its image is kept.
+                gr.update(value=None) if not x else gr.update(),
                 gr.update(value=None),
                 gr.update(value=False, visible=x),
             ] + [gr.update(visible=x)] * 3
@@ -1064,6 +1068,18 @@ class ControlNetUiGroup(object):
         assert self.type_filter is not None
         if self.is_img2img:
             self.register_img2img_same_input()
+        self.register_gallery_enable()
+
+    def register_gallery_enable(self):
+        """Enable the unit of an image run from the gallery if it has a model: a unit without one is
+        skipped. The model is read from Gradio, not from the dropdown, which shows any filter typed."""
+        self.gallery_enable.click(
+            fn=None,
+            js='(model, enabled) => [enabled || (!!model && model !== "None")]',
+            inputs=[self.model, self.enabled],
+            outputs=[self.enabled],
+            show_progress=False,
+        )
 
     def register_callbacks(self):
         """Register callbacks that involves A1111 context gradio components."""

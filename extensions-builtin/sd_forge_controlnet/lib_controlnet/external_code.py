@@ -180,6 +180,9 @@ class ControlNetUnit:
     pixel_perfect: bool = False
     control_mode: Union[ControlMode, int, str] = ControlMode.BALANCED
     save_detected_map: bool = True
+    # The gallery reference of the image, as JSON: last, after the fields passed by position, as it is set
+    # from the args after all the units (see ControlNetForForgeOfficial.ui).
+    image_ref: str = ''
 
     @staticmethod
     def infotext_fields():

@@ -178,10 +178,11 @@ async function _pickGalleryInputImage(uuid, pick) {
     _loadGalleryInputImage(uuid, ref, selection);
 }
 
-// Load the input image of a run from the gallery. Its strokes are cleared: an input drawn over is not
-// registered, while ForgeCanvas keeps them for an image of the same size.
-function _setGalleryInputImage(uuid, ref) {
+// Load the input image of a run from the gallery, calling onLoaded once loaded. Its strokes are cleared:
+// an input drawn over is not registered, while ForgeCanvas keeps them for an image of the same size.
+function _setGalleryInputImage(uuid, ref, onLoaded) {
     const selection = _startGallerySelection(uuid);
+    selection.onLoaded = onLoaded;
     selection.clearsForeground = true;
     _loadGalleryInputImage(uuid, ref, selection);
 }
@@ -206,9 +207,10 @@ function galleryInputImageLoaded(uuid, loaded) {
 
     if (selection && _gallerySelections[uuid] === selection) {
         _cancelGalleryInputImage(uuid);
-        if (loaded) {
+        if (loaded && (selection.isWanted?.() ?? true)) {
             const {background, ref} = JSON.parse(loaded);
             _putGalleryInputImage(uuid, background, ref, selection.clearsForeground);
+            selection.onLoaded?.();
         }
     }
 
@@ -309,6 +311,29 @@ function _getPngSize(dataUrl) {
     }
 }
 
+// The mask of a ControlNet unit emptied at once, and "Use Mask" unchecked, which hides it and clears it
+// too (register_shift_upload_mask of controlnet_ui_group.py): left checked, the empty mask canvas could
+// not be drawn on.
+function _resetControlNetMask(uuid) {
+    const prefix = uuid.replace(/_input_image$/, "");
+    for (const textarea of [_getBackgroundTextarea(`${prefix}_mask_image`), _getForegroundTextarea(`${prefix}_mask_image`)]) {
+        if (textarea) {
+            textarea.value = "";
+            updateInput(textarea);
+        }
+    }
+
+    const checkbox = gradioApp().querySelector(`#${CSS.escape(`${prefix}_controlnet_mask_upload_checkbox`)} input[type="checkbox"]`);
+    if (checkbox?.checked) {
+        checkbox.click();
+    }
+}
+
+// Enable the ControlNet unit if it has a model (see register_gallery_enable of controlnet_ui_group.py).
+function _enableControlNetUnit(tabname, unit) {
+    gradioApp().getElementById(`${tabname}_controlnet_ControlNet-${unit}_controlnet_gallery_enable`)?.click();
+}
+
 // The img2img mode of an input label, or -1.
 function _getImg2imgMode(label) {
     return _IMG2IMG_GALLERY_INPUTS.findIndex(([inputLabel]) => inputLabel === label);
@@ -321,22 +346,53 @@ function getGalleryInputImg2imgMode(inputImages) {
 }
 
 // Load the input images of a run from the gallery by their labels: the img2img ones into the canvas of
-// their mode.
+// their mode, "ControlNet {i}" into the unit i.
 function loadGalleryInputImages(tabname, inputImages) {
     for (const {label, ...ref} of inputImages || []) {
         const img2imgMode = _getImg2imgMode(label);
+        const controlNetUnit = /^ControlNet (\d+)$/.exec(label)?.[1];
 
         let uuid = null;
         if (tabname === "img2img" && img2imgMode >= 0) {
             uuid = _IMG2IMG_GALLERY_INPUTS[img2imgMode][1];
+        } else if (controlNetUnit !== undefined) {
+            uuid = `${tabname}_controlnet_ControlNet-${controlNetUnit}_input_image`;
         }
 
         if (!uuid || !_isGalleryInputCanvas(uuid)) {
             console.warn(`No canvas for the gallery input image "${label}" in ${tabname}`);
-        } else {
+        } else if (controlNetUnit === undefined) {
             _setGalleryInputImage(uuid, ref);
+        } else {
+            // Once its image is loaded: its own mask, which ControlNet takes before the strokes, is of another
+            // image; the unit is enabled then, as without an image the generation would fail.
+            const onLoaded = () => {
+                _resetControlNetMask(uuid);
+                _enableControlNetUnit(tabname, controlNetUnit);
+            };
+            if (tabname === "img2img") {
+                _setControlNetIndependentImage(uuid, ref, onLoaded);
+            } else {
+                _setGalleryInputImage(uuid, ref, onLoaded);
+            }
         }
     }
+}
+
+// An img2img ControlNet unit uses its own image only with "Upload independent control image" checked,
+// which the RUN checks; the image is put only if still checked once loaded (see controlnet_ui_group.py).
+function _setControlNetIndependentImage(uuid, ref, onLoaded) {
+    const id = uuid.replace(/_input_image$/, "_controlnet_same_img2img_checkbox");
+    const checkbox = gradioApp().querySelector(`#${CSS.escape(id)} input[type="checkbox"]`);
+    const selection = _startGallerySelection(uuid);
+    selection.isWanted = () => !checkbox || checkbox.checked;
+    selection.onLoaded = onLoaded;
+    selection.clearsForeground = true;
+
+    if (checkbox && !checkbox.checked) {
+        checkbox.click();
+    }
+    _loadGalleryInputImage(uuid, ref, selection);
 }
 
 function _getImageFile(dataTransfer) {

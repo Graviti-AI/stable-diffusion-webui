@@ -9,6 +9,7 @@ from modules import shared, script_callbacks, masking, images
 from modules.ui_components import InputAccordion
 from modules.api.api import decode_base64_to_image
 from modules.system_monitor import monitor_call_context
+from modules.gallery_input_images import InputImageRef, resolve_input_image
 import gradio as gr
 
 from lib_controlnet import global_state, external_code
@@ -96,6 +97,10 @@ class ControlNetForForgeOfficial(scripts.Script):
                             controls.extend(components)
                             unit_args_len.append(len(components))
 
+        # The gallery references of the unit images after all the units, whose args stay as API requests pass
+        # them by position.
+        controls.extend(group.image.gallery_ref for group in ui_groups)
+
         for i, ui_group in enumerate(ui_groups):
             infotext.register_unit(i, ui_group)
         if shared.opts.data.get("control_net_sync_field_args", True):
@@ -117,6 +122,9 @@ class ControlNetForForgeOfficial(scripts.Script):
                 unit.input_mode = InputMode(unit.input_mode)
                 units.append(unit)
                 offset += args_len
+
+            for unit, image_ref in zip(units, args[offset:]):
+                unit.image_ref = image_ref or ''
 
             setattr(p, _CONTROLNET_UNITS_KEY, units)
 
@@ -164,6 +172,22 @@ class ControlNetForForgeOfficial(scripts.Script):
             input_image = [np.asarray(x)[:, :, 0] for x in input_image]
             input_image = np.stack(input_image, axis=2)
         return input_image
+
+    @staticmethod
+    def resolve_gallery_input_image(p, unit: ControlNetUnit, image: np.ndarray) -> np.ndarray:
+        """The canvas image of the unit, from the gallery when it is the image of its reference; labelled
+        by its index among the enabled units, as the infotext."""
+        units = getattr(p, "_controlnet_units", None) or []
+        index = next((i for i, item in enumerate(units) if item is unit), None)
+        enabled_index = next((i for i, item in enumerate(x for x in units if x.enabled) if item is unit), None)
+        if index is None or enabled_index is None:
+            return image
+
+        ref = InputImageRef.parse(unit.image_ref)
+        gallery_image = resolve_input_image(
+            p, Infotext.unit_prefix(enabled_index), f"input image of ControlNet Unit {index}", ref, image
+        )
+        return image if gallery_image is None else np.array(gallery_image)
 
     def get_input_data(self, p, unit, preprocessor, h, w):
         logger.info(f'ControlNet Input Mode: {unit.input_mode}')
@@ -228,6 +252,10 @@ class ControlNetForForgeOfficial(scripts.Script):
 
             if not isinstance(image, np.ndarray):
                 raise ValueError("controlnet is enabled but no input image is given")
+
+            # Only the canvas image, when used: not a preview, a scribble or the img2img image.
+            if image is unit_image:
+                image = self.resolve_gallery_input_image(p, unit, image)
 
             image = HWC3(image)
 

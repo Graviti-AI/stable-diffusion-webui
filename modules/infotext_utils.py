@@ -167,7 +167,7 @@ def connect_paste_params_buttons(dummy_component):
                 func = send_image_and_dimensions if need_send_dementions else image_from_url_text
                 jsfunc = "extract_image_from_gallery"
             elif isinstance(binding.source_image_component, gr.JSON):
-                func = send_image_and_dimensions_from_url if need_send_dementions else images.read_image_from_cdn_image_url
+                func = send_image_and_dimensions_from_url if need_send_dementions else images.read_image_from_sent_url
                 jsfunc = "extract_image_url_from_gallery_urls"
             else:
                 func = send_image_and_dimensions if need_send_dementions else lambda x: x
@@ -221,7 +221,7 @@ def send_image_and_dimensions(x):
 
 
 def send_image_and_dimensions_from_url(url: str):
-    image = images.read_image_from_cdn_image_url(url)
+    image = images.read_image_from_sent_url(url)
     if shared.opts.send_size and isinstance(image, Image.Image):
         w = image.width
         h = image.height

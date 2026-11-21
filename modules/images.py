@@ -25,7 +25,6 @@ import hashlib
 from modules import sd_samplers, shared, script_callbacks, errors
 from modules.paths_internal import roboto_ttf_file
 from modules.shared import opts
-from modules.paths import workdir
 from modules.system_monitor import remove_schema
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
@@ -904,15 +903,19 @@ def make_cdn_image_url(url: str) -> str:
     return f"{GALLERY_CDN_URL.rstrip('/')}/{url.lstrip('/')}"
 
 
-def read_image_from_cdn_image_url(url: str) -> Image.Image:
-    if not GALLERY_CDN_URL:
-        raise ValueError("GALLERY_CDN_URL environment variable is not set")
+def read_image_from_sent_url(url: str) -> Image.Image:
+    """Read an image URL sent by the browser: a gallery media URL from the gallery, which checks its
+    signature, any other over HTTP; never from the workdir, unchecked."""
 
-    prefix = f"{GALLERY_CDN_URL.rstrip('/')}/api/public/gallery/v1/media/"
-    path = workdir / url.split("?", 1)[0].removeprefix(prefix)
+    from urllib.parse import urlsplit
 
-    if path.exists():
-        return Image.open(path)
+    from modules.gallery_input_images import is_gallery_media_url, load_gallery_media
+
+    if is_gallery_media_url(url):
+        return load_gallery_media(url)
+
+    if not isinstance(url, str) or urlsplit(url).scheme not in ("http", "https"):
+        raise ValueError(f"Not an image URL: {str(url)[:200]}")
 
     import requests
 

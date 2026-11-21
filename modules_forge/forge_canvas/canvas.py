@@ -161,6 +161,7 @@ class ForgeCanvas:
 
         # The gallery image the background was loaded from (modules/gallery_input_images.py).
         self.gallery_ref = None
+        self.gallery_sent = None
         if gallery_input:
             gallery_input_canvases[self.uuid] = self
             self.gallery_ref = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_ref')
@@ -168,6 +169,9 @@ class ForgeCanvas:
             # The background and reference loaded, put into the canvas by the browser unless cancelled.
             gallery_loaded = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_loaded')
             gallery_loaded.do_not_save_to_config = True
+            # The image sent to the canvas (modules/infotext_utils.py), put into it alike.
+            self.gallery_sent = gr.Textbox(visible=False, elem_id=f'{self.uuid}_gallery_sent')
+            self.gallery_sent.do_not_save_to_config = True
             gallery_load = gr.Button(visible=False, elem_id=f'{self.uuid}_gallery_load')
             gallery_load.click(
                 fn=load_gallery_input_image,

@@ -101,8 +101,9 @@ const webUIApp = {
         gallery_run_models = models;
         gradioApp().getElementById(`${tabname}_paste`).click();
     },
-    sendToImg2Img(url) {
-        gallery_send_to_url = url;
+    // Sent with its gallery reference, the image is a gallery input of the img2img canvas.
+    sendToImg2Img(url, ref) {
+        gallery_send_to_url = ref ? {url, ref} : url;
         gradioApp().getElementById("txt2img_send_to_img2img").click();
     }
 };

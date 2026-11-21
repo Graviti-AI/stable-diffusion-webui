@@ -51,15 +51,16 @@ function extract_image_from_gallery(gallery) {
     return [[gallery[index]]];
 }
 
-function extract_image_url_from_gallery_urls(gallery_urls) {
+// The other inputs (the gallery ids of the outputs) are passed along.
+function extract_image_url_from_gallery_urls(gallery_urls, ...inputs) {
     if (gallery_send_to_url) {
-        let result = [gallery_send_to_url];
+        let result = [gallery_send_to_url, ...inputs];
         gallery_send_to_url = null;
         return result;
     }
 
     if (gallery_urls.length == 0) {
-        return [null];
+        return [null, ...inputs];
     }
 
     var index = selected_gallery_index();
@@ -69,7 +70,7 @@ function extract_image_url_from_gallery_urls(gallery_urls) {
         index = 0;
     }
 
-    return [gallery_urls[index]];
+    return [gallery_urls[index], ...inputs];
 }
 
 function update_gallery_urls(gallery) {

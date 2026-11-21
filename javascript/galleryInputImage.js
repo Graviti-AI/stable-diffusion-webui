@@ -1,6 +1,6 @@
 // Fill the ForgeCanvases taking gallery inputs through the gallery of diffus-app, as Create/Edit Image
-// does: picked with the image selector, uploaded when dropped or pasted. See
-// modules/gallery_input_images.py.
+// does: picked with the image selector, uploaded when dropped or pasted, loaded by reference when sent
+// to it. See modules/gallery_input_images.py.
 
 // The selection in progress of each canvas, until its image is loaded.
 const _gallerySelections = {};
@@ -8,6 +8,9 @@ const _gallerySelections = {};
 // The load of each canvas sent to the server ({ref, selection}) and the one queued after it: one at a
 // time, so an answer is that of the load sent; a load queued is replaced by a later one.
 const _galleryLoads = {};
+
+// What a Send to with no image answers (see send_image_from_url of infotext_utils.py).
+const _GALLERY_NOTHING_SENT = "nothing";
 
 // Null when WebUI is not embedded in diffus-app, its own uploads then used.
 function _getInputImageApp() {
@@ -195,6 +198,30 @@ function galleryInputImageLoaded(uuid, loaded) {
 
     if (queued && _gallerySelections[uuid] === queued.selection) {
         _sendGalleryLoad(uuid, queued);
+    }
+    return "";
+}
+
+// Start sending an image to the canvas (Send to): a selection taking over the one in progress.
+function startGalleryInputImageSend(uuid) {
+    _startGallerySelection(uuid).isSend = true;
+    _showGalleryInputLoading(uuid, null);
+}
+
+// Run once a send is done, with its background and reference as JSON (empty when it failed): put into
+// the canvas as a load is, if the send is still in progress. Clears the sent value.
+function galleryInputImageSent(uuid, sent) {
+    // No send was started: one in progress from another button goes on.
+    if (sent === _GALLERY_NOTHING_SENT) {
+        return "";
+    }
+
+    if (_gallerySelections[uuid]?.isSend) {
+        _cancelGalleryInputImage(uuid);
+        if (sent) {
+            const {background, ref} = JSON.parse(sent);
+            _putGalleryInputImage(uuid, background, ref);
+        }
     }
     return "";
 }

@@ -117,6 +117,53 @@ function modalKeyHandler(event) {
     }
 }
 
+// The gallery URLs of the outputs of each tab, and the gallery ids of those registered.
+const outputGalleryImageIds = {};
+
+// The update of the gallery URLs of an output panel, keeping them with the gallery ids.
+function updateOutputGalleryUrls(tabname, gallery, ids) {
+    const update = update_gallery_urls(gallery);
+    outputGalleryImageIds[tabname] = {urls: update.value, ids: ids ?? {}};
+    return update;
+}
+
+// Open the detail of the selected output in diffus-app, among the registered outputs, as its own generations
+// do: true when opened, the lightbox shown otherwise.
+function openOutputImageDetail(image) {
+    try {
+        return _openOutputImageDetail(image);
+    } catch (error) {
+        // Not embedded in diffus-app, or in a page of another origin.
+        console.error(error);
+        return false;
+    }
+}
+
+function _openOutputImageDetail(image) {
+    const openImageDetail = window.parent.diffusApp?.openImageDetail;
+    if (!openImageDetail) {
+        return false;
+    }
+
+    const tabname = Object.keys(outputGalleryImageIds).find((name) => gradioApp().getElementById(`${name}_gallery`)?.contains(image));
+    if (!tabname) {
+        return false;
+    }
+
+    const {urls, ids} = outputGalleryImageIds[tabname];
+    let index = selected_gallery_index_id(`${tabname}_gallery`);
+    if (index < 0 || index >= urls.length) {
+        index = 0;
+    }
+    const imageId = ids[urls[index]];
+    if (imageId == null) {
+        return false;
+    }
+
+    const imageIds = urls.map((url) => ids[url]).filter((id) => id != null);
+    return openImageDetail(imageIds, imageId) === true;
+}
+
 function setupImageForLightbox(e) {
     if (e.dataset.modded) {
         return;
@@ -136,6 +183,12 @@ function setupImageForLightbox(e) {
 
     e.addEventListener('click', function(evt) {
         if (!opts.js_modal_lightbox || evt.button != 0) return;
+
+        if (openOutputImageDetail(evt.target)) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            return;
+        }
 
         modalZoomSet(gradioApp().getElementById('modalImage'), opts.js_modal_lightbox_initially_zoomed);
         evt.preventDefault();

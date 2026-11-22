@@ -204,9 +204,10 @@ def create_output_panel(tabname, outdir, toprow=None):
                 res.gallery = gr.Gallery(label='Output', show_label=False, elem_id=f"{tabname}_gallery", columns=4, preview=True, height=shared.opts.gallery_height or None, interactive=False, type="pil", object_fit="contain")
                 res.gallery.change(
                     fn=None,
-                    inputs=[res.gallery],
+                    inputs=[res.gallery, res.gallery_ids],
                     outputs=[res.gallery_urls],
-                    _js="update_gallery_urls",
+                    # Keeping the gallery ids of the outputs for their detail in diffus-app.
+                    _js=f'(gallery, ids) => updateOutputGalleryUrls("{tabname}", gallery, ids)',
                 )
 
             with gr.Row(elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"):

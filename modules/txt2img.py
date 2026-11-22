@@ -141,14 +141,16 @@ def txt2img_upscale(request: gr.Request, id_task: str, gallery_urls: list[str], 
                 p.do_not_save_grid = True
                 processed = processing.process_images(p)
 
+    insert = getattr(shared.opts, 'hires_button_gallery_insert', False)
     new_gallery_ids = build_url_to_image_ids(processed.images)
     gallery_ids.update(new_gallery_ids)
-    del gallery_ids[gallery_urls[gallery_index]]
+    if not insert:
+        # Replaced, the upscaled image goes with its id, if it has one; inserted, both are kept.
+        gallery_ids.pop(gallery_urls[gallery_index], None)
     processed.images = [getattr(image, "gallery_url", image) for image in processed.images]
 
     shared.total_tqdm.clear()
 
-    insert = getattr(shared.opts, 'hires_button_gallery_insert', False)
     new_gallery = []
     for i, url in enumerate(gallery_urls):
         if insert or i != gallery_index:

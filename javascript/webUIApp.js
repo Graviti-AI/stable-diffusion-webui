@@ -117,10 +117,11 @@ const webUIApp = {
         gradioApp().getElementById(`${tabname}_paste`).click();
         loadGalleryInputImages(tabname, inputImages);
     },
-    // Sent with its gallery reference, the image is a gallery input of the img2img canvas.
+    // The image alone, without the parameters of txt2img; sent with its gallery reference, it is a gallery input
+    // of the img2img canvas.
     sendToImg2Img(url, ref) {
         gallery_send_to_url = ref ? {url, ref} : url;
-        gradioApp().getElementById("txt2img_send_to_img2img").click();
+        gradioApp().getElementById("gallery_send_to_img2img").click();
     }
 };
 

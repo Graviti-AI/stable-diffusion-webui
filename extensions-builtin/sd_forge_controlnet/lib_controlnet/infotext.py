@@ -80,6 +80,11 @@ class Infotext(object):
             self.infotext_fields.append((io_component, component_locator))
             self.paste_field_names.append(component_locator)
 
+        # The timestep range shows the guidance pasted (see on_infotext_pasted).
+        component_locator = f"{unit_prefix} timestep_range"
+        self.infotext_fields.append((uigroup.timestep_range, component_locator))
+        self.paste_field_names.append(component_locator)
+
     @staticmethod
     def write_infotext(
         units: List[external_code.ControlNetUnit], p: StableDiffusionProcessing
@@ -103,8 +108,19 @@ class Infotext(object):
 
             assert isinstance(v, str), f"Expect string but got {v}."
             try:
-                for field, value in vars(parse_unit(v)).items():
+                unit = parse_unit(v)
+                # Only numbers from 0 to 1 in order, as the range shows and the generation uses; otherwise the
+                # guidance is left as it is.
+                guidance = (unit.guidance_start, unit.guidance_end)
+                valid_guidance = all(
+                    isinstance(x, (int, float)) and not isinstance(x, bool) and 0 <= x <= 1 for x in guidance
+                ) and guidance[0] <= guidance[1]
+                if valid_guidance:
+                    updates[f"{k} timestep_range"] = guidance
+                for field, value in vars(unit).items():
                     if field == "image":
+                        continue
+                    if field in ("guidance_start", "guidance_end") and not valid_guidance:
                         continue
                     if value is None:
                         logger.debug(f"InfoText: Skipping {field} because value is None.")

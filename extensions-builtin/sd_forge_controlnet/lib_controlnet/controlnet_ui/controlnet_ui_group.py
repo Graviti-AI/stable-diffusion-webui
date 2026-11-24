@@ -512,8 +512,10 @@ class ControlNetUiGroup(object):
                 elem_id=f"{elem_id_tabname}_{tabname}_controlnet_guidance_end_slider",
             )
 
+        # In the browser, so that no late response writes back an older range while dragging.
         self.timestep_range.change(
-            lambda x: (x[0], x[1]),
+            fn=None,
+            js="(range) => [range[0], range[1]]",
             inputs=[self.timestep_range],
             outputs=[self.guidance_start, self.guidance_end],
             queue=False,
@@ -679,7 +681,21 @@ class ControlNetUiGroup(object):
         )
 
     def register_build_sliders(self):
-        def build_sliders(module: str, pp: bool):
+        # A value is kept if a number in the range of the slider, a string written back as the number.
+        def keep_slider_value(kwargs: dict, value):
+            if isinstance(value, bool):
+                return
+            try:
+                number = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return
+            if kwargs['minimum'] <= number <= kwargs['maximum']:
+                if isinstance(value, (int, float)):
+                    kwargs.pop('value', None)
+                else:
+                    kwargs['value'] = number
+
+        def build_sliders(module: str, pp: bool, *slider_values, reset_values: bool = True):
 
             logger.debug(
                 f"Prevent update slider value: {self.prevent_next_n_slider_value_update}"
@@ -688,15 +704,23 @@ class ControlNetUiGroup(object):
 
             preprocessor = global_state.get_preprocessor(module)
 
-            slider_resolution_kwargs = preprocessor.slider_resolution.gradio_update_kwargs.copy()
+            slider_kwargs = [
+                preprocessor.slider_resolution.gradio_update_kwargs.copy(),
+                preprocessor.slider_1.gradio_update_kwargs.copy(),
+                preprocessor.slider_2.gradio_update_kwargs.copy(),
+            ]
+            if not reset_values:
+                for kwargs, value in zip(slider_kwargs, slider_values):
+                    keep_slider_value(kwargs, value)
+            slider_resolution_kwargs, slider_1_kwargs, slider_2_kwargs = slider_kwargs
 
             if pp:
                 slider_resolution_kwargs['visible'] = False
 
             grs = [
                 gr.update(**slider_resolution_kwargs),
-                gr.update(**preprocessor.slider_1.gradio_update_kwargs.copy()),
-                gr.update(**preprocessor.slider_2.gradio_update_kwargs.copy()),
+                gr.update(**slider_1_kwargs),
+                gr.update(**slider_2_kwargs),
                 gr.update(visible=True),
                 gr.update(visible=not preprocessor.do_not_need_model),
                 gr.update(visible=not preprocessor.do_not_need_model),
@@ -708,6 +732,9 @@ class ControlNetUiGroup(object):
         inputs = [
             self.module,
             self.pixel_perfect,
+            self.processor_res,
+            self.threshold_a,
+            self.threshold_b,
         ]
         outputs = [
             self.processor_res,
@@ -718,12 +745,15 @@ class ControlNetUiGroup(object):
             self.refresh_models,
             self.control_mode,
         ]
-        self.module.change(
-            build_sliders, inputs=inputs, outputs=outputs, show_progress=False
-        )
-        self.pixel_perfect.change(
-            build_sliders, inputs=inputs, outputs=outputs, show_progress=False
-        )
+        # Changed by the user, the sliders get the defaults; otherwise, as by a paste, they keep their values.
+        build_sliders_keeping_values = functools.partial(build_sliders, reset_values=False)
+        for component in (self.module, self.pixel_perfect):
+            component.change(
+                build_sliders_keeping_values, inputs=inputs, outputs=outputs, show_progress=False
+            )
+            component.input(
+                build_sliders, inputs=inputs, outputs=outputs, show_progress=False
+            )
 
         def filter_selected(k: str):
             logger.debug(f"Prevent update {self.prevent_next_n_module_update}")
@@ -756,11 +786,14 @@ class ControlNetUiGroup(object):
                     ),
                 ]
 
+        # The preprocessor chosen by the filter starts with its defaults.
         self.type_filter.change(
             fn=filter_selected,
             inputs=[self.type_filter],
             outputs=[self.module, self.model],
             show_progress=False,
+        ).then(
+            build_sliders, inputs=inputs, outputs=outputs, show_progress=False
         )
 
     def register_run_annotator(self):

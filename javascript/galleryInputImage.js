@@ -329,7 +329,7 @@ function _resetControlNetMask(uuid) {
     }
 }
 
-// Enable the ControlNet unit if it has a model (see register_gallery_enable of controlnet_ui_group.py).
+// Enable the ControlNet unit if its model is of this node (see register_gallery_enable of controlnet_ui_group.py).
 function _enableControlNetUnit(tabname, unit) {
     gradioApp().getElementById(`${tabname}_controlnet_ControlNet-${unit}_controlnet_gallery_enable`)?.click();
 }

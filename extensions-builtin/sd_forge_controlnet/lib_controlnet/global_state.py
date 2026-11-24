@@ -113,8 +113,8 @@ def get_filtered_controlnet_names(tag):
 def update_controlnet_filenames():
     global controlnet_filename_dict, controlnet_names
 
-    controlnet_filename_dict = {'None': 'model.safetensors'}
-    controlnet_names = ['None']
+    # Set at once, the models of the last scan read meanwhile.
+    filename_dict = {'None': 'model.safetensors'}
 
     ext_dirs = (shared.opts.data.get("control_net_models_path", None), getattr(shared.cmd_opts, 'controlnet_dir', None))
     extra_lora_paths = (extra_lora_path for extra_lora_path in ext_dirs
@@ -125,9 +125,9 @@ def update_controlnet_filenames():
         sort_by = shared.opts.data.get("control_net_models_sort_models_by", "name")
         filter_by = shared.opts.data.get("control_net_models_name_filter", "")
         found = get_all_models(sort_by, filter_by, path)
-        controlnet_filename_dict.update(found)
+        filename_dict.update(found)
 
-    controlnet_names = list(controlnet_filename_dict.keys())
+    controlnet_filename_dict, controlnet_names = filename_dict, list(filename_dict.keys())
     return
 
 

@@ -406,6 +406,10 @@ class ControlNetUiGroup(object):
             )
             # Clicked once the image of a RUN from the gallery is loaded.
             self.gallery_enable = gr.Button(visible=False, elem_id=f"{elem_id_tabname}_{tabname}_controlnet_gallery_enable")
+            # The check of the server, with the state of the RUN it is for.
+            self.gallery_enable_result = gr.JSON(value=None, visible=False)
+            # The toggles of the unit by the user.
+            self.enabled_toggles = gr.JSON(value=0, visible=False)
             self.pixel_perfect = gr.Checkbox(
                 label="Pixel Perfect",
                 value=self.default_unit.pixel_perfect,
@@ -1104,12 +1108,38 @@ class ControlNetUiGroup(object):
         self.register_gallery_enable()
 
     def register_gallery_enable(self):
-        """Enable the unit of an image run from the gallery if it has a model: a unit without one is
-        skipped. The model is read from Gradio, not from the dropdown, which shows any filter typed."""
-        self.gallery_enable.click(
+        """Enable the unit of an image run from the gallery if its model is of this node, disabling it if not; a
+        unit without a model is left as it is. The checks of a unit are made one at a time, the last RUN made
+        meanwhile next, and a result applies only if the model, the state and the toggles of the user are still
+        those of its RUN. The model is read from Gradio, not from the dropdown, which shows any filter typed."""
+        self.enabled.input(
             fn=None,
-            js='(model, enabled) => [enabled || (!!model && model !== "None")]',
-            inputs=[self.model, self.enabled],
+            js="(toggles) => [(toggles || 0) + 1]",
+            inputs=[self.enabled_toggles],
+            outputs=[self.enabled_toggles],
+            show_progress=False,
+        )
+
+        def check_gallery_enable(model: str, enabled: bool, toggles: int):
+            if not model or model == "None":
+                result = enabled
+            else:
+                result = model in global_state.get_all_controlnet_names()
+            return {"model": model, "enabled": enabled, "toggles": toggles, "result": result}
+
+        self.gallery_enable.click(
+            check_gallery_enable,
+            inputs=[self.model, self.enabled, self.enabled_toggles],
+            outputs=[self.gallery_enable_result],
+            show_progress=False,
+            trigger_mode="always_last",
+        ).success(
+            fn=None,
+            js="""(check, model, enabled, toggles) => [
+                check && check.model === model && check.enabled === enabled && check.toggles === toggles
+                    ? check.result : enabled
+            ]""",
+            inputs=[self.gallery_enable_result, self.model, self.enabled, self.enabled_toggles],
             outputs=[self.enabled],
             show_progress=False,
         )
